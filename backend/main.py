@@ -1,20 +1,20 @@
 import uvicorn
-from fastapi import FastAPI, Query, HTTPException
+from typing import Optional
+from fastapi import FastAPI, Query, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
 from pydantic import BaseModel
-from scraper import perform_ai_grounded_search, get_clean_document, set_api_key, get_api_status
+from scraper import perform_ai_grounded_search, get_clean_document, set_api_key, get_api_status, ApiKeyRequiredException
 
 class KeyConfigRequest(BaseModel):
     api_key: str
 
-
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="1.2.0"
+    version="1.3.0"
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -30,14 +30,21 @@ app.add_middleware(
 def api_search(
     q: str = Query(..., description="Termo de pesquisa"),
     external: bool = Query(False, description="Incluir fontes externas da internet"),
-    lang: str = Query("pt", description="Código de idioma (ex: pt, en, es)")
+    lang: str = Query("pt", description="Código de idioma (ex: pt, en, es)"),
+    x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-Api-Key"),
+    api_key: Optional[str] = Query(None, description="Chave API opcional do cliente")
 ):
     if not q.strip():
         return {"ai_response": "", "results": []}
+    
+    client_key = x_gemini_api_key or api_key
     try:
-        return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang)
+        return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=client_key)
+    except ApiKeyRequiredException as e:
+        raise HTTPException(status_code=401, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/read")
 def api_read(

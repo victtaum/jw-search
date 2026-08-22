@@ -24,6 +24,9 @@ object SearchApiClient {
         connection.readTimeout = 15000
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile)")
         connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/json")
+        if (apiKey.isNotBlank()) {
+            connection.setRequestProperty("X-Gemini-Api-Key", apiKey)
+        }
 
         val responseCode = connection.responseCode
         if (responseCode == HttpURLConnection.HTTP_OK) {

@@ -146,12 +146,22 @@ def clean_result_title(title, url):
 
 
 
-def perform_ai_grounded_search(query, include_external=False, lang='pt'):
-    if not client:
-        return {
-            "ai_response": "Erro: A chave de API do Gemini (GEMINI_API_KEY) não está configurada no servidor.",
-            "results": []
-        }
+class ApiKeyRequiredException(Exception):
+    """Raised when no API key is provided on client or server."""
+    pass
+
+def perform_ai_grounded_search(query, include_external=False, lang='pt', custom_api_key=None):
+    active_client = None
+    if custom_api_key and str(custom_api_key).strip():
+        try:
+            active_client = genai.Client(api_key=str(custom_api_key).strip())
+        except Exception as e:
+            raise Exception(f"Chave de API do Gemini inválida: {e}")
+    elif client:
+        active_client = client
+        
+    if not active_client:
+        raise ApiKeyRequiredException("Chave da API do Gemini não configurada. Por favor, insira sua chave gratuita para realizar a pesquisa.")
         
     # Language instruction
     lang_map = {
@@ -160,6 +170,7 @@ def perform_ai_grounded_search(query, include_external=False, lang='pt'):
         'es': 'Español'
     }
     target_lang = lang_map.get(lang, 'Português (Brasil)')
+
 
     if include_external:
         source_directive = """Você tem permissão para pesquisar na Internet em geral para contextualizar fatos históricos, arqueológicos ou científicos.

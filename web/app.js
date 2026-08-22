@@ -48,6 +48,13 @@ searchForm.addEventListener("submit", async (e) => {
     
     const includeExternal = externalCheckbox.checked;
     const lang = langSelect.value;
+    const userApiKey = getUserApiKey();
+    
+    // If no user key and no server key confirmed yet, prompt onboarding modal
+    if (!userApiKey && window.serverHasKey === false) {
+        openKeyModal("Para realizar pesquisas com IA, é necessário configurar sua chave gratuita do Google Gemini.");
+        return;
+    }
     
     // UI Loading state
     statusContainer.classList.remove("hidden");
@@ -62,12 +69,25 @@ searchForm.addEventListener("submit", async (e) => {
             lang: lang
         });
         
-        const response = await fetch(`${API_BASE}/api/search?${params}`);
-        if (!response.ok) {
-            throw new Error(`Erro na busca: ${response.statusText}`);
+        const headers = { "Accept": "application/json" };
+        if (userApiKey) {
+            headers["X-Gemini-Api-Key"] = userApiKey;
         }
         
+        const response = await fetch(`${API_BASE}/api/search?${params}`, { headers });
         const data = await response.json();
+        
+        if (!response.ok) {
+            const errorDetail = data.detail || `Erro (${response.status}): ${response.statusText}`;
+            if (response.status === 401 || (typeof errorDetail === "string" && errorDetail.includes("Chave da API"))) {
+                openKeyModal("Sua chave de API do Gemini não foi encontrada ou é inválida. Por favor, adicione uma chave válida.");
+                throw new Error("Chave de API necessária.");
+            } else if (response.status === 429 || (typeof errorDetail === "string" && errorDetail.toLowerCase().includes("quota"))) {
+                openKeyModal("A cota da chave de API atual foi atingida (limite do Google). Insira sua chave pessoal gratuita para continuar.");
+                throw new Error("Cota de requisições excedida.");
+            }
+            throw new Error(errorDetail);
+        }
         
         // Render AI Synthesized response
         if (data.ai_response) {
@@ -86,10 +106,10 @@ searchForm.addEventListener("submit", async (e) => {
         console.error(error);
         resultsContainer.innerHTML = `
             <div class="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 flex items-center space-x-3">
-                <i class="fa-solid fa-circle-exclamation text-xl"></i>
+                <i class="fa-solid fa-circle-exclamation text-xl flex-shrink-0"></i>
                 <div>
-                    <p class="font-semibold">Erro ao buscar informações</p>
-                    <p class="text-sm">Não foi possível conectar ao servidor ou a busca falhou. Certifique-se de que o backend está rodando na porta 8000.</p>
+                    <p class="font-semibold">Erro na busca</p>
+                    <p class="text-sm">${escapeHtml(error.message || "Não foi possível completar a consulta.")}</p>
                 </div>
             </div>
         `;
@@ -283,12 +303,34 @@ const btnSaveKey = document.getElementById("btn-save-key");
 const keyStatusMsg = document.getElementById("key-status-msg");
 const keyBadgeText = document.getElementById("key-badge-text");
 
-function openKeyModal() {
+function getUserApiKey() {
+    return localStorage.getItem("jw_search_user_api_key") || "";
+}
+
+function setUserApiKey(key) {
+    if (key) {
+        localStorage.setItem("jw_search_user_api_key", key);
+    } else {
+        localStorage.removeItem("jw_search_user_api_key");
+    }
+}
+
+function openKeyModal(noticeMessage = null) {
     keyModal.classList.remove("pointer-events-none");
     keyModal.classList.remove("opacity-0");
     keyModalContainer.classList.remove("scale-95");
     keyModalContainer.classList.add("scale-100");
-    keyStatusMsg.classList.add("hidden");
+    
+    // Fill current user key if any
+    inputApiKey.value = getUserApiKey();
+    
+    if (noticeMessage) {
+        keyStatusMsg.className = "text-xs p-3 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 mt-2 flex items-center space-x-2";
+        keyStatusMsg.innerHTML = `<i class="fa-solid fa-triangle-exclamation flex-shrink-0 text-sm"></i> <span>${escapeHtml(noticeMessage)}</span>`;
+        keyStatusMsg.classList.remove("hidden");
+    } else {
+        keyStatusMsg.classList.add("hidden");
+    }
 }
 
 function closeKeyModal() {
@@ -300,7 +342,7 @@ function closeKeyModal() {
     }, 200);
 }
 
-btnOpenKeyModal.addEventListener("click", openKeyModal);
+btnOpenKeyModal.addEventListener("click", () => openKeyModal());
 btnCloseKeyModal.addEventListener("click", closeKeyModal);
 keyModal.addEventListener("click", (e) => {
     if (e.target === keyModal) closeKeyModal();
@@ -326,55 +368,60 @@ btnSaveKey.addEventListener("click", async () => {
     }
 
     btnSaveKey.disabled = true;
-    btnSaveKey.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Salvando...</span>`;
+    btnSaveKey.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Salvando e ativando...</span>`;
 
+    // 1. Always save in client's browser localStorage
+    setUserApiKey(key);
+
+    // 2. Optionally sync with local backend
     try {
-        const response = await fetch(`${API_BASE}/api/config`, {
+        await fetch(`${API_BASE}/api/config`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ api_key: key })
         });
-
-        const data = await response.json();
-        if (response.ok) {
-            keyStatusMsg.className = "text-xs p-3 rounded-lg bg-green-50 text-green-700 border border-green-200 mt-2 flex items-center space-x-2";
-            keyStatusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> <span>Chave validada e salva com sucesso!</span>`;
-            keyStatusMsg.classList.remove("hidden");
-            
-            checkKeyStatus();
-            setTimeout(() => {
-                closeKeyModal();
-                inputApiKey.value = "";
-            }, 1200);
-        } else {
-            throw new Error(data.detail || "Falha ao salvar chave.");
-        }
-    } catch (err) {
-        keyStatusMsg.className = "text-xs p-3 rounded-lg bg-red-50 text-red-700 border border-red-200 mt-2 flex items-center space-x-2";
-        keyStatusMsg.innerHTML = `<i class="fa-solid fa-circle-xmark text-base"></i> <span>${escapeHtml(err.message)}</span>`;
-        keyStatusMsg.classList.remove("hidden");
-    } finally {
-        btnSaveKey.disabled = false;
-        btnSaveKey.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> <span>Salvar Chave</span>`;
+    } catch (e) {
+        // Backend sync is optional when client passes header
     }
+
+    keyStatusMsg.className = "text-xs p-3 rounded-lg bg-green-50 text-green-700 border border-green-200 mt-2 flex items-center space-x-2";
+    keyStatusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> <span>Sua chave pessoal foi ativada com sucesso!</span>`;
+    keyStatusMsg.classList.remove("hidden");
+    
+    checkKeyStatus();
+    setTimeout(() => {
+        closeKeyModal();
+    }, 1200);
+
+    btnSaveKey.disabled = false;
+    btnSaveKey.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> <span>Salvar Chave</span>`;
 });
 
 // Check API key presence on startup
 async function checkKeyStatus() {
+    const userKey = getUserApiKey();
+    if (userKey) {
+        keyBadgeText.innerHTML = `<span class="text-green-300">●</span> Minha Chave`;
+        btnOpenKeyModal.title = "Sua chave pessoal está ativa no navegador. Clique para alterar.";
+        return;
+    }
+
     try {
         const res = await fetch(`${API_BASE}/api/config`);
         if (res.ok) {
             const data = await res.json();
+            window.serverHasKey = data.has_key;
             if (data.has_key) {
-                keyBadgeText.innerHTML = `<span class="text-green-300">●</span> Chave Ativa`;
-                btnOpenKeyModal.title = `Chave configurada (${data.key_preview || ''}). Clique para alterar.`;
+                keyBadgeText.innerHTML = `<span class="text-blue-300">●</span> Chave Servidor`;
+                btnOpenKeyModal.title = `Chave padrão do servidor (${data.key_preview || ''}). Você pode inserir a sua própria chave para usar sua cota.`;
             } else {
-                keyBadgeText.innerHTML = `<span class="text-amber-300">●</span> Inserir Chave`;
+                keyBadgeText.innerHTML = `<span class="text-amber-300">●</span> Inserir Minha Chave`;
                 btnOpenKeyModal.title = "Nenhuma chave configurada. Clique para obter sua chave gratuita.";
             }
         }
     } catch (e) {
-        console.warn("Não foi possível verificar status da chave:", e);
+        window.serverHasKey = false;
+        keyBadgeText.innerHTML = `<span class="text-amber-300">●</span> Inserir Chave`;
     }
 }
 
