@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JW Search - Portal de Pesquisa</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- PWA Manifest & iOS Standalone Support -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#334155">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="JW Search">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .reader-content {
+            font-family: 'Lora', serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col text-gray-800">
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-700 text-white shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-book-open-reader text-2xl text-blue-300"></i>
+                <span class="text-xl font-semibold tracking-wide">JW Search</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="btn-open-key-modal" class="text-xs bg-slate-600 hover:bg-slate-500 px-3 py-1.5 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5">
+                    <i class="fa-solid fa-key text-amber-300"></i>
+                    <span id="key-badge-text">Chave IA</span>
+                </button>
+                <span class="text-xs bg-slate-600 px-2.5 py-1.5 rounded-lg text-slate-300 border border-slate-500 hidden sm:inline-block">v1.2</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8">
+        
+        <!-- Search Card -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2 text-center md:text-left">
+                Pesquisa Teocrática Unificada
+            </h1>
+            <p class="text-sm text-gray-500 mb-6 text-center md:text-left">
+                Consulte assuntos e dúvidas diretamente na Biblioteca Online (WOL) e no site oficial JW.org.
+            </p>
+            
+            <form id="search-form" class="space-y-4">
+                <!-- Search Input Row -->
+                <div class="relative flex items-center">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 text-gray-400"></i>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Digite o assuntou ou dúvida" 
+                        class="w-full pl-11 pr-24 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-base"
+                        required
+                        autofocus
+                    >
+                    <button 
+                        type="submit" 
+                        class="absolute right-2 px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2"
+                    >
+                        <span>Buscar</span>
+                    </button>
+                </div>
+                
+                <!-- Toggle Switches & Options -->
+                <div class="flex flex-wrap items-center justify-between pt-2 text-sm gap-4">
+                    <div class="flex items-center space-x-3">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="external-checkbox" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                            <span class="ml-3 text-sm font-medium text-gray-600 select-none">Pesquisar também na Internet (outras fontes)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2 text-gray-500">
+                        <i class="fa-solid fa-language text-base"></i>
+                        <select id="lang-select" class="bg-transparent border-none py-1 focus:outline-none font-medium cursor-pointer text-gray-600">
+                            <option value="pt" selected>Português</option>
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Search Status / Loading -->
+        <div id="status-container" class="hidden text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-slate-700 border-t-transparent mb-3"></div>
+            <p class="text-gray-500 text-sm">Pesquisando extensivamente nas fontes...</p>
+        </div>
+
+        <!-- AI Response Section -->
+        <div id="ai-response-card" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 mb-6 border-l-4 border-l-slate-700">
+            <div class="flex items-center space-x-3 mb-4 text-slate-700">
+                <i class="fa-solid fa-wand-magic-sparkles text-xl text-blue-500"></i>
+                <h2 class="text-lg font-bold tracking-wide">Ponderações da Inteligência Artificial</h2>
+            </div>
+            <div id="ai-response-content" class="prose max-w-none text-gray-800 leading-relaxed text-sm md:text-base space-y-4">
+                <!-- AI text will be parsed and injected here -->
+            </div>
+        </div>
+
+        <!-- Results List -->
+        <div id="results-container" class="space-y-4">
+            <!-- Results will be injected here by app.js -->
+            <div class="text-center py-12 text-gray-400">
+                <i class="fa-solid fa-search text-4xl mb-3"></i>
+                <p class="text-sm">Os resultados da pesquisa aparecerão aqui.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-100 border-t border-gray-200 py-6 mt-12 text-center text-xs text-gray-500">
+        <p>JW Search - Projeto de Consulta de Informações Teocráticas.</p>
+        <p class="mt-1">Desenvolvido como ferramenta de estudo pessoal. Os direitos das publicações pertencem aos seus respectivos autores.</p>
+    </footer>
+
+    <!-- Reader View Panel (Sidebar/Drawer) -->
+    <div id="reader-panel" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity duration-300 opacity-0 pointer-events-none flex justify-end">
+        
+        <!-- Panel Container -->
+        <div id="reader-container" class="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300">
+            
+            <!-- Panel Header -->
+            <div class="border-b border-gray-100 px-6 py-4 flex justify-between items-center bg-gray-50">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-book-open text-slate-600 text-lg"></i>
+                    <span id="reader-pub" class="text-xs font-semibold uppercase tracking-wider text-slate-500 max-w-[300px] truncate">Referência</span>
+                </div>
+                
+                <!-- Controls -->
+                <div class="flex items-center space-x-4">
+                    <!-- Text Size Adjusters -->
+                    <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white text-xs">
+                        <button id="font-dec" class="px-3 py-1.5 hover:bg-gray-100 border-r border-gray-200 font-bold" title="Diminuir texto">A-</button>
+                        <button id="font-inc" class="px-3 py-1.5 hover:bg-gray-100 font-bold" title="Aumentar texto">A+</button>
+                    </div>
+                    <!-- Close button -->
+                    <button id="close-reader" class="text-gray-400 hover:text-gray-600 text-xl" title="Fechar leitor">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Panel Body (Scrollable Article content) -->
+            <div id="reader-body" class="flex-grow overflow-y-auto px-6 md:px-10 py-8 reader-content bg-[#FCFBF9]">
+                <!-- Article Title -->
+                <h2 id="reader-title" class="text-3xl font-bold text-gray-900 mb-6 leading-tight">Título do Artigo</h2>
+                <!-- Article HTML -->
+                <div id="reader-content" class="prose max-w-none text-gray-800 text-lg leading-relaxed space-y-6">
+                    <p>Carregando conteúdo...</p>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Embedded API Key Modal / Onboarding Wizard -->
+    <div id="key-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 sm:p-8 transform scale-95 transition-transform duration-200" id="key-modal-container">
+            <div class="flex justify-between items-center pb-4 border-b border-gray-100">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                        <i class="fa-solid fa-key text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-base">Chave de IA (Google Gemini)</h3>
+                        <p class="text-xs text-gray-500">Trilha rápida para obter sua chave gratuita</p>
+                    </div>
+                </div>
+                <button id="btn-close-key-modal" class="text-gray-400 hover:text-gray-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Onboarding Steps -->
+            <div class="space-y-4 py-5 text-sm text-gray-600">
+                <!-- Step 1 -->
+                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <span class="w-6 h-6 rounded-full bg-slate-700 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                    <div class="flex-grow">
+                        <p class="font-semibold text-gray-800">Acesse o Google AI Studio</p>
+                        <p class="text-xs text-gray-500 mt-0.5">O Google fornece cotas gratuitas para uso pessoal com qualquer conta Google.</p>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1.5 mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors">
+                            <span>Abrir Google AI Studio</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <span class="w-6 h-6 rounded-full bg-slate-700 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                    <div>
+                        <p class="font-semibold text-gray-800">Crie sua chave de API</p>
+                        <p class="text-xs text-gray-500 mt-0.5">No site do Google, clique no botão azul <b>"Create API key"</b> e copie a chave gerada.</p>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="flex items-start space-x-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                    <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                    <div class="flex-grow">
+                        <p class="font-semibold text-gray-800">Cole sua chave abaixo</p>
+                        <div class="mt-2 space-y-2">
+                            <input 
+                                type="password" 
+                                id="input-api-key" 
+                                placeholder="AIzaSy..." 
+                                class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                            <div class="flex items-center justify-between pt-1">
+                                <button id="btn-toggle-key-visibility" type="button" class="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1">
+                                    <i class="fa-solid fa-eye text-xs"></i>
+                                    <span>Mostrar chave</span>
+                                </button>
+                                <button id="btn-save-key" type="button" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg transition-colors flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-floppy-disk"></i>
+                                    <span>Salvar Chave</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Message -->
+            <div id="key-status-msg" class="hidden text-xs p-3 rounded-lg"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/app.js"></script>
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('Service Worker registrado!', reg.scope))
+                    .catch(err => console.error('Erro no registro do Service Worker', err));
+            });
+        }
+    </script>
+</body>
+</html>
