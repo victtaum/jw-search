@@ -64,6 +64,24 @@
             </p>
             
             <form id="search-form" class="space-y-4">
+                <!-- AI Engine / Provider Selector -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-1">
+                    <div class="inline-flex bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs">
+                        <button type="button" id="tab-prov-gemini" class="prov-selector-btn px-3 py-1.5 rounded-lg font-semibold bg-white text-slate-800 shadow-sm transition-all" data-provider="gemini">
+                            <i class="fa-solid fa-wand-magic-sparkles text-blue-500 mr-1"></i> Gemini 2.5
+                        </button>
+                        <button type="button" id="tab-prov-deepseek" class="prov-selector-btn px-3 py-1.5 rounded-lg font-medium text-gray-600 hover:text-slate-800 transition-all" data-provider="deepseek">
+                            <i class="fa-solid fa-brain text-indigo-500 mr-1"></i> DeepSeek RAG
+                        </button>
+                        <button type="button" id="tab-prov-hy3" class="prov-selector-btn px-3 py-1.5 rounded-lg font-medium text-gray-600 hover:text-slate-800 transition-all" data-provider="hy3">
+                            <i class="fa-solid fa-bolt text-amber-500 mr-1"></i> Hy3 / OpenAI
+                        </button>
+                    </div>
+                    <span id="active-engine-badge" class="text-[11px] text-gray-500 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
+                        Motor: <b>Gemini + Grounding</b>
+                    </span>
+                </div>
+
                 <!-- Search Input Row -->
                 <div class="relative flex items-center">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 text-gray-400"></i>
@@ -181,15 +199,15 @@
     
     <!-- Embedded API Key Modal / Onboarding Wizard -->
     <div id="key-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
-        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 sm:p-8 transform scale-95 transition-transform duration-200" id="key-modal-container">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xl w-full p-6 sm:p-8 transform scale-95 transition-transform duration-200" id="key-modal-container">
             <div class="flex justify-between items-center pb-4 border-b border-gray-100">
                 <div class="flex items-center space-x-2.5">
                     <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
                         <i class="fa-solid fa-key text-base"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-gray-900 text-base">Chave de IA (Google Gemini)</h3>
-                        <p class="text-xs text-gray-500">Trilha rápida para obter sua chave gratuita</p>
+                        <h3 class="font-bold text-gray-900 text-base">Configurações de Inteligência Artificial</h3>
+                        <p class="text-xs text-gray-500">Configure suas chaves gratuitas ou alternativas</p>
                     </div>
                 </div>
                 <button id="btn-close-key-modal" class="text-gray-400 hover:text-gray-600 text-lg">
@@ -197,59 +215,90 @@
                 </button>
             </div>
 
-            <!-- Onboarding Steps -->
-            <div class="space-y-4 py-5 text-sm text-gray-600">
-                <!-- Step 1 -->
-                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <span class="w-6 h-6 rounded-full bg-slate-700 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
-                    <div class="flex-grow">
-                        <p class="font-semibold text-gray-800">Acesse o Google AI Studio</p>
-                        <p class="text-xs text-gray-500 mt-0.5">O Google fornece cotas gratuitas para uso pessoal com qualquer conta Google.</p>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1.5 mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors">
-                            <span>Abrir Google AI Studio</span>
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                        </a>
-                    </div>
-                </div>
+            <!-- Provider Selection Tabs in Modal -->
+            <div class="flex border-b border-gray-100 mt-4 text-xs font-semibold">
+                <button type="button" id="modal-tab-gemini" class="modal-tab-btn px-4 py-2 border-b-2 border-blue-600 text-blue-600">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Google Gemini
+                </button>
+                <button type="button" id="modal-tab-deepseek" class="modal-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                    <i class="fa-solid fa-brain mr-1"></i> DeepSeek
+                </button>
+                <button type="button" id="modal-tab-hy3" class="modal-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                    <i class="fa-solid fa-bolt mr-1"></i> Hy3 / OpenAI
+                </button>
+            </div>
 
-                <!-- Step 2 -->
-                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <span class="w-6 h-6 rounded-full bg-slate-700 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+            <!-- Tab Content: Gemini -->
+            <div id="modal-pane-gemini" class="modal-tab-pane space-y-3 py-4 text-sm text-gray-600">
+                <div class="p-3 bg-blue-50/50 rounded-xl border border-blue-100 flex items-start justify-between gap-3">
                     <div>
-                        <p class="font-semibold text-gray-800">Crie sua chave de API</p>
-                        <p class="text-xs text-gray-500 mt-0.5">No site do Google, clique no botão azul <b>"Create API key"</b> e copie a chave gerada.</p>
+                        <p class="font-semibold text-gray-800 text-xs">Crie sua chave gratuita no Google AI Studio:</p>
+                        <p class="text-[11px] text-gray-500 mt-0.5">O Google oferece 15 requisições/min gratuitas para qualquer conta Google.</p>
                     </div>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex-shrink-0 flex items-center space-x-1">
+                        <span>Obter Chave</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">GEMINI_API_KEY:</label>
+                    <input type="password" id="input-gemini-key" placeholder="AIzaSy..." class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
 
-                <!-- Step 3 -->
-                <div class="flex items-start space-x-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                    <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
-                    <div class="flex-grow">
-                        <p class="font-semibold text-gray-800">Cole sua chave abaixo</p>
-                        <div class="mt-2 space-y-2">
-                            <input 
-                                type="password" 
-                                id="input-api-key" 
-                                placeholder="AIzaSy..." 
-                                class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                            <div class="flex items-center justify-between pt-1">
-                                <button id="btn-toggle-key-visibility" type="button" class="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1">
-                                    <i class="fa-solid fa-eye text-xs"></i>
-                                    <span>Mostrar chave</span>
-                                </button>
-                                <button id="btn-save-key" type="button" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg transition-colors flex items-center space-x-1.5">
-                                    <i class="fa-solid fa-floppy-disk"></i>
-                                    <span>Salvar Chave</span>
-                                </button>
-                            </div>
-                        </div>
+            <!-- Tab Content: DeepSeek -->
+            <div id="modal-pane-deepseek" class="modal-tab-pane hidden space-y-3 py-4 text-sm text-gray-600">
+                <div class="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-semibold text-gray-800 text-xs">Obtenha sua chave no portal DeepSeek:</p>
+                        <p class="text-[11px] text-gray-500 mt-0.5">Excelente para raciocínio profundo e alternativa quando a cota do Gemini esgotar.</p>
+                    </div>
+                    <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors flex-shrink-0 flex items-center space-x-1">
+                        <span>DeepSeek Portal</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">DEEPSEEK_API_KEY:</label>
+                    <input type="password" id="input-deepseek-key" placeholder="sk-..." class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- Tab Content: Hy3 / OpenAI-compatible -->
+            <div id="modal-pane-hy3" class="modal-tab-pane hidden space-y-3 py-4 text-sm text-gray-600">
+                <div class="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
+                    <p class="font-semibold text-gray-800 text-xs">Integração Hy3 / Tencent / OpenRouter / Ollama:</p>
+                    <p class="text-[11px] text-gray-500 mt-0.5">Compatível com qualquer endpoint OpenAI, vLLM, Together AI ou Ollama local.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">API Key:</label>
+                        <input type="password" id="input-hy3-key" placeholder="Chave da API ou token..." class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Base URL (Opcional):</label>
+                        <input type="text" id="input-hy3-base-url" placeholder="https://api.together.xyz/v1" class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Modelo (Opcional):</label>
+                        <input type="text" id="input-hy3-model" placeholder="hy3 ou deepseek-chat" class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
                     </div>
                 </div>
             </div>
 
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                <button id="btn-toggle-key-visibility" type="button" class="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1">
+                    <i class="fa-solid fa-eye text-xs"></i>
+                    <span>Mostrar chaves</span>
+                </button>
+                <button id="btn-save-key" type="button" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg transition-colors flex items-center space-x-1.5">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Salvar Configurações</span>
+                </button>
+            </div>
+
             <!-- Feedback Message -->
-            <div id="key-status-msg" class="hidden text-xs p-3 rounded-lg"></div>
+            <div id="key-status-msg" class="hidden text-xs p-3 rounded-lg mt-3"></div>
         </div>
     </div>
 

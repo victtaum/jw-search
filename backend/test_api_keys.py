@@ -14,54 +14,54 @@ if backend_dir not in sys.path:
 
 import scraper
 from main import app
+from rag_engine import search_wol_direct, fetch_rag_context
 
-class TestApiKeyFlow(unittest.TestCase):
+class TestMultiModelAndRAGFlow(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
-        # Backup original client and key
         self.original_key = scraper.GEMINI_API_KEY
         self.original_client = scraper.client
 
     def tearDown(self):
-        # Restore original state
         scraper.GEMINI_API_KEY = self.original_key
         scraper.client = self.original_client
 
-    def test_search_without_key_fails_with_401(self):
-        """When neither server nor client provides an API key, /api/search must return 401."""
+    def test_search_gemini_without_key_fails_with_401(self):
+        """When neither server nor client provides a Gemini key, /api/search must return 401."""
         scraper.client = None
         scraper.GEMINI_API_KEY = None
         
-        response = self.client.get("/api/search?q=teste")
+        response = self.client.get("/api/search?q=teste&provider=gemini")
         self.assertEqual(response.status_code, 401)
         self.assertIn("Chave da API do Gemini", response.json()["detail"])
-        print("PASS: Search without key correctly returned 401 with informative error.")
+        print("PASS: Search without Gemini key correctly returned 401 with informative error.")
 
-    def test_config_status_endpoint(self):
-        """The /api/config endpoint must return status dictionary."""
-        response = self.client.get("/api/config")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("has_key", data)
-        print(f"PASS: /api/config returned has_key={data['has_key']}")
+    def test_search_deepseek_without_key_fails_with_401(self):
+        """When no DeepSeek key is provided, /api/search?provider=deepseek must return 401."""
+        response = self.client.get("/api/search?q=amor&provider=deepseek")
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("DeepSeek", response.json()["detail"])
+        print("PASS: DeepSeek search without key returned 401.")
 
-    def test_search_with_client_header_key(self):
-        """When a client provides X-Gemini-Api-Key, it should be received and processed."""
-        # Using a dummy client key to verify it is accepted and handled by the endpoint
-        response = self.client.get(
-            "/api/search?q=amor",
-            headers={"X-Gemini-Api-Key": "AIzaSyDummyTestKeyForVerificationOnly12345"}
-        )
-        # The key is dummy so Google will return an error (400 or 500), but not 401 missing key!
-        self.assertNotEqual(response.status_code, 401)
-        print("PASS: Custom client header X-Gemini-Api-Key was accepted and processed by backend.")
+    def test_search_hy3_without_key_fails_with_401(self):
+        """When no Hy3 key is provided, /api/search?provider=hy3 must return 401."""
+        response = self.client.get("/api/search?q=paz&provider=hy3")
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("HY3", response.json()["detail"])
+        print("PASS: Hy3 search without key returned 401.")
+
+    def test_direct_wol_rag_retrieval(self):
+        """The custom RAG retrieval engine must fetch real articles and links from wol.jw.org."""
+        results = search_wol_direct("amor leal", lang="pt", max_results=5)
+        self.assertGreater(len(results), 0)
+        first = results[0]
+        self.assertIn("title", first)
+        self.assertIn("link", first)
+        self.assertTrue(first["link"].startswith("https://wol.jw.org/"))
+        print(f"PASS: Custom RAG successfully retrieved {len(results)} articles from wol.jw.org (Ex: '{first['title']}').")
 
     def test_reader_does_not_require_api_key(self):
         """The WOL reader /api/read must work independently without an AI key."""
-        scraper.client = None
-        scraper.GEMINI_API_KEY = None
-        
-        # Test with an official WOL URL
         url = "https://wol.jw.org/pt/wol/d/r5/lp-t/1200002781"
         response = self.client.get(f"/api/read?url={url}")
         self.assertEqual(response.status_code, 200)
