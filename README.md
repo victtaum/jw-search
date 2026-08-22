@@ -1,4 +1,4 @@
-﻿# 📖 JW Search - Portal de Pesquisa Teocrática Inteligente
+# 📖 JW Search - Portal de Pesquisa Teocrática Inteligente
 
 O **JW Search** é uma ferramenta de pesquisa teocrática pessoal com Inteligência Artificial (RAG com Google Search Grounding), buscando respostas estruturadas exclusivamente nas fontes oficiais (**jw.org** e **wol.jw.org**).
 
@@ -39,9 +39,9 @@ No iOS, a extensão de pacotes compilados é **.ipa**. Para instalar aplicativos
 ---
 
 ## 📂 Estrutura do Projeto
-- **ackend/**: Servidor FastAPI em Python com busca RAG em IA e leitor WOL.
-- **web/**: Frontend responsivo em HTML5, Tailwind CSS e Progressive Web App (PWA) compatível com iOS/Android.
-- **ndroid/**: Código-fonte do app nativo Android em Kotlin e Jetpack Compose.
-- **ios/**: Código-fonte do app nativo iOS em Swift e SwiftUI.
+- **`backend/`**: Servidor FastAPI em Python com busca RAG em IA e leitor WOL.
+- **`web/`**: Frontend responsivo em HTML5, Tailwind CSS e Progressive Web App (PWA) compatível com iOS/Android.
+- **`android/`**: Código-fonte do app nativo Android em Kotlin e Jetpack Compose.
+- **`ios/`**: Código-fonte do app nativo iOS em Swift e SwiftUI.
 - **JW-Search.apk**: Aplicativo Android compilado pronto para instalar.
 - **start.bat**: Inicializador automático para Windows.
