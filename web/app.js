@@ -189,15 +189,15 @@ function updateExternalSearchUI(includeExternal) {
     }
 }
 
+window.toggleSearchScope = function() {
+    updateExternalSearchUI(!isExternalSearch);
+};
+
 if (btnToggleSearchScope) {
-    btnToggleSearchScope.addEventListener("click", () => {
-        updateExternalSearchUI(!isExternalSearch);
-    });
+    btnToggleSearchScope.addEventListener("click", window.toggleSearchScope);
 }
 if (btnToggleFollowupExternal) {
-    btnToggleFollowupExternal.addEventListener("click", () => {
-        updateExternalSearchUI(!isExternalSearch);
-    });
+    btnToggleFollowupExternal.addEventListener("click", window.toggleSearchScope);
 }
 
 // ==========================================
