@@ -63,8 +63,22 @@ def set_api_key(new_key: str):
         return False, f"Erro ao configurar chave: {e}"
 
 def get_api_status():
+    has_gemini = bool(client and GEMINI_API_KEY)
+    has_deepseek = bool(os.environ.get("DEEPSEEK_API_KEY"))
+    has_hy3 = bool(os.environ.get("HY3_API_KEY") or os.environ.get("OPENAI_API_KEY"))
+    
+    default_prov = "gemini"
+    if has_hy3 and not has_gemini:
+        default_prov = "hy3"
+    elif has_deepseek and not has_gemini:
+        default_prov = "deepseek"
+        
     return {
-        "has_key": bool(client and GEMINI_API_KEY),
+        "has_key": has_gemini or has_deepseek or has_hy3,
+        "has_gemini": has_gemini,
+        "has_deepseek": has_deepseek,
+        "has_hy3": has_hy3,
+        "default_provider": default_prov,
         "key_preview": f"{GEMINI_API_KEY[:4]}...{GEMINI_API_KEY[-4:]}" if GEMINI_API_KEY and len(GEMINI_API_KEY) > 8 else None
     }
 

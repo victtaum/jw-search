@@ -109,16 +109,22 @@ searchForm.addEventListener("submit", async (e) => {
     const hy3BaseUrl = localStorage.getItem("jw_search_hy3_base_url") || "";
     const hy3Model = localStorage.getItem("jw_search_hy3_model") || "";
     
-    // Check if key is available for selected provider
-    if (currentProvider === "gemini" && !geminiKey && window.serverHasKey === false) {
+    // Check if key is available for selected provider (either client local key OR server env key)
+    const serverHasKeyForCurrent = window.serverConfig ? (
+        (currentProvider === "gemini" && window.serverConfig.has_gemini) ||
+        (currentProvider === "deepseek" && window.serverConfig.has_deepseek) ||
+        (currentProvider === "hy3" && window.serverConfig.has_hy3)
+    ) : (window.serverHasKey === true && currentProvider === "gemini");
+
+    if (currentProvider === "gemini" && !geminiKey && !serverHasKeyForCurrent) {
         openKeyModal("Para realizar pesquisas com o Google Gemini, adicione sua chave gratuita.");
         switchModalTab("gemini");
         return;
-    } else if (currentProvider === "deepseek" && !deepseekKey) {
+    } else if (currentProvider === "deepseek" && !deepseekKey && !serverHasKeyForCurrent) {
         openKeyModal("Para pesquisar com o DeepSeek (RAG WOL), adicione sua chave do DeepSeek.");
         switchModalTab("deepseek");
         return;
-    } else if (currentProvider === "hy3" && !hy3Key) {
+    } else if (currentProvider === "hy3" && !hy3Key && !serverHasKeyForCurrent) {
         openKeyModal("Para pesquisar com o Hy3 / OpenAI, adicione sua chave ou token.");
         switchModalTab("hy3");
         return;
@@ -525,14 +531,14 @@ async function checkKeyStatus() {
     const dKey = localStorage.getItem("jw_search_deepseek_key");
     const hKey = localStorage.getItem("jw_search_hy3_key");
 
-    let hasKeyForActive = false;
-    if (currentProvider === "gemini" && gKey) hasKeyForActive = true;
-    else if (currentProvider === "deepseek" && dKey) hasKeyForActive = true;
-    else if (currentProvider === "hy3" && hKey) hasKeyForActive = true;
+    let hasLocalKey = false;
+    if (currentProvider === "gemini" && gKey) hasLocalKey = true;
+    else if (currentProvider === "deepseek" && dKey) hasLocalKey = true;
+    else if (currentProvider === "hy3" && hKey) hasLocalKey = true;
 
-    if (hasKeyForActive) {
-        keyBadgeText.innerHTML = `<span class="text-green-300">●</span> Chave ${currentProvider.toUpperCase()}`;
-        btnOpenKeyModal.title = `Chave configurada para ${currentProvider}. Clique para alterar.`;
+    if (hasLocalKey) {
+        keyBadgeText.innerHTML = `<span class="text-green-300">●</span> Minha Chave`;
+        btnOpenKeyModal.title = `Sua chave pessoal está ativa no navegador para ${currentProvider}. Clique para alterar.`;
         return;
     }
 
@@ -540,13 +546,20 @@ async function checkKeyStatus() {
         const res = await fetch(`${API_BASE}/api/config`);
         if (res.ok) {
             const data = await res.json();
+            window.serverConfig = data;
             window.serverHasKey = data.has_key;
-            if (data.has_key && currentProvider === "gemini") {
-                keyBadgeText.innerHTML = `<span class="text-blue-300">●</span> Chave Servidor`;
-                btnOpenKeyModal.title = "Chave padrão do servidor disponível.";
+            
+            let serverHasForActive = false;
+            if (currentProvider === "gemini" && data.has_gemini) serverHasForActive = true;
+            else if (currentProvider === "deepseek" && data.has_deepseek) serverHasForActive = true;
+            else if (currentProvider === "hy3" && data.has_hy3) serverHasForActive = true;
+
+            if (serverHasForActive) {
+                keyBadgeText.innerHTML = `<span class="text-blue-300">●</span> Servidor Ativo`;
+                btnOpenKeyModal.title = `Chave padrão do servidor ativa para ${currentProvider}. Você também pode inserir sua própria chave se preferir.`;
             } else {
                 keyBadgeText.innerHTML = `<span class="text-amber-300">●</span> Inserir Chave`;
-                btnOpenKeyModal.title = `Nenhuma chave configurada para ${currentProvider}. Clique para configurar.`;
+                btnOpenKeyModal.title = `Nenhuma chave configurada para ${currentProvider}. Clique para configurar sua chave gratuita.`;
             }
         }
     } catch (e) {
