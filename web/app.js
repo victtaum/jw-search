@@ -146,19 +146,48 @@ updateProviderUI();
 
 
 // ==========================================
-// External Internet Search UI Sync
+// Theocratic Purity & Scope UI Sync (100% JW vs Web)
 // ==========================================
-function updateExternalSearchUI(enabled) {
-    if (externalCheckbox) externalCheckbox.checked = enabled;
-    if (btnToggleFollowupExternal && labelFollowupExternal && iconFollowupExternal) {
-        if (enabled) {
-            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-amber-400 text-amber-800 bg-amber-50/95 flex items-center space-x-1.5 transition-all text-[11px] font-semibold select-none shadow-xs cursor-pointer ring-2 ring-amber-200/60";
-            iconFollowupExternal.className = "fa-solid fa-globe text-amber-600 animate-pulse text-[11px]";
-            labelFollowupExternal.textContent = "Fontes além do JW: Ativadas";
+const searchCardScopeBadge = document.getElementById("search-card-scope-badge");
+const tooltipScopeTitle = document.getElementById("tooltip-scope-title");
+const tooltipScopeDesc = document.getElementById("tooltip-scope-desc");
+
+function updateExternalSearchUI(includeExternal) {
+    if (externalCheckbox) externalCheckbox.checked = includeExternal;
+    
+    // Update Search Card scope badge
+    if (searchCardScopeBadge) {
+        if (!includeExternal) {
+            searchCardScopeBadge.innerHTML = `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs">
+                    <i class="fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]"></i>
+                    <span>100% Acervo Oficial JW (Protegido)</span>
+                </span>
+            `;
         } else {
-            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:border-amber-400 hover:text-amber-800 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer";
-            iconFollowupExternal.className = "fa-solid fa-globe text-slate-400 text-[11px]";
-            labelFollowupExternal.textContent = "Fontes além do JW: Desativadas";
+            searchCardScopeBadge.innerHTML = `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-300">
+                    <i class="fa-solid fa-globe text-slate-500 text-[11px]"></i>
+                    <span>Incluindo Web Externa (Fontes Seculares)</span>
+                </span>
+            `;
+        }
+    }
+
+    // Update Followup Scope button & Tooltip
+    if (btnToggleFollowupExternal && labelFollowupExternal && iconFollowupExternal) {
+        if (!includeExternal) {
+            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-emerald-300 text-emerald-900 bg-emerald-50/95 flex items-center space-x-1.5 transition-all text-[11px] font-semibold select-none shadow-xs cursor-pointer ring-2 ring-emerald-200/60";
+            iconFollowupExternal.className = "fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]";
+            labelFollowupExternal.textContent = "100% Acervo Oficial JW";
+            if (tooltipScopeTitle) tooltipScopeTitle.innerHTML = `<i class="fa-solid fa-shield-halved text-xs"></i><span>Modo Teocrático Protegido (Recomendado)</span>`;
+            if (tooltipScopeDesc) tooltipScopeDesc.innerHTML = `Pesquisa <b>100% focada nas Escrituras e nas publicações oficiais</b> (wol.jw.org e jw.org), blindada contra opiniões pessoais, fóruns ou especulações da internet.`;
+        } else {
+            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:border-slate-400 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer";
+            iconFollowupExternal.className = "fa-solid fa-globe text-slate-500 text-[11px]";
+            labelFollowupExternal.textContent = "Web Externa Incluída";
+            if (tooltipScopeTitle) tooltipScopeTitle.innerHTML = `<i class="fa-solid fa-globe text-xs text-amber-400"></i><span>Web Externa Incluída</span>`;
+            if (tooltipScopeDesc) tooltipScopeDesc.innerHTML = `A IA também consultará dicionários seculares e páginas da internet. Pode incluir ideias ou teorias não teocráticas.`;
         }
     }
 }
