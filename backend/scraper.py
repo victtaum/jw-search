@@ -228,7 +228,7 @@ PERGUNTA DO USUÁRIO: "{query}"
 
     try:
         # Run search grounding
-        response = client.models.generate_content(
+        response = active_client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(

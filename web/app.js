@@ -58,7 +58,7 @@ if (btnHeaderHome) {
 // ==========================================
 // Provider & Multi-Model Engine Selector
 // ==========================================
-let currentProvider = localStorage.getItem("jw_search_active_provider") || "gemini";
+let currentProvider = localStorage.getItem("jw_search_active_provider") || "hy3";
 
 const provBtns = document.querySelectorAll(".prov-selector-btn");
 const activeEngineBadge = document.getElementById("active-engine-badge");

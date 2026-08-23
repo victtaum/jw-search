@@ -44,15 +44,20 @@ def api_search(
     if not q.strip():
         return {"ai_response": "", "results": []}
     
-    prov = (provider or "gemini").lower()
+    prov = (provider or "hy3").lower()
     
     # 1. Custom Theocratic RAG for DeepSeek
     if prov == "deepseek":
         active_key = x_deepseek_api_key or x_api_key or api_key or os.environ.get("DEEPSEEK_API_KEY")
         if not active_key:
+            # Fallback to Hy3 or Gemini if available
+            hy3_key = x_hy3_api_key or os.environ.get("HY3_API_KEY") or os.environ.get("OPENAI_API_KEY")
+            if hy3_key:
+                print("DeepSeek key not found. Falling back to Hy3...")
+                return perform_custom_rag_search(query=q.strip(), provider="hy3", api_key=hy3_key, include_external=external, lang=lang)
             raise HTTPException(
                 status_code=401,
-                detail="Chave da API do DeepSeek não informada. Adicione sua chave nas configurações para pesquisar com DeepSeek."
+                detail="Chave da API do DeepSeek não informada. Adicione sua chave nas configurações para pesquisar."
             )
         try:
             return perform_custom_rag_search(
@@ -65,15 +70,33 @@ def api_search(
                 lang=lang
             )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            # Fallback to Gemini on error
+            try:
+                gemini_key = x_gemini_api_key or os.environ.get("GEMINI_API_KEY")
+                return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=gemini_key)
+            except Exception:
+                raise HTTPException(status_code=500, detail=str(e))
 
-    # 2. Custom Theocratic RAG for Hy3 / Tencent / OpenAI-compatible
+    # 2. Primary Default: Hy3 / Tencent / OpenRouter (with automatic fallback to Gemini)
     elif prov in ["hy3", "tencent", "hunyuan", "openai"]:
         active_key = x_hy3_api_key or x_api_key or api_key or os.environ.get("HY3_API_KEY") or os.environ.get("OPENAI_API_KEY")
+        gemini_key = x_gemini_api_key or os.environ.get("GEMINI_API_KEY")
+        has_gemini = bool(gemini_key)
+        
         if not active_key:
+            # If Hy3 has no key, try Gemini fallback immediately if available
+            if has_gemini:
+                print("Hy3 key not found. Falling back to Google Gemini Grounding...")
+                try:
+                    return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=gemini_key)
+                except Exception as g_err:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Nenhuma chave ativa encontrada (Hy3 ou Gemini). Configure sua chave gratuita nas configurações para pesquisar."
+                    )
             raise HTTPException(
                 status_code=401,
-                detail=f"Chave da API ({prov.upper()}) não informada. Adicione sua chave nas configurações para pesquisar."
+                detail="Chave da API (Hy3/OpenRouter) não informada. Adicione sua chave nas configurações para pesquisar."
             )
         try:
             return perform_custom_rag_search(
@@ -86,32 +109,43 @@ def api_search(
                 lang=lang
             )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            if has_gemini:
+                print(f"Hy3 failed ({e}). Attempting automatic fallback to Google Gemini...")
+                try:
+                    return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=gemini_key)
+                except Exception as g_err:
+                    pass
+            raise HTTPException(
+                status_code=429 if "429" in str(e) else 500,
+                detail="As cotas padrão do Hy3 e do Gemini falharam. Adicione sua própria chave gratuita no painel de configurações para continuar pesquisando sem limites."
+            )
 
-    # 3. Default: Google Gemini with Grounding (with auto-fallback when quota runs out)
+    # 3. Google Gemini with Grounding (with auto-fallback to Hy3)
     else:
         client_key = x_gemini_api_key or x_api_key or api_key
+        hy3_key = x_hy3_api_key or os.environ.get("HY3_API_KEY") or os.environ.get("OPENAI_API_KEY")
         try:
             return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=client_key)
-        except ApiKeyRequiredException as e:
-            raise HTTPException(status_code=401, detail=str(e))
+        except ApiKeyRequiredException:
+            if hy3_key:
+                print("Gemini key required. Falling back to Hy3 RAG...")
+                return perform_custom_rag_search(query=q.strip(), provider="hy3", api_key=hy3_key, include_external=external, lang=lang)
+            raise HTTPException(status_code=401, detail="Chave do Google Gemini não informada. Adicione sua chave nas configurações.")
         except Exception as e:
             err_str = str(e)
-            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
-                # Check if DeepSeek or Hy3 keys are available for automatic fallback
-                deepseek_key = x_deepseek_api_key or os.environ.get("DEEPSEEK_API_KEY")
-                if deepseek_key:
-                    print("Gemini quota exhausted. Automatically falling back to DeepSeek RAG engine...")
+            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower() or "500" in err_str:
+                if hy3_key:
+                    print("Gemini failed/quota exhausted. Automatically falling back to Hy3 RAG engine...")
                     return perform_custom_rag_search(
                         query=q.strip(),
-                        provider="deepseek",
-                        api_key=deepseek_key,
+                        provider="hy3",
+                        api_key=hy3_key,
                         include_external=external,
                         lang=lang
                     )
                 raise HTTPException(
                     status_code=429,
-                    detail="Cota da API do Gemini esgotada no momento. Alterne para o DeepSeek ou Hy3 nas configurações de IA."
+                    detail="Cota da API do Gemini esgotada. Configure sua chave gratuita do Hy3 ou DeepSeek nas configurações."
                 )
             raise HTTPException(status_code=500, detail=err_str)
 

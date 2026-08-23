@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 import unittest
 from fastapi.testclient import TestClient
@@ -33,7 +33,7 @@ class TestMultiModelAndRAGFlow(unittest.TestCase):
         
         response = self.client.get("/api/search?q=teste&provider=gemini")
         self.assertEqual(response.status_code, 401)
-        self.assertIn("Chave da API do Gemini", response.json()["detail"])
+        self.assertIn("Gemini", response.json()["detail"])
         print("PASS: Search without Gemini key correctly returned 401 with informative error.")
 
     def test_search_deepseek_without_key_fails_with_401(self):
@@ -43,12 +43,22 @@ class TestMultiModelAndRAGFlow(unittest.TestCase):
         self.assertIn("DeepSeek", response.json()["detail"])
         print("PASS: DeepSeek search without key returned 401.")
 
-    def test_search_hy3_without_key_fails_with_401(self):
-        """When no Hy3 key is provided, /api/search?provider=hy3 must return 401."""
-        response = self.client.get("/api/search?q=paz&provider=hy3")
-        self.assertEqual(response.status_code, 401)
-        self.assertIn("HY3", response.json()["detail"])
-        print("PASS: Hy3 search without key returned 401.")
+    def test_search_hy3_without_any_keys_fails_with_401(self):
+        """When neither Hy3 nor Gemini keys are provided anywhere, /api/search?provider=hy3 must return 401."""
+        scraper.client = None
+        scraper.GEMINI_API_KEY = None
+        orig_gem = os.environ.pop("GEMINI_API_KEY", None)
+        orig_hy3 = os.environ.pop("HY3_API_KEY", None)
+        orig_oa = os.environ.pop("OPENAI_API_KEY", None)
+        try:
+            response = self.client.get("/api/search?q=paz&provider=hy3")
+            self.assertEqual(response.status_code, 401)
+            self.assertIn("chave", response.json()["detail"].lower())
+            print("PASS: Hy3 search without any server/client keys correctly returned 401.")
+        finally:
+            if orig_gem: os.environ["GEMINI_API_KEY"] = orig_gem
+            if orig_hy3: os.environ["HY3_API_KEY"] = orig_hy3
+            if orig_oa: os.environ["OPENAI_API_KEY"] = orig_oa
 
     def test_direct_wol_rag_retrieval(self):
         """The custom RAG retrieval engine must fetch real articles and links from wol.jw.org."""
