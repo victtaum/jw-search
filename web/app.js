@@ -450,32 +450,45 @@ function renderConversationThread() {
         if (turn.results && turn.results.length > 0) {
             sourcesHtml = `
                 <div class="bg-slate-50/80 border-b border-gray-100 px-5 py-3">
-                    <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center justify-between mb-2.5">
                         <span class="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-book-bookmark text-amber-500"></i> Fontes Teocráticas Consultadas (${turn.results.length})
+                            <i class="fa-solid fa-book-bookmark text-amber-500"></i> Fontes Teocráticas Oficiais Consultadas (${turn.results.length})
                         </span>
                     </div>
-                    <div class="flex gap-2.5 overflow-x-auto pb-1.5 no-scrollbar">`;
+                    <div class="flex gap-3 overflow-x-auto pb-2 no-scrollbar">`;
             turn.results.forEach(res => {
+                const pub = res.publication || 'Biblioteca Online';
+                let badgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+                let pubIcon = "fa-book";
+                if (pub.includes("Sentinela")) { badgeClass = "bg-blue-50 text-blue-700 border-blue-200"; pubIcon = "fa-tower-observation"; }
+                else if (pub.includes("Despertai")) { badgeClass = "bg-amber-50 text-amber-700 border-amber-200"; pubIcon = "fa-sun"; }
+                else if (pub.includes("Perspicaz")) { badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200"; pubIcon = "fa-compass"; }
+                else if (pub.includes("Bíblia")) { badgeClass = "bg-purple-50 text-purple-700 border-purple-200"; pubIcon = "fa-book-bible"; }
+                else if (pub.includes("Histórias")) { badgeClass = "bg-rose-50 text-rose-700 border-rose-200"; pubIcon = "fa-graduation-cap"; }
+
                 sourcesHtml += `
-                    <div class="bg-white border border-gray-200 rounded-xl p-2.5 flex-shrink-0 w-64 max-w-[80vw] shadow-xs flex flex-col justify-between">
+                    <div class="bg-white border border-gray-200 rounded-xl p-3 flex-shrink-0 w-72 max-w-[85vw] shadow-xs flex flex-col justify-between hover:border-blue-300 transition-colors">
                         <div>
-                            <span class="text-[10px] font-semibold text-slate-500 uppercase block truncate">${escapeHtml(res.publication || 'WOL')}</span>
-                            <h4 class="text-xs font-bold text-slate-800 leading-tight line-clamp-2 my-1">${escapeHtml(res.title)}</h4>
+                            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass} mb-1.5 truncate max-w-full">
+                                <i class="fa-solid ${pubIcon} text-[9px]"></i> ${escapeHtml(pub)}
+                            </span>
+                            <h4 class="text-xs font-bold text-slate-800 leading-snug line-clamp-2 my-1" title="${escapeHtml(res.title)}">${escapeHtml(res.title)}</h4>
+                            ${res.snippet ? `<p class="text-[11px] text-gray-500 line-clamp-2 mt-1 leading-relaxed">${escapeHtml(res.snippet)}</p>` : ''}
                         </div>
-                        <div class="flex items-center justify-between pt-2 mt-2 border-t border-gray-50 text-[11px]">
-                            <button class="btn-open-wol-reader text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1" data-url="${res.link}" data-title="${escapeHtml(res.title)}" data-pub="${escapeHtml(res.publication || '')}">
-                                <i class="fa-solid fa-book-open text-[10px]"></i> Ler no app
+                        <div class="flex items-center justify-between pt-2.5 mt-2.5 border-t border-gray-100 text-[11px]">
+                            <button class="btn-open-wol-reader text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 transition-colors" data-url="${res.link}" data-title="${escapeHtml(res.title)}" data-pub="${escapeHtml(pub)}">
+                                <i class="fa-solid fa-book-open text-[11px]"></i> Ler no app
                             </button>
-                            <a href="${res.link}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-gray-600">
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            <a href="${res.link}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-gray-600 flex items-center gap-1 text-[10px] transition-colors" title="Abrir link original">
+                                <span>Site Oficial</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                             </a>
                         </div>
                     </div>`;
             });
             sourcesHtml += `</div></div>`;
         }
-        const bodyHtml = `<div class="p-6 md:p-8 markdown-body prose max-w-none">${parseMarkdownToHtml(turn.answer)}</div>`;
+        const bodyHtml = `<div class="p-6 md:p-8 markdown-body prose max-w-none">${parseMarkdownToHtml(turn.answer || 'Gerando análise teocrática...')}</div>`;
         turnCard.innerHTML = headerHtml + sourcesHtml + bodyHtml;
         chatMessagesList.appendChild(turnCard);
     });

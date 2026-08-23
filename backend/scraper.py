@@ -127,32 +127,77 @@ def infer_publication_info(title, url):
     url_lower = (url or "").lower()
     title_lower = (title or "").lower()
     
-    if any(k in url_lower or k in title_lower for k in ["sentinela", "watchtower"]) or re.search(r'/w\d{4}', url_lower):
+    if "wp" in url_lower or "/sentinela-fevereiro" in url_lower or "/sentinela-janeiro" in url_lower or "/sentinela-março" in url_lower:
+        return "A Sentinela (Público)"
+    elif "ws" in url_lower or "sentinela-estudo" in url_lower:
+        return "A Sentinela (Edição de Estudo)"
+    elif any(k in url_lower for k in ["/w20", "/w19", "/w18", "/w17", "/w16", "/w15", "/w14", "/w13", "/w12", "/w11", "/w10", "/w0", "/w9", "/w8", "/w7", "/w6"]) or "sentinela" in url_lower or "watchtower" in url_lower:
         return "A Sentinela"
-    elif any(k in url_lower or k in title_lower for k in ["despertai", "awake"]) or re.search(r'/g\d{4}', url_lower):
+    elif any(k in url_lower or k in title_lower for k in ["/g20", "/g19", "/g18", "/g17", "/g16", "/g15", "/g14", "/g13", "/g12", "/g0", "/g9", "/g8", "/g7", "despertai", "awake"]):
         return "Despertai!"
-    elif any(k in url_lower or k in title_lower for k in ["it-1", "it-2", "perspicaz", "insight"]):
+    elif any(k in url_lower or k in title_lower for k in ["it-1", "it-2", "perspicaz", "insight", "estudo-perspicaz"]):
         return "Estudo Perspicaz das Escrituras"
-    elif any(k in url_lower or k in title_lower for k in ["nwt", "bi12", "biblia", "bible"]):
+    elif any(k in url_lower or k in title_lower for k in ["nwt", "bi12", "biblia", "bible", "/bc/", "/b/"]):
         return "Bíblia Sagrada (Tradução do Novo Mundo)"
-    elif any(k in url_lower or k in title_lower for k in ["perguntas", "ijw"]):
+    elif any(k in url_lower or k in title_lower for k in ["ijwbq", "perguntas-biblicas", "perguntas"]):
         return "Perguntas Bíblicas Respondidas"
+    elif any(k in url_lower or k in title_lower for k in ["ijwyp", "jovens-perguntam"]):
+        return "Os Jovens Perguntam"
+    elif any(k in url_lower for k in ["/lfb/", "/my/", "historias-biblia", "aprenda-historias"]):
+        return "Histórias da Bíblia"
+    elif any(k in url_lower for k in ["/mwb", "vida-e-ministerio"]):
+        return "Apostila Vida e Ministério"
+    elif any(k in url_lower for k in ["/lff", "seja-feliz-para-sempre"]):
+        return "Livro Seja Feliz para Sempre!"
     elif "wol.jw.org" in url_lower:
-        return "WOL - Biblioteca Online"
+        return "Biblioteca Online (WOL)"
     elif "jw.org" in url_lower:
-        return "JW.ORG - Site Oficial"
+        return "JW.ORG (Site Oficial)"
     else:
         return urllib.parse.urlparse(url).netloc or "Fonte da Internet"
 
 def clean_result_title(title, url):
-    if not title or title.strip() in ["jw.org", "WOL", "WOL - Biblioteca", "Link de Referência", "Artigo de Referência"]:
+    raw_title = urllib.parse.unquote((title or "").strip())
+    url_lower = (url or "").lower()
+
+    # If title is generic or just a code
+    if not raw_title or raw_title.lower() in ["jw.org", "wol", "wol - biblioteca", "link de referência", "artigo de referência", "início", "pesquisar"]:
         path = urllib.parse.urlparse(url).path.strip("/")
-        parts = [p for p in path.split("/") if p and p not in ["pt", "en", "es", "wol", "d", "r5", "lp-t"]]
+        parts = [p for p in path.split("/") if p and p not in ["pt", "en", "es", "wol", "d", "r5", "lp-t", "biblioteca", "revistas", "livros"]]
         if parts:
             slug = urllib.parse.unquote(parts[-1]).replace("-", " ").replace("_", " ")
-            return slug.capitalize()
-        return "Artigo da Biblioteca"
-    return urllib.parse.unquote(title.strip())
+            raw_title = slug
+
+    # If title looks like wp20130201 or g20040408
+    if re.match(r'^(wp|ws|w|g)\d{6,8}$', raw_title, re.I):
+        pub_type = "A Sentinela" if raw_title.lower().startswith("w") else "Despertai!"
+        year = raw_title[2:6] if raw_title.lower().startswith("wp") or raw_title.lower().startswith("ws") else raw_title[1:5]
+        return f"{pub_type} ({year})"
+
+    # Capitalize and clean slug formatting
+    clean = re.sub(r'\s+', ' ', raw_title.replace("-", " ").replace("_", " ")).strip()
+    words = clean.split()
+    capitalized = []
+    lower_words = {"de", "do", "da", "dos", "das", "em", "no", "na", "nos", "nas", "por", "para", "com", "e", "o", "a", "os", "as", "um", "uma"}
+    for i, w in enumerate(words):
+        if i == 0 or w.lower() not in lower_words:
+            capitalized.append(w.capitalize())
+        else:
+            capitalized.append(w.lower())
+    
+    formatted = " ".join(capitalized)
+    
+    # Specific known biblical themes polish
+    if "moises" in formatted.lower():
+        formatted = formatted.replace("Moises", "Moisés").replace("moises", "Moisés")
+    if "fe" in formatted.lower():
+        formatted = formatted.replace("Fe", "Fé").replace(" fe ", " fé ")
+    if "biblia" in formatted.lower():
+        formatted = formatted.replace("Biblia", "Bíblia")
+    if "jeova" in formatted.lower():
+        formatted = formatted.replace("Jeova", "Jeová")
+
+    return formatted or "Publicação Oficial"
 
 
 

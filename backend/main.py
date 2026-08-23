@@ -244,23 +244,25 @@ def handle_theocratic_search(
     if not q.strip():
         return {"ai_response": "", "results": []}
     
-    prov = (provider or "hy3").lower()
+    prov = (provider or "gemini").lower()
     
     # 1. Custom Theocratic RAG for DeepSeek
     if prov == "deepseek":
         active_key = x_deepseek_api_key or x_api_key or api_key or os.environ.get("DEEPSEEK_API_KEY")
         if not active_key:
-            # Fallback to Hy3 or Gemini if available
+            # Fallback to Gemini or Hy3 if available
+            gemini_key = x_gemini_api_key or os.environ.get("GEMINI_API_KEY")
+            if gemini_key:
+                return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=gemini_key, history=history)
             hy3_key = x_hy3_api_key or os.environ.get("HY3_API_KEY") or os.environ.get("OPENAI_API_KEY")
             if hy3_key:
-                print("DeepSeek key not found. Falling back to Hy3...")
                 return perform_custom_rag_search(query=q.strip(), provider="hy3", api_key=hy3_key, include_external=external, lang=lang, history=history)
             raise HTTPException(
                 status_code=401,
                 detail="Chave da API do DeepSeek não informada. Adicione sua chave nas configurações para pesquisar."
             )
         try:
-            return perform_custom_rag_search(
+            res = perform_custom_rag_search(
                 query=q.strip(),
                 provider="deepseek",
                 api_key=active_key,
@@ -270,37 +272,39 @@ def handle_theocratic_search(
                 lang=lang,
                 history=history
             )
+            if res.get("ai_response") and len(res["ai_response"].strip()) > 20:
+                return res
+            # If DeepSeek produced empty output, fallback to Gemini
+            gemini_key = x_gemini_api_key or os.environ.get("GEMINI_API_KEY")
+            if gemini_key:
+                return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=gemini_key, history=history)
+            return res
         except Exception as e:
-            # Fallback to Gemini on error
             try:
                 gemini_key = x_gemini_api_key or os.environ.get("GEMINI_API_KEY")
                 return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=gemini_key, history=history)
             except Exception:
                 raise HTTPException(status_code=500, detail=str(e))
 
-    # 2. Primary Default: Hy3 / Tencent / OpenRouter (with automatic fallback to Gemini)
+    # 2. Hy3 / Tencent / OpenRouter (with automatic fallback to Gemini)
     elif prov in ["hy3", "tencent", "hunyuan", "openai"]:
         active_key = x_hy3_api_key or x_api_key or api_key or os.environ.get("HY3_API_KEY") or os.environ.get("OPENAI_API_KEY")
         gemini_key = x_gemini_api_key or os.environ.get("GEMINI_API_KEY")
         has_gemini = bool(gemini_key)
         
         if not active_key:
-            # If Hy3 has no key, try Gemini fallback immediately if available
+            # If Hy3 has no key, try Gemini fallback immediately
             if has_gemini:
-                print("Hy3 key not found. Falling back to Google Gemini Grounding...")
                 try:
                     return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=gemini_key, history=history)
                 except Exception as g_err:
-                    raise HTTPException(
-                        status_code=401,
-                        detail="Nenhuma chave ativa encontrada (Hy3 ou Gemini). Configure sua chave gratuita nas configurações para pesquisar."
-                    )
+                    pass
             raise HTTPException(
                 status_code=401,
                 detail="Chave da API (Hy3/OpenRouter) não informada. Adicione sua chave nas configurações para pesquisar."
             )
         try:
-            return perform_custom_rag_search(
+            res = perform_custom_rag_search(
                 query=q.strip(),
                 provider=prov,
                 api_key=active_key,
@@ -310,6 +314,13 @@ def handle_theocratic_search(
                 lang=lang,
                 history=history
             )
+            if res.get("ai_response") and len(res["ai_response"].strip()) > 20:
+                return res
+            # If Hy3 returned empty text, transparently fallback to Gemini
+            if has_gemini:
+                print("Hy3 returned empty response. Falling back to Google Gemini Grounding...")
+                return perform_ai_grounded_search(q.strip(), include_external=external, lang=lang, custom_api_key=gemini_key, history=history)
+            return res
         except Exception as e:
             if has_gemini:
                 print(f"Hy3 failed ({e}). Attempting automatic fallback to Google Gemini...")
