@@ -32,39 +32,147 @@
         .reader-content {
             font-family: 'Lora', serif;
         }
+        /* Markdown Tables Styling */
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            border: 1px solid #E2E8F0;
+        }
+        .markdown-body th, .markdown-body td {
+            border: 1px solid #E2E8F0;
+            padding: 0.625rem 0.875rem;
+            text-align: left;
+        }
+        .markdown-body th {
+            background-color: #F1F5F9;
+            font-weight: 600;
+            color: #0F172A;
+        }
+        .markdown-body tr:nth-child(even) {
+            background-color: #F8FAFC;
+        }
+        .markdown-body blockquote {
+            border-left: 4px solid #3B82F6;
+            padding-left: 1rem;
+            color: #475569;
+            font-style: italic;
+            margin: 0.75rem 0;
+            background: #EFF6FF;
+            padding: 0.5rem 1rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+        /* Print Styles for PDF Export */
+        @media print {
+            header, footer, #search-card, #followup-container, .no-print, button {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .chat-turn {
+                page-break-inside: avoid;
+                border: 1px solid #ddd !important;
+                box-shadow: none !important;
+                margin-bottom: 1.5rem !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col text-gray-800">
 
     <!-- Header / Navbar -->
-    <header class="bg-slate-700 text-white shadow-md sticky top-0 z-30">
-        <div class="max-w-6xl mx-auto px-4 py-3.5 flex justify-between items-center">
-            <a href="/" id="btn-header-home" class="flex items-center space-x-3 cursor-pointer group hover:opacity-90 transition-opacity select-none" title="Voltar ao início">
+    <header class="bg-slate-700 text-white shadow-md sticky top-0 z-30 no-print">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="/" id="btn-header-home" class="flex items-center space-x-3 cursor-pointer group hover:opacity-90 transition-opacity select-none" title="Início / Novo Estudo">
                 <div class="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-600/70 flex items-center justify-center text-blue-300 shadow-inner group-hover:scale-105 transition-transform">
                     <i class="fa-solid fa-book-open-reader text-xl"></i>
                 </div>
-                <span class="text-xl font-bold tracking-wide text-white group-hover:text-blue-100 transition-colors">JW Search</span>
+                <div>
+                    <span class="text-xl font-bold tracking-wide text-white group-hover:text-blue-100 transition-colors">JW Search</span>
+                    <span class="text-[10px] text-blue-200 block -mt-1 font-normal">Estudo & Chat RAG</span>
+                </div>
             </a>
-            <div class="flex items-center space-x-3">
+            
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Import Session Button -->
+                <input type="file" id="file-import-study" accept=".json,.md" class="hidden">
+                <button id="btn-import-study" class="text-xs bg-slate-600/90 hover:bg-slate-500 px-3 py-1.5 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5 shadow-sm" title="Importar arquivo de estudo (.json ou .md)">
+                    <i class="fa-solid fa-file-import text-blue-300"></i>
+                    <span class="hidden md:inline">Importar</span>
+                </button>
+
+                <!-- Saved Studies / History Button -->
+                <button id="btn-open-history" class="text-xs bg-slate-600/90 hover:bg-slate-500 px-3 py-1.5 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5 shadow-sm" title="Histórico de estudos salvos">
+                    <i class="fa-solid fa-clock-rotate-left text-amber-300"></i>
+                    <span class="hidden md:inline">Histórico</span>
+                    <span id="history-count-badge" class="hidden px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px] font-bold">0</span>
+                </button>
+
+                <!-- Export / Save Dropdown -->
+                <div class="relative inline-block text-left" id="export-dropdown-wrapper">
+                    <button id="btn-export-dropdown" class="text-xs bg-slate-800 hover:bg-slate-900 px-3 py-1.5 rounded-lg text-white border border-slate-600 transition-colors flex items-center space-x-1.5 shadow-sm">
+                        <i class="fa-solid fa-cloud-arrow-down text-green-400"></i>
+                        <span>Exportar</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>
+                    </button>
+                    <!-- Dropdown Menu -->
+                    <div id="export-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 text-xs text-gray-700">
+                        <div class="px-3 py-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-50">Opções de Exportação</div>
+                        <button id="btn-export-md" class="w-full text-left px-3 py-2 hover:bg-blue-50 hover:text-blue-700 flex items-center space-x-2 transition-colors">
+                            <i class="fa-solid fa-file-lines text-blue-600 w-4"></i>
+                            <div>
+                                <span class="font-semibold block">Markdown (.md)</span>
+                                <span class="text-[10px] text-gray-400">Ideal para notas e backup leve</span>
+                            </div>
+                        </button>
+                        <button id="btn-export-json" class="w-full text-left px-3 py-2 hover:bg-amber-50 hover:text-amber-700 flex items-center space-x-2 transition-colors">
+                            <i class="fa-solid fa-file-code text-amber-600 w-4"></i>
+                            <div>
+                                <span class="font-semibold block">Sessão Completa (.json)</span>
+                                <span class="text-[10px] text-gray-400">Permite importar e continuar conversa</span>
+                            </div>
+                        </button>
+                        <button id="btn-export-docx" class="w-full text-left px-3 py-2 hover:bg-indigo-50 hover:text-indigo-700 flex items-center space-x-2 transition-colors">
+                            <i class="fa-solid fa-file-word text-indigo-600 w-4"></i>
+                            <div>
+                                <span class="font-semibold block">Word (.docx)</span>
+                                <span class="text-[10px] text-gray-400">Documento formatado para edição</span>
+                            </div>
+                        </button>
+                        <button id="btn-export-pdf" class="w-full text-left px-3 py-2 hover:bg-rose-50 hover:text-rose-700 flex items-center space-x-2 transition-colors border-t border-gray-50">
+                            <i class="fa-solid fa-file-pdf text-rose-600 w-4"></i>
+                            <div>
+                                <span class="font-semibold block">Imprimir / Salvar PDF</span>
+                                <span class="text-[10px] text-gray-400">Layout limpo para impressão</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- API Key Manager Button -->
                 <button id="btn-open-key-modal" class="text-xs bg-slate-600 hover:bg-slate-500 px-3 py-1.5 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5 shadow-sm">
                     <i class="fa-solid fa-key text-amber-300"></i>
                     <span id="key-badge-text">Chaves IA</span>
                 </button>
-                <span class="text-xs bg-slate-600 px-2.5 py-1.5 rounded-lg text-slate-300 border border-slate-500 hidden sm:inline-block">v1.4</span>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8">
+    <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-6">
         
-        <!-- Search Card -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8">
+        <!-- Search Card (Initial State) -->
+        <div id="search-card" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 mb-6 transition-all">
             <h1 class="text-2xl font-bold text-gray-800 mb-2 text-center md:text-left">
-                Pesquisa Teocrática Unificada
+                Pesquisa Teocrática & Chat Contínuo
             </h1>
             <p class="text-sm text-gray-500 mb-6 text-center md:text-left">
-                Consulte assuntos e dúvidas diretamente na Biblioteca Online (WOL) e no site oficial JW.org.
+                Consulte a Biblioteca Online (WOL), peça tabelas comparativas, resumos e interaja com o contexto.
             </p>
             
             <form id="search-form" class="space-y-4">
@@ -82,7 +190,7 @@
                         </button>
                     </div>
                     <span id="active-engine-badge" class="text-[11px] text-gray-500 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
-                        Motor: <b>Gemini + Grounding</b>
+                        Motor: <b class="text-amber-600">Hy3 / OpenAI (RAG WOL)</b>
                     </span>
                 </div>
 
@@ -92,13 +200,14 @@
                     <input 
                         type="text" 
                         id="search-input" 
-                        placeholder="Digite o assuntou ou dúvida" 
+                        placeholder="Digite o assunto, pergunta ou pedido de estudo..." 
                         class="w-full pl-11 pr-24 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-base"
                         required
                         autofocus
                     >
                     <button 
                         type="submit" 
+                        id="btn-main-search"
                         class="absolute right-2 px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2"
                     >
                         <span>Buscar</span>
@@ -127,33 +236,132 @@
             </form>
         </div>
 
-        <!-- Search Status / Loading -->
+        <!-- Conversational Chat Thread View -->
+        <div id="chat-thread-container" class="space-y-6 mb-24">
+            <!-- Dynamic list of turns injected here -->
+            <div id="chat-messages-list" class="space-y-6"></div>
+        </div>
+
+        <!-- Search Status / Loading Animation -->
         <div id="status-container" class="hidden text-center py-8">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-slate-700 border-t-transparent mb-3"></div>
-            <p class="text-gray-500 text-sm">Pesquisando extensivamente nas fontes...</p>
+            <p id="status-text" class="text-gray-500 text-sm">Pesquisando extensivamente no acervo oficial...</p>
         </div>
 
-        <!-- AI Response Section -->
-        <div id="ai-response-card" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 mb-6 border-l-4 border-l-slate-700">
-            <div class="flex items-center space-x-3 mb-4 text-slate-700">
-                <i class="fa-solid fa-wand-magic-sparkles text-xl text-blue-500"></i>
-                <h2 class="text-lg font-bold tracking-wide">Ponderações da Inteligência Artificial</h2>
-            </div>
-            <div id="ai-response-content" class="prose max-w-none text-gray-800 leading-relaxed text-sm md:text-base space-y-4">
-                <!-- AI text will be parsed and injected here -->
-            </div>
-        </div>
+        <!-- Sticky Follow-Up Interactive Bar (When conversation is active) -->
+        <div id="followup-container" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 py-3.5 px-4 shadow-lg z-20">
+            <div class="max-w-4xl mx-auto space-y-2.5">
+                <!-- Quick Suggestions Pills -->
+                <div class="flex items-center space-x-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+                    <span class="text-gray-400 font-semibold flex-shrink-0"><i class="fa-solid fa-wand-magic-sparkles text-amber-500 mr-1"></i> Sugestões:</span>
+                    <button type="button" class="btn-prompt-pill px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 rounded-full border border-gray-200 text-gray-600 flex-shrink-0 transition-colors" data-prompt="Crie uma tabela comparativa com os pontos principais">
+                        📊 Tabela Comparativa
+                    </button>
+                    <button type="button" class="btn-prompt-pill px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 rounded-full border border-gray-200 text-gray-600 flex-shrink-0 transition-colors" data-prompt="Faça um resumo em tópicos práticos para estudo em família">
+                        👨‍👩‍👧‍👦 Estudo em Família
+                    </button>
+                    <button type="button" class="btn-prompt-pill px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 rounded-full border border-gray-200 text-gray-600 flex-shrink-0 transition-colors" data-prompt="Quais outros textos bíblicos complementam esse entendimento?">
+                        📜 Textos Bíblicos
+                    </button>
+                    <button type="button" class="btn-prompt-pill px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 rounded-full border border-gray-200 text-gray-600 flex-shrink-0 transition-colors" data-prompt="Organize um esboço estruturado com títulos e subtítulos">
+                        📝 Esboço Estruturado
+                    </button>
+                </div>
 
-        <!-- Results List -->
-        <div id="results-container" class="space-y-4">
-            <!-- Results will be injected here by app.js -->
-            <div class="text-center py-12 text-gray-400">
-                <i class="fa-solid fa-search text-4xl mb-3"></i>
-                <p class="text-sm">Os resultados da pesquisa aparecerão aqui.</p>
+                <!-- Interactive Follow-up Input Row -->
+                <form id="followup-form" class="flex items-center gap-2">
+                    <button type="button" id="btn-new-chat" class="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors flex-shrink-0" title="Iniciar nova conversa">
+                        <i class="fa-solid fa-plus mr-1"></i> Novo Estudo
+                    </button>
+                    <div class="relative flex-grow flex items-center">
+                        <input 
+                            type="text" 
+                            id="followup-input" 
+                            placeholder="Faça uma pergunta de acompanhamento, peça tabelas ou aprofunde..." 
+                            class="w-full pl-4 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
+                            required
+                        >
+                        <button 
+                            type="submit" 
+                            id="btn-send-followup"
+                            class="absolute right-1.5 p-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition-colors flex items-center justify-center text-sm"
+                            title="Enviar pergunta"
+                        >
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
     </main>
+
+    <!-- Confirm Reset / Exit Modal -->
+    <div id="confirm-exit-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 transform scale-95 transition-transform duration-200">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                    <i class="fa-solid fa-floppy-disk text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 text-base">Salvar conversa atual?</h3>
+                    <p class="text-xs text-gray-500">Você possui um estudo ativo em andamento.</p>
+                </div>
+            </div>
+            <p class="text-xs text-gray-600 mb-5 leading-relaxed">
+                Deseja exportar ou salvar seu estudo no histórico local antes de iniciar uma nova pesquisa?
+            </p>
+            <div class="space-y-2">
+                <button id="btn-confirm-export-md" class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs flex items-center justify-center space-x-2 transition-colors">
+                    <i class="fa-solid fa-file-lines"></i>
+                    <span>Exportar em Markdown (.md)</span>
+                </button>
+                <button id="btn-confirm-save-history" class="w-full py-2 px-4 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-xl text-xs flex items-center justify-center space-x-2 transition-colors">
+                    <i class="fa-solid fa-bookmark"></i>
+                    <span>Salvar no Histórico & Limpar</span>
+                </button>
+                <button id="btn-confirm-discard" class="w-full py-2 px-4 bg-gray-100 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium rounded-xl text-xs transition-colors">
+                    Descartar e Continuar
+                </button>
+                <button id="btn-confirm-cancel" class="w-full py-1.5 text-gray-400 hover:text-gray-600 text-xs">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History / Saved Studies Modal -->
+    <div id="history-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 sm:p-8 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200">
+            <div class="flex justify-between items-center pb-4 border-b border-gray-100 flex-shrink-0">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
+                        <i class="fa-solid fa-clock-rotate-left text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-base">Histórico de Estudos Salvos</h3>
+                        <p class="text-xs text-gray-500">Acesse ou exporte pesquisas anteriores</p>
+                    </div>
+                </div>
+                <button id="btn-close-history-modal" class="text-gray-400 hover:text-gray-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="history-list-container" class="flex-grow overflow-y-auto py-4 space-y-3">
+                <!-- Injected via app.js -->
+            </div>
+
+            <div class="flex justify-between items-center pt-3 border-t border-gray-100 flex-shrink-0 text-xs">
+                <button id="btn-clear-all-history" class="text-red-500 hover:text-red-700 transition-colors">
+                    <i class="fa-solid fa-trash-can mr-1"></i> Limpar todo histórico
+                </button>
+                <button id="btn-close-history-footer" class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="bg-gray-100 border-t border-gray-200 py-6 mt-12 text-center text-xs text-gray-500">

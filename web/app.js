@@ -1,16 +1,83 @@
-// Base API URL. In production/local deployment, it points to the same origin
+// ==========================================
+// JW Search - Conversational Theocratic Agent
+// ==========================================
+
 const API_BASE = "";
 
+// State
+let currentProvider = localStorage.getItem("jw_search_active_provider") || "hy3";
+let currentFontSize = 18; // Reader font size in pixels
+
+let activeConversation = {
+    id: "conv_" + Date.now(),
+    title: "Pesquisa Teocrática",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    turns: [], // Array of { query, answer, results, provider, model, timestamp }
+    provider: currentProvider
+};
+
+// DOM Elements
+const searchCard = document.getElementById("search-card");
 const searchForm = document.getElementById("search-form");
 const searchInput = document.getElementById("search-input");
 const externalCheckbox = document.getElementById("external-checkbox");
 const langSelect = document.getElementById("lang-select");
-const statusContainer = document.getElementById("status-container");
-const resultsContainer = document.getElementById("results-container");
 
-// AI elements
-const aiResponseCard = document.getElementById("ai-response-card");
-const aiResponseContent = document.getElementById("ai-response-content");
+const chatThreadContainer = document.getElementById("chat-thread-container");
+const chatMessagesList = document.getElementById("chat-messages-list");
+const statusContainer = document.getElementById("status-container");
+const statusText = document.getElementById("status-text");
+
+const followupContainer = document.getElementById("followup-container");
+const followupForm = document.getElementById("followup-form");
+const followupInput = document.getElementById("followup-input");
+const btnNewChat = document.getElementById("btn-new-chat");
+
+// Header actions
+const btnHeaderHome = document.getElementById("btn-header-home");
+const btnImportStudy = document.getElementById("btn-import-study");
+const fileImportStudy = document.getElementById("file-import-study");
+const btnOpenHistory = document.getElementById("btn-open-history");
+const historyCountBadge = document.getElementById("history-count-badge");
+
+// Export dropdown
+const btnExportDropdown = document.getElementById("btn-export-dropdown");
+const exportMenu = document.getElementById("export-menu");
+const btnExportMd = document.getElementById("btn-export-md");
+const btnExportJson = document.getElementById("btn-export-json");
+const btnExportDocx = document.getElementById("btn-export-docx");
+const btnExportPdf = document.getElementById("btn-export-pdf");
+
+// Modals
+const confirmExitModal = document.getElementById("confirm-exit-modal");
+const btnConfirmExportMd = document.getElementById("btn-confirm-export-md");
+const btnConfirmSaveHistory = document.getElementById("btn-confirm-save-history");
+const btnConfirmDiscard = document.getElementById("btn-confirm-discard");
+const btnConfirmCancel = document.getElementById("btn-confirm-cancel");
+
+const historyModal = document.getElementById("history-modal");
+const historyListContainer = document.getElementById("history-list-container");
+const btnCloseHistoryModal = document.getElementById("btn-close-history-modal");
+const btnCloseHistoryFooter = document.getElementById("btn-close-history-footer");
+const btnClearAllHistory = document.getElementById("btn-clear-all-history");
+
+// Key Modal Elements
+const keyModal = document.getElementById("key-modal");
+const keyModalContainer = document.getElementById("key-modal-container");
+const btnOpenKeyModal = document.getElementById("btn-open-key-modal");
+const btnCloseKeyModal = document.getElementById("btn-close-key-modal");
+const keyBadgeText = document.getElementById("key-badge-text");
+const btnSaveKey = document.getElementById("btn-save-key");
+const btnToggleKeyVisibility = document.getElementById("btn-toggle-key-visibility");
+const keyStatusMsg = document.getElementById("key-status-msg");
+
+const inputGeminiKey = document.getElementById("input-gemini-key");
+const inputDeepseekKey = document.getElementById("input-deepseek-key");
+const inputHy3Key = document.getElementById("input-hy3-key");
+const selectHy3Preset = document.getElementById("select-hy3-preset");
+const inputHy3BaseUrl = document.getElementById("input-hy3-base-url");
+const inputHy3Model = document.getElementById("input-hy3-model");
 
 // Reader elements
 const readerPanel = document.getElementById("reader-panel");
@@ -22,44 +89,10 @@ const closeReaderBtn = document.getElementById("close-reader");
 const fontDecBtn = document.getElementById("font-dec");
 const fontIncBtn = document.getElementById("font-inc");
 
-let currentFontSize = 18; // default in pixels
-
-// Font size controls
-fontDecBtn.addEventListener("click", () => {
-    if (currentFontSize > 14) {
-        currentFontSize -= 2;
-        readerContent.style.fontSize = `${currentFontSize}px`;
-    }
-});
-
-fontIncBtn.addEventListener("click", () => {
-    if (currentFontSize < 28) {
-        currentFontSize += 2;
-        readerContent.style.fontSize = `${currentFontSize}px`;
-    }
-});
-
-// Clickable Header Icon / Title (Return to Home)
-const btnHeaderHome = document.getElementById("btn-header-home");
-if (btnHeaderHome) {
-    btnHeaderHome.addEventListener("click", (e) => {
-        e.preventDefault();
-        searchInput.value = "";
-        resultsContainer.innerHTML = "";
-        aiResponseCard.classList.add("hidden");
-        aiResponseContent.innerHTML = "";
-        statusContainer.classList.add("hidden");
-        closeReader();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        searchInput.focus();
-    });
-}
 
 // ==========================================
-// Provider & Multi-Model Engine Selector
+// Provider Selection UI
 // ==========================================
-let currentProvider = localStorage.getItem("jw_search_active_provider") || "hy3";
-
 const provBtns = document.querySelectorAll(".prov-selector-btn");
 const activeEngineBadge = document.getElementById("active-engine-badge");
 
@@ -73,12 +106,14 @@ function updateProviderUI() {
         }
     });
 
-    if (currentProvider === "deepseek") {
-        activeEngineBadge.innerHTML = `Motor: <b class="text-indigo-600">DeepSeek (RAG WOL)</b>`;
-    } else if (currentProvider === "hy3") {
-        activeEngineBadge.innerHTML = `Motor: <b class="text-amber-600">Hy3 / OpenAI (RAG WOL)</b>`;
-    } else {
-        activeEngineBadge.innerHTML = `Motor: <b class="text-blue-600">Gemini + Grounding</b>`;
+    if (activeEngineBadge) {
+        if (currentProvider === "deepseek") {
+            activeEngineBadge.innerHTML = `Motor: <b class="text-indigo-600">DeepSeek (RAG WOL)</b>`;
+        } else if (currentProvider === "hy3") {
+            activeEngineBadge.innerHTML = `Motor: <b class="text-amber-600">Hy3 / OpenAI (RAG WOL)</b>`;
+        } else {
+            activeEngineBadge.innerHTML = `Motor: <b class="text-blue-600">Gemini 2.5 + Grounding</b>`;
+        }
     }
 }
 
@@ -86,6 +121,7 @@ provBtns.forEach(btn => {
     btn.addEventListener("click", () => {
         currentProvider = btn.getAttribute("data-provider");
         localStorage.setItem("jw_search_active_provider", currentProvider);
+        activeConversation.provider = currentProvider;
         updateProviderUI();
         checkKeyStatus();
     });
@@ -93,310 +129,659 @@ provBtns.forEach(btn => {
 
 updateProviderUI();
 
-// Search Submission
-searchForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    
-    const query = searchInput.value.trim();
+
+// ==========================================
+// Quick Suggestion Pills
+// ==========================================
+document.querySelectorAll(".btn-prompt-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+        const prompt = pill.getAttribute("data-prompt");
+        if (followupInput) {
+            followupInput.value = prompt;
+            followupInput.focus();
+            executeTurnSearch(prompt);
+        }
+    });
+});
+
+
+// ==========================================
+// Conversational Chat Search Logic
+// ==========================================
+async function executeTurnSearch(userQuery) {
+    const query = userQuery.trim();
     if (!query) return;
-    
-    const includeExternal = externalCheckbox.checked;
-    const lang = langSelect.value;
-    
+
+    if (activeConversation.turns.length === 0) {
+        activeConversation.title = query.length > 50 ? query.substring(0, 47) + "..." : query;
+    }
+
+    const includeExternal = externalCheckbox ? externalCheckbox.checked : false;
+    const lang = langSelect ? langSelect.value : "pt";
+
     const geminiKey = localStorage.getItem("jw_search_gemini_key") || localStorage.getItem("jw_search_user_api_key") || "";
     const deepseekKey = localStorage.getItem("jw_search_deepseek_key") || "";
     const hy3Key = localStorage.getItem("jw_search_hy3_key") || "";
     const hy3BaseUrl = localStorage.getItem("jw_search_hy3_base_url") || "";
     const hy3Model = localStorage.getItem("jw_search_hy3_model") || "";
-    
-    // Check if key is available for selected provider (either client local key OR server env key)
-    const serverHasKeyForCurrent = window.serverConfig ? (
-        (currentProvider === "gemini" && window.serverConfig.has_gemini) ||
-        (currentProvider === "deepseek" && window.serverConfig.has_deepseek) ||
-        (currentProvider === "hy3" && window.serverConfig.has_hy3)
-    ) : (window.serverHasKey === true && currentProvider === "gemini");
 
-    if (currentProvider === "gemini" && !geminiKey && !serverHasKeyForCurrent) {
-        openKeyModal("Para realizar pesquisas com o Google Gemini, adicione sua chave gratuita.");
-        switchModalTab("gemini");
-        return;
-    } else if (currentProvider === "deepseek" && !deepseekKey && !serverHasKeyForCurrent) {
-        openKeyModal("Para pesquisar com o DeepSeek (RAG WOL), adicione sua chave do DeepSeek.");
-        switchModalTab("deepseek");
-        return;
-    } else if (currentProvider === "hy3" && !hy3Key && !serverHasKeyForCurrent) {
-        openKeyModal("Para pesquisar com o Hy3 / OpenAI, adicione sua chave ou token.");
-        switchModalTab("hy3");
-        return;
-    }
-    
-    // UI Loading state
     statusContainer.classList.remove("hidden");
-    resultsContainer.innerHTML = "";
-    aiResponseCard.classList.add("hidden");
-    aiResponseContent.innerHTML = "";
-    
+    if (statusText) {
+        statusText.innerText = activeConversation.turns.length === 0
+            ? "Pesquisando extensivamente no acervo oficial (WOL / JW.ORG)..."
+            : "Analisando contexto anterior e aprofundando estudo teocrático...";
+    }
+
+    statusContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    const historyPayload = [];
+    for (const turn of activeConversation.turns) {
+        historyPayload.push({ role: "user", content: turn.query });
+        historyPayload.push({ role: "assistant", content: turn.answer });
+    }
+
     try {
-        const params = new URLSearchParams({
-            q: query,
-            external: includeExternal,
-            lang: lang,
-            provider: currentProvider
-        });
-        if (currentProvider === "hy3" && hy3BaseUrl) params.append("base_url", hy3BaseUrl);
-        if (currentProvider === "hy3" && hy3Model) params.append("model", hy3Model);
-        
-        const headers = { "Accept": "application/json" };
+        const headers = { "Content-Type": "application/json" };
         if (geminiKey) headers["X-Gemini-Api-Key"] = geminiKey;
         if (deepseekKey) headers["X-Deepseek-Api-Key"] = deepseekKey;
         if (hy3Key) headers["X-Hy3-Api-Key"] = hy3Key;
-        
-        const response = await fetch(`${API_BASE}/api/search?${params}`, { headers });
-        const data = await response.json();
-        
-        if (!response.ok) {
-            const errorDetail = data.detail || `Erro (${response.status}): ${response.statusText}`;
-            if (response.status === 401) {
-                openKeyModal(typeof errorDetail === "string" ? errorDetail : "Chave de API necessária para este provedor.");
-                switchModalTab(currentProvider);
-                throw new Error("Chave de API necessária.");
-            } else if (response.status === 429) {
-                openKeyModal("Cota do Gemini excedida no momento. Dica: você pode alternar para o DeepSeek na aba ao lado!");
-                switchModalTab("deepseek");
-                throw new Error("Cota de requisições excedida.");
+
+        const bodyData = {
+            query: query,
+            history: historyPayload,
+            provider: currentProvider,
+            model: hy3Model || null,
+            base_url: hy3BaseUrl || null,
+            include_external: includeExternal,
+            lang: lang
+        };
+
+        const res = await fetch(`${API_BASE}/api/chat`, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(bodyData)
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({ detail: "Erro de comunicação com o servidor." }));
+            if (res.status === 401 || res.status === 429) {
+                openKeyModal(errData.detail || "Cota esgotada ou chave necessária.");
+            } else {
+                alert(`Erro na pesquisa: ${errData.detail || "Falha desconhecida"}`);
             }
-            throw new Error(errorDetail);
+            statusContainer.classList.add("hidden");
+            return;
         }
-        
-        // Render AI Synthesized response
-        if (data.ai_response) {
-            aiResponseContent.innerHTML = marked.parse(data.ai_response);
-            aiResponseContent.querySelectorAll("a").forEach(a => {
-                a.setAttribute("target", "_blank");
-                a.setAttribute("rel", "noopener noreferrer");
-                a.classList.add("text-blue-600", "hover:underline", "font-medium");
-            });
-            aiResponseCard.classList.remove("hidden");
-        }
-        
-        // Render sources results
-        renderResults(data.results, query);
-    } catch (error) {
-        console.error(error);
-        resultsContainer.innerHTML = `
-            <div class="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 flex items-center space-x-3">
-                <i class="fa-solid fa-circle-exclamation text-xl flex-shrink-0"></i>
-                <div>
-                    <p class="font-semibold">Erro na busca</p>
-                    <p class="text-sm">${escapeHtml(error.message || "Não foi possível completar a consulta.")}</p>
-                </div>
-            </div>
-        `;
+
+        const data = await res.json();
+        const newTurn = {
+            query: query,
+            answer: data.ai_response || "Nenhuma resposta gerada.",
+            results: data.results || [],
+            provider: data.provider || currentProvider,
+            model: data.model || "",
+            timestamp: new Date().toISOString()
+        };
+
+        activeConversation.turns.push(newTurn);
+        activeConversation.updatedAt = new Date().toISOString();
+
+        saveCurrentThreadToStorage();
+        renderConversationThread();
+
+        if (searchInput) searchInput.value = "";
+        if (followupInput) followupInput.value = "";
+
+    } catch (err) {
+        alert(`Erro de conexão: ${err.message}`);
     } finally {
         statusContainer.classList.add("hidden");
     }
-});
+}
 
-// Render Results Card List
-function renderResults(results, query) {
-    if (!results || results.length === 0) {
-        resultsContainer.innerHTML = `
-            <div class="text-center py-12 bg-white rounded-xl border border-gray-100 shadow-sm p-6 text-gray-500">
-                <i class="fa-solid fa-folder-open text-4xl mb-3 text-gray-300"></i>
-                <p class="font-medium">Nenhum resultado encontrado nas fontes</p>
-                <p class="text-xs mt-1">Experimente mudar o termo ou marcar 'Pesquisar também na Internet'.</p>
-            </div>
-        `;
+if (searchForm) {
+    searchForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const q = searchInput.value.trim();
+        if (q) executeTurnSearch(q);
+    });
+}
+
+if (followupForm) {
+    followupForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const q = followupInput.value.trim();
+        if (q) executeTurnSearch(q);
+    });
+}
+
+
+// ==========================================
+// Rich Markdown & Table Parser
+// ==========================================
+function parseMarkdownToHtml(markdown) {
+    if (!markdown) return "";
+    const lines = markdown.split("\n");
+    let html = "";
+    let inTable = false;
+    let tableRows = [];
+    let inUl = false;
+    let inOl = false;
+    let inBlockquote = false;
+
+    function flushTable() {
+        if (!tableRows.length) return "";
+        let tHtml = '<div class="overflow-x-auto my-3"><table class="w-full text-xs sm:text-sm border border-gray-200 rounded-lg overflow-hidden">';
+        tHtml += '<thead><tr class="bg-slate-100 text-slate-800 font-semibold">';
+        const headers = tableRows[0];
+        headers.forEach(h => { tHtml += `<th class="border border-gray-200 px-3 py-2 text-left">${formatInlineMarkdown(h)}</th>`; });
+        tHtml += '</tr></thead><tbody>';
+        for (let i = 1; i < tableRows.length; i++) {
+            const row = tableRows[i];
+            const bgClass = i % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
+            tHtml += `<tr class="${bgClass}">`;
+            row.forEach(cell => { tHtml += `<td class="border border-gray-200 px-3 py-2 text-gray-700">${formatInlineMarkdown(cell)}</td>`; });
+            tHtml += '</tr>';
+        }
+        tHtml += '</tbody></table></div>';
+        tableRows = []; inTable = false;
+        return tHtml;
+    }
+
+    function flushLists() {
+        let lHtml = "";
+        if (inUl) { lHtml += "</ul>"; inUl = false; }
+        if (inOl) { lHtml += "</ol>"; inOl = false; }
+        if (inBlockquote) { lHtml += "</blockquote>"; inBlockquote = false; }
+        return lHtml;
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+            if (trimmed.includes("---")) continue;
+            inTable = true;
+            tableRows.push(trimmed.split("|").slice(1, -1).map(c => c.trim()));
+            continue;
+        } else if (inTable) { html += flushTable(); }
+
+        if (!trimmed) { html += flushLists(); continue; }
+
+        if (trimmed.startsWith("### ")) {
+            html += flushLists();
+            html += `<h3 class="text-base sm:text-lg font-bold text-slate-800 mt-5 mb-2 pb-1 border-b border-gray-100 flex items-center gap-1.5">${formatInlineMarkdown(trimmed.substring(4))}</h3>`;
+        } else if (trimmed.startsWith("## ")) {
+            html += flushLists();
+            html += `<h2 class="text-lg sm:text-xl font-bold text-slate-900 mt-6 mb-3 pb-1 border-b border-gray-200">${formatInlineMarkdown(trimmed.substring(3))}</h2>`;
+        } else if (trimmed.startsWith("# ")) {
+            html += flushLists();
+            html += `<h1 class="text-xl sm:text-2xl font-bold text-slate-900 mt-6 mb-3">${formatInlineMarkdown(trimmed.substring(2))}</h1>`;
+        } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+            if (!inUl) {
+                html += flushLists();
+                html += '<ul class="list-disc list-inside space-y-1.5 my-2 text-gray-700 text-sm leading-relaxed pl-2">';
+                inUl = true;
+            }
+            html += `<li>${formatInlineMarkdown(trimmed.substring(2))}</li>`;
+        } else if (/^\d+\.\s/.test(trimmed)) {
+            if (!inOl) {
+                html += flushLists();
+                html += '<ol class="list-decimal list-inside space-y-1.5 my-2 text-gray-700 text-sm leading-relaxed pl-2">';
+                inOl = true;
+            }
+            html += `<li>${formatInlineMarkdown(trimmed.replace(/^\d+\.\s/, ''))}</li>`;
+        } else if (trimmed.startsWith(">")) {
+            if (!inBlockquote) {
+                html += flushLists();
+                html += '<blockquote class="border-l-4 border-blue-500 bg-blue-50/60 p-3 my-2.5 rounded-r-lg text-slate-700 text-sm italic">';
+                inBlockquote = true;
+            }
+            html += `<p class="mb-1">${formatInlineMarkdown(trimmed.replace(/^>\s*/, ''))}</p>`;
+        } else {
+            html += flushLists();
+            html += `<p class="my-2.5 text-gray-700 text-sm md:text-base leading-relaxed">${formatInlineMarkdown(trimmed)}</p>`;
+        }
+    }
+    if (inTable) html += flushTable();
+    html += flushLists();
+    return html;
+}
+
+function formatInlineMarkdown(text) {
+    if (!text) return "";
+    let str = escapeHtml(text);
+    str = str.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
+    str = str.replace(/\*([^*]+)\*/g, '<em class="italic">$1</em>');
+    str = str.replace(/`([^`]+)`/g, '<code class="bg-gray-100 text-blue-700 px-1.5 py-0.5 rounded text-xs font-mono">$1</code>');
+    str = str.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, (match, title, url) => {
+        if (url.includes("wol.jw.org")) {
+            return `<a href="${url}" class="wol-inline-link text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2 transition-colors cursor-pointer" data-url="${url}" data-title="${title}">${title} <i class="fa-solid fa-book-open text-[10px] ml-0.5 opacity-75"></i></a>`;
+        }
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2 transition-colors">${title} <i class="fa-solid fa-arrow-up-right-from-square text-[9px] ml-0.5 opacity-75"></i></a>`;
+    });
+    return str;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.innerText = text;
+    return div.innerHTML;
+}
+
+
+// ==========================================
+// Thread UI Rendering
+// ==========================================
+function renderConversationThread() {
+    if (!chatMessagesList) return;
+    if (activeConversation.turns.length === 0) {
+        chatThreadContainer.classList.add("hidden");
+        followupContainer.classList.add("hidden");
+        searchCard.classList.remove("hidden");
         return;
     }
-    
-    resultsContainer.innerHTML = "";
-    
-    results.forEach(item => {
-        const card = document.createElement("div");
-        
-        let highlightedSnippet = item.snippet;
-        if (query) {
-            const words = query.split(/\s+/).filter(w => w.length > 2);
-            words.forEach(w => {
-                const regex = new RegExp(`(${w})`, "gi");
-                highlightedSnippet = highlightedSnippet.replace(regex, `<mark class="bg-amber-100 text-amber-900 rounded px-1 font-medium">$1</mark>`);
-            });
-        }
-        
-        const isExt = item.is_external;
-        const borderClass = isExt ? "border-amber-200 bg-amber-50/20" : "border-gray-100 bg-white";
-        const badgeClass = isExt 
-            ? "bg-amber-100 text-amber-800 border-amber-300" 
-            : "bg-blue-50 text-blue-700 border-blue-200";
-        const badgeLabel = isExt ? "FONTE EXTERNA" : "FONTE OFICIAL";
-
-        card.className = `${borderClass} rounded-xl p-5 shadow-sm border hover:shadow-md transition-all duration-200 mb-4`;
-        card.innerHTML = `
-            <div class="flex items-start justify-between">
-                <div class="flex-grow pr-4">
-                    <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                        <span class="text-xs px-2 py-0.5 rounded-md font-semibold border ${badgeClass}">
-                            ${escapeHtml(item.publication || (isExt ? "Internet" : "WOL"))}
-                        </span>
-                        <span class="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full ${isExt ? 'bg-amber-200 text-amber-900' : 'bg-blue-100 text-blue-800'}">
-                            ${badgeLabel}
+    searchCard.classList.add("hidden");
+    chatThreadContainer.classList.remove("hidden");
+    followupContainer.classList.remove("hidden");
+    chatMessagesList.innerHTML = "";
+    activeConversation.turns.forEach((turn, idx) => {
+        const turnCard = document.createElement("div");
+        turnCard.className = "chat-turn bg-white rounded-2xl shadow-sm border border-gray-200/90 overflow-hidden transition-all";
+        let headerHtml = `
+            <div class="bg-slate-800 text-white px-5 py-4 flex items-start justify-between gap-3">
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 rounded-lg bg-slate-700 border border-slate-600 flex items-center justify-center text-blue-300 font-bold text-xs flex-shrink-0 mt-0.5">
+                        ${idx + 1}
+                    </div>
+                    <div>
+                        <h2 class="text-base font-semibold text-white leading-snug">${escapeHtml(turn.query)}</h2>
+                        <span class="text-[11px] text-slate-300 flex items-center gap-2 mt-0.5">
+                            <span><i class="fa-regular fa-clock mr-1"></i>${new Date(turn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>•</span>
+                            <span class="capitalize"><i class="fa-solid fa-microchip mr-1"></i>${turn.provider}</span>
                         </span>
                     </div>
-                    
-                    <h3 class="text-base font-bold text-gray-900 hover:text-blue-600 transition-colors">
-                        <a href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">
-                            ${escapeHtml(item.title)}
-                        </a>
-                    </h3>
-                    
-                    <p class="text-gray-600 text-sm mt-2 line-clamp-3 leading-relaxed">
-                        ${highlightedSnippet}
-                    </p>
-                    
-                    <div class="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-gray-100 text-xs">
-                        <a 
-                            href="${escapeHtml(item.link)}" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            class="text-blue-600 hover:text-blue-800 font-semibold flex items-center space-x-1"
-                        >
-                            <span>Acessar Publicação</span>
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                        </a>
-                        
-                        ${!isExt && item.link.includes("wol.jw.org") ? `
-                            <button 
-                                class="btn-read-drawer text-slate-700 hover:text-slate-900 font-semibold flex items-center space-x-1"
-                                data-url="${escapeHtml(item.link)}"
-                                data-title="${escapeHtml(item.title)}"
-                            >
-                                <i class="fa-solid fa-book-open"></i>
-                                <span>Ler no App</span>
-                            </button>
-                        ` : ""}
-                    </div>
+                </div>
+                <div class="flex items-center space-x-1.5 flex-shrink-0">
+                    <button class="btn-copy-turn text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-slate-700 transition-colors" data-idx="${idx}" title="Copiar resposta em Markdown">
+                        <i class="fa-regular fa-copy text-sm"></i>
+                    </button>
                 </div>
             </div>
         `;
-        
-        resultsContainer.appendChild(card);
+        let sourcesHtml = "";
+        if (turn.results && turn.results.length > 0) {
+            sourcesHtml = `
+                <div class="bg-slate-50/80 border-b border-gray-100 px-5 py-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-book-bookmark text-amber-500"></i> Fontes Teocráticas Consultadas (${turn.results.length})
+                        </span>
+                    </div>
+                    <div class="flex gap-2.5 overflow-x-auto pb-1.5 no-scrollbar">`;
+            turn.results.forEach(res => {
+                sourcesHtml += `
+                    <div class="bg-white border border-gray-200 rounded-xl p-2.5 flex-shrink-0 w-64 max-w-[80vw] shadow-xs flex flex-col justify-between">
+                        <div>
+                            <span class="text-[10px] font-semibold text-slate-500 uppercase block truncate">${escapeHtml(res.publication || 'WOL')}</span>
+                            <h4 class="text-xs font-bold text-slate-800 leading-tight line-clamp-2 my-1">${escapeHtml(res.title)}</h4>
+                        </div>
+                        <div class="flex items-center justify-between pt-2 mt-2 border-t border-gray-50 text-[11px]">
+                            <button class="btn-open-wol-reader text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1" data-url="${res.link}" data-title="${escapeHtml(res.title)}" data-pub="${escapeHtml(res.publication || '')}">
+                                <i class="fa-solid fa-book-open text-[10px]"></i> Ler no app
+                            </button>
+                            <a href="${res.link}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-gray-600">
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            </a>
+                        </div>
+                    </div>`;
+            });
+            sourcesHtml += `</div></div>`;
+        }
+        const bodyHtml = `<div class="p-6 md:p-8 markdown-body prose max-w-none">${parseMarkdownToHtml(turn.answer)}</div>`;
+        turnCard.innerHTML = headerHtml + sourcesHtml + bodyHtml;
+        chatMessagesList.appendChild(turnCard);
     });
+    attachThreadInteractiveListeners();
+    setTimeout(() => {
+        const turns = document.querySelectorAll(".chat-turn");
+        if (turns.length > 0) turns[turns.length - 1].scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+}
 
-    document.querySelectorAll(".btn-read-drawer").forEach(button => {
-        button.addEventListener("click", (e) => {
-            const url = button.getAttribute("data-url");
-            const title = button.getAttribute("data-title");
-            openReader(url, title);
+function attachThreadInteractiveListeners() {
+    document.querySelectorAll(".wol-inline-link").forEach(link => {
+        link.addEventListener("click", (e) => {
+            e.preventDefault();
+            const url = link.getAttribute("data-url");
+            const title = link.getAttribute("data-title");
+            if (url) openReader(url, title, "Biblioteca Online");
+        });
+    });
+    document.querySelectorAll(".btn-open-wol-reader").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const url = btn.getAttribute("data-url");
+            const title = btn.getAttribute("data-title");
+            const pub = btn.getAttribute("data-pub");
+            if (url) openReader(url, title, pub);
+        });
+    });
+    document.querySelectorAll(".btn-copy-turn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const idx = parseInt(btn.getAttribute("data-idx"), 10);
+            const turn = activeConversation.turns[idx];
+            if (turn) {
+                const textToCopy = `## ❓ ${turn.query}\n\n${turn.answer}`;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    btn.innerHTML = `<i class="fa-solid fa-check text-green-400"></i>`;
+                    setTimeout(() => { btn.innerHTML = `<i class="fa-regular fa-copy text-sm"></i>`; }, 2000);
+                });
+            }
         });
     });
 }
 
-// Drawer Reader Implementation
-async function openReader(url, title) {
-    readerTitle.textContent = title || "Carregando...";
-    readerContent.innerHTML = `
-        <div class="text-center py-20">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent mb-3"></div>
-            <p class="text-gray-500 text-sm">Buscando e limpando conteúdo do documento oficial...</p>
-        </div>
-    `;
-    
-    readerPanel.classList.remove("pointer-events-none");
-    readerPanel.classList.add("opacity-100");
-    readerContainer.classList.remove("translate-x-full");
-    
-    try {
-        const response = await fetch(`${API_BASE}/api/read?url=${encodeURIComponent(url)}`);
-        if (!response.ok) throw new Error("Não foi possível carregar o documento.");
-        
-        const data = await response.json();
-        if (data.content) {
-            readerContent.innerHTML = data.content;
-            
-            readerContent.querySelectorAll("a").forEach(a => {
-                const href = a.getAttribute("href");
-                if (href && href.startsWith("/")) {
-                    a.setAttribute("href", `https://wol.jw.org${href}`);
-                }
-                a.setAttribute("target", "_blank");
-                a.setAttribute("rel", "noopener noreferrer");
-                a.classList.add("text-blue-600", "hover:underline");
-            });
-        } else {
-            readerContent.innerHTML = `<p class="text-red-500">Conteúdo indisponível para este artigo.</p>`;
+
+// ==========================================
+// Export Functions
+// ==========================================
+function getFullConversationMarkdown() {
+    let md = `# 📖 Estudo Teocrático: ${activeConversation.title}\n`;
+    md += `*Data:* ${new Date(activeConversation.createdAt).toLocaleDateString()} | *Gerado via:* JW Search\n\n---\n\n`;
+    activeConversation.turns.forEach((turn, idx) => {
+        md += `## ❓ Pergunta ${idx + 1}: ${turn.query}\n\n${turn.answer}\n\n`;
+        if (turn.results && turn.results.length > 0) {
+            md += `### 📚 Fontes Oficiais:\n`;
+            turn.results.forEach(r => { md += `- [${r.title}](${r.link}) (${r.publication || 'WOL'})\n`; });
+            md += `\n`;
         }
-    } catch (err) {
-        console.error(err);
-        readerContent.innerHTML = `
-            <div class="p-4 bg-red-50 text-red-700 rounded-xl">
-                <p class="font-bold">Erro ao carregar artigo</p>
-                <p class="text-sm mt-1">${escapeHtml(err.message)}</p>
-            </div>
-        `;
+        md += `---\n\n`;
+    });
+    return md;
+}
+
+function sanitizeFilename(name) {
+    return (name || 'estudo').toLowerCase().replace(/[^a-z0-9à-ú_-]/gi, '_').replace(/_+/g, '_').substring(0, 40);
+}
+
+function exportMarkdown() {
+    if (activeConversation.turns.length === 0) return;
+    const md = getFullConversationMarkdown();
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `estudo_teocratico_${sanitizeFilename(activeConversation.title)}.md`;
+    a.click(); URL.revokeObjectURL(url);
+    if (exportMenu) exportMenu.classList.add("hidden");
+}
+
+function exportJson() {
+    if (activeConversation.turns.length === 0) return;
+    const jsonStr = JSON.stringify(activeConversation, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `sessao_jw_search_${sanitizeFilename(activeConversation.title)}.json`;
+    a.click(); URL.revokeObjectURL(url);
+    if (exportMenu) exportMenu.classList.add("hidden");
+}
+
+async function exportDocx() {
+    if (activeConversation.turns.length === 0) return;
+    const md = getFullConversationMarkdown();
+    try {
+        const res = await fetch(`${API_BASE}/api/export/docx`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: activeConversation.title, content: md })
+        });
+        if (!res.ok) throw new Error("Falha ao gerar documento Word.");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `estudo_teocratico_${sanitizeFilename(activeConversation.title)}.docx`;
+        a.click(); URL.revokeObjectURL(url);
+    } catch (e) { alert(`Erro na exportação DOCX: ${e.message}`); }
+    if (exportMenu) exportMenu.classList.add("hidden");
+}
+
+function exportPdf() {
+    if (activeConversation.turns.length === 0) return;
+    if (exportMenu) exportMenu.classList.add("hidden");
+    window.print();
+}
+
+if (btnExportDropdown) {
+    btnExportDropdown.addEventListener("click", (e) => { e.stopPropagation(); exportMenu.classList.toggle("hidden"); });
+}
+document.addEventListener("click", () => { if (exportMenu) exportMenu.classList.add("hidden"); });
+if (btnExportMd) btnExportMd.addEventListener("click", exportMarkdown);
+if (btnExportJson) btnExportJson.addEventListener("click", exportJson);
+if (btnExportDocx) btnExportDocx.addEventListener("click", exportDocx);
+if (btnExportPdf) btnExportPdf.addEventListener("click", exportPdf);
+
+
+// ==========================================
+// Import Conversation System
+// ==========================================
+if (btnImportStudy && fileImportStudy) {
+    btnImportStudy.addEventListener("click", () => { fileImportStudy.value = ""; fileImportStudy.click(); });
+    fileImportStudy.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const content = ev.target.result;
+            try {
+                if (file.name.endsWith(".json")) {
+                    const parsed = JSON.parse(content);
+                    if (!parsed.turns || !Array.isArray(parsed.turns)) throw new Error("Formato inválido.");
+                    activeConversation = parsed;
+                } else {
+                    activeConversation = {
+                        id: "conv_" + Date.now(),
+                        title: file.name.replace(/\.[^/.]+$/, ""),
+                        createdAt: new Date().toISOString(),
+                        turns: [{ query: "Arquivo Importado", answer: content, results: [], provider: currentProvider, timestamp: new Date().toISOString() }],
+                        provider: currentProvider
+                    };
+                }
+                saveCurrentThreadToStorage();
+                renderConversationThread();
+            } catch (err) { alert(`Erro ao importar: ${err.message}`); }
+        };
+        reader.readAsText(file);
+    });
+}
+
+
+// ==========================================
+// History Management
+// ==========================================
+function getStoredThreads() {
+    try { const raw = localStorage.getItem("jw_search_saved_threads"); return raw ? JSON.parse(raw) : []; } catch { return []; }
+}
+function saveCurrentThreadToStorage() {
+    if (activeConversation.turns.length === 0) return;
+    const threads = getStoredThreads().filter(t => t.id !== activeConversation.id);
+    threads.unshift(activeConversation);
+    if (threads.length > 40) threads.pop();
+    localStorage.setItem("jw_search_saved_threads", JSON.stringify(threads));
+    updateHistoryBadge();
+}
+function updateHistoryBadge() {
+    const count = getStoredThreads().length;
+    if (historyCountBadge) {
+        if (count > 0) { historyCountBadge.innerText = count; historyCountBadge.classList.remove("hidden"); }
+        else { historyCountBadge.classList.add("hidden"); }
     }
+}
+updateHistoryBadge();
+
+function renderHistoryModal() {
+    if (!historyListContainer) return;
+    const threads = getStoredThreads();
+    if (threads.length === 0) {
+        historyListContainer.innerHTML = `<div class="text-center py-10 text-gray-400"><p class="text-xs">Nenhum estudo salvo.</p></div>`;
+        return;
+    }
+    historyListContainer.innerHTML = "";
+    threads.forEach((t) => {
+        const item = document.createElement("div");
+        item.className = "bg-gray-50 border border-gray-200/80 rounded-xl p-3.5 hover:border-blue-300 transition-all flex items-center justify-between gap-3";
+        item.innerHTML = `
+            <div class="flex-grow min-w-0"><h4 class="text-xs sm:text-sm font-bold text-gray-800 truncate">${escapeHtml(t.title || 'Pesquisa')}</h4></div>
+            <div class="flex items-center space-x-1.5 text-xs">
+                <button class="btn-load-history px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg" data-id="${t.id}">Abrir</button>
+            </div>`;
+        historyListContainer.appendChild(item);
+    });
+    document.querySelectorAll(".btn-load-history").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            activeConversation = getStoredThreads().find(t => t.id === id);
+            renderConversationThread();
+            closeHistoryModal();
+        });
+    });
+}
+
+function openHistoryModal() { renderHistoryModal(); historyModal.classList.remove("pointer-events-none", "opacity-0"); }
+function closeHistoryModal() { historyModal.classList.add("opacity-0"); setTimeout(() => historyModal.classList.add("pointer-events-none"), 200); }
+if (btnOpenHistory) btnOpenHistory.addEventListener("click", openHistoryModal);
+if (btnCloseHistoryModal) btnCloseHistoryModal.addEventListener("click", closeHistoryModal);
+
+
+// ==========================================
+// Reader Panel Logic
+// ==========================================
+async function openReader(url, title, pub = "Publicação Oficial") {
+    readerPanel.classList.remove("pointer-events-none", "opacity-0");
+    readerContainer.classList.remove("translate-x-full");
+    readerPub.innerText = pub;
+    readerTitle.innerText = title;
+    try {
+        const res = await fetch(`${API_BASE}/api/read?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        readerContent.innerHTML = data.content || "Conteúdo não disponível.";
+    } catch { readerContent.innerHTML = "Erro ao carregar."; }
 }
 
 function closeReader() {
+    readerPanel.classList.add("opacity-0");
     readerContainer.classList.add("translate-x-full");
-    readerPanel.classList.remove("opacity-100");
-    setTimeout(() => {
-        readerPanel.classList.add("pointer-events-none");
-    }, 300);
+    setTimeout(() => readerPanel.classList.add("pointer-events-none"), 300);
 }
 
-closeReaderBtn.addEventListener("click", closeReader);
-readerPanel.addEventListener("click", (e) => {
-    if (e.target === readerPanel) closeReader();
+if (closeReaderBtn) closeReaderBtn.addEventListener("click", closeReader);
+if (fontDecBtn) fontDecBtn.addEventListener("click", () => { currentFontSize -= 2; readerContent.style.fontSize = `${currentFontSize}px`; });
+if (fontIncBtn) fontIncBtn.addEventListener("click", () => { currentFontSize += 2; readerContent.style.fontSize = `${currentFontSize}px`; });
+
+
+// ==========================================
+// Exit / Reset Protection Guard
+// ==========================================
+function resetConversationState() {
+    activeConversation = {
+        id: "conv_" + Date.now(),
+        title: "Pesquisa Teocrática",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        turns: [],
+        provider: currentProvider
+    };
+    renderConversationThread();
+    if (searchInput) {
+        searchInput.value = "";
+        searchInput.focus();
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function triggerNewChatOrHome(e) {
+    if (e) e.preventDefault();
+    if (activeConversation.turns.length > 0) {
+        openConfirmExitModal();
+    } else {
+        resetConversationState();
+    }
+}
+
+if (btnHeaderHome) btnHeaderHome.addEventListener("click", triggerNewChatOrHome);
+if (btnNewChat) btnNewChat.addEventListener("click", triggerNewChatOrHome);
+
+window.addEventListener("beforeunload", (e) => {
+    if (activeConversation.turns.length > 0) {
+        e.preventDefault();
+        e.returnValue = "Você possui um estudo ativo. Deseja salvar antes de sair?";
+    }
 });
 
-// Helper to escape HTML tags to prevent XSS
-function escapeHtml(text) {
-    if (!text) return "";
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+function openConfirmExitModal() {
+    confirmExitModal.classList.remove("pointer-events-none", "opacity-0");
+    confirmExitModal.querySelector("div").classList.remove("scale-95");
+    confirmExitModal.querySelector("div").classList.add("scale-100");
 }
 
+function closeConfirmExitModal() {
+    confirmExitModal.classList.add("opacity-0");
+    confirmExitModal.querySelector("div").classList.remove("scale-100");
+    confirmExitModal.querySelector("div").classList.add("scale-95");
+    setTimeout(() => {
+        confirmExitModal.classList.add("pointer-events-none");
+    }, 200);
+}
+
+if (btnConfirmExportMd) {
+    btnConfirmExportMd.addEventListener("click", () => {
+        exportMarkdown();
+        closeConfirmExitModal();
+        resetConversationState();
+    });
+}
+
+if (btnConfirmSaveHistory) {
+    btnConfirmSaveHistory.addEventListener("click", () => {
+        saveCurrentThreadToStorage();
+        closeConfirmExitModal();
+        resetConversationState();
+    });
+}
+
+if (btnConfirmDiscard) {
+    btnConfirmDiscard.addEventListener("click", () => {
+        closeConfirmExitModal();
+        resetConversationState();
+    });
+}
+
+if (btnConfirmCancel) {
+    btnConfirmCancel.addEventListener("click", closeConfirmExitModal);
+}
+
+
 // ==========================================
-// Embedded API Key Management & Wizard Flow
+// API Key Management & Presets
 // ==========================================
-const btnOpenKeyModal = document.getElementById("btn-open-key-modal");
-const btnCloseKeyModal = document.getElementById("btn-close-key-modal");
-const keyModal = document.getElementById("key-modal");
-const keyModalContainer = document.getElementById("key-modal-container");
-const btnToggleKeyVisibility = document.getElementById("btn-toggle-key-visibility");
-const btnSaveKey = document.getElementById("btn-save-key");
-const keyStatusMsg = document.getElementById("key-status-msg");
-const keyBadgeText = document.getElementById("key-badge-text");
-
-const inputGeminiKey = document.getElementById("input-gemini-key");
-const inputDeepseekKey = document.getElementById("input-deepseek-key");
-const inputHy3Key = document.getElementById("input-hy3-key");
-const inputHy3BaseUrl = document.getElementById("input-hy3-base-url");
-const inputHy3Model = document.getElementById("input-hy3-model");
-
-const selectHy3Preset = document.getElementById("select-hy3-preset");
-
-const hy3Presets = {
-    "openrouter": { baseUrl: "https://openrouter.ai/api/v1", model: "tencent/hy3" },
-    "tencent": { baseUrl: "https://api.hunyuan.tencent.com/v1", model: "hy3" },
-    "siliconflow": { baseUrl: "https://api.siliconflow.cn/v1", model: "tencent/Hunyuan-A52B-Instruct" },
-    "together": { baseUrl: "https://api.together.xyz/v1", model: "togethercomputer/hy3" },
-    "ollama": { baseUrl: "http://localhost:11434/v1", model: "hy3" },
-    "custom": { baseUrl: "", model: "" }
-};
-
 if (selectHy3Preset) {
     selectHy3Preset.addEventListener("change", () => {
-        const val = selectHy3Preset.value;
-        const preset = hy3Presets[val];
-        if (preset && val !== "custom") {
-            if (inputHy3BaseUrl) inputHy3BaseUrl.value = preset.baseUrl;
-            if (inputHy3Model) inputHy3Model.value = preset.model;
+        const preset = selectHy3Preset.value;
+        if (preset === "openrouter") {
+            if (inputHy3BaseUrl) inputHy3BaseUrl.value = "https://openrouter.ai/api/v1";
+            if (inputHy3Model) inputHy3Model.value = "tencent/hy3";
+        } else if (preset === "tencent") {
+            if (inputHy3BaseUrl) inputHy3BaseUrl.value = "https://api.hunyuan.cloud.tencent.com/v1";
+            if (inputHy3Model) inputHy3Model.value = "hunyuan-standard";
+        } else if (preset === "siliconflow") {
+            if (inputHy3BaseUrl) inputHy3BaseUrl.value = "https://api.siliconflow.cn/v1";
+            if (inputHy3Model) inputHy3Model.value = "tencent/Hunyuan-A52B-Instruct";
+        } else if (preset === "together") {
+            if (inputHy3BaseUrl) inputHy3BaseUrl.value = "https://api.together.xyz/v1";
+            if (inputHy3Model) inputHy3Model.value = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
+        } else if (preset === "ollama") {
+            if (inputHy3BaseUrl) inputHy3BaseUrl.value = "http://localhost:11434/v1";
+            if (inputHy3Model) inputHy3Model.value = "llama3.2";
         }
     });
 }
@@ -416,7 +801,6 @@ if (inputHy3Key) {
     });
 }
 
-// Modal Tab Switcher
 function switchModalTab(tabName) {
     document.querySelectorAll(".modal-tab-btn").forEach(btn => {
         btn.className = "modal-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700";
@@ -440,12 +824,10 @@ document.getElementById("modal-tab-deepseek")?.addEventListener("click", () => s
 document.getElementById("modal-tab-hy3")?.addEventListener("click", () => switchModalTab("hy3"));
 
 function openKeyModal(noticeMessage = null) {
-    keyModal.classList.remove("pointer-events-none");
-    keyModal.classList.remove("opacity-0");
+    keyModal.classList.remove("pointer-events-none", "opacity-0");
     keyModalContainer.classList.remove("scale-95");
     keyModalContainer.classList.add("scale-100");
     
-    // Preload inputs
     if (inputGeminiKey) inputGeminiKey.value = localStorage.getItem("jw_search_gemini_key") || localStorage.getItem("jw_search_user_api_key") || "";
     if (inputDeepseekKey) inputDeepseekKey.value = localStorage.getItem("jw_search_deepseek_key") || "";
     if (inputHy3Key) inputHy3Key.value = localStorage.getItem("jw_search_hy3_key") || "";
@@ -472,101 +854,82 @@ function closeKeyModal() {
     }, 200);
 }
 
-btnOpenKeyModal.addEventListener("click", () => openKeyModal());
-btnCloseKeyModal.addEventListener("click", closeKeyModal);
-keyModal.addEventListener("click", (e) => {
-    if (e.target === keyModal) closeKeyModal();
-});
-
-btnToggleKeyVisibility.addEventListener("click", () => {
-    const inputs = [inputGeminiKey, inputDeepseekKey, inputHy3Key];
-    const isPassword = inputs[0].type === "password";
-    inputs.forEach(inp => {
-        if (inp) inp.type = isPassword ? "text" : "password";
+if (btnOpenKeyModal) btnOpenKeyModal.addEventListener("click", () => openKeyModal());
+if (btnCloseKeyModal) btnCloseKeyModal.addEventListener("click", closeKeyModal);
+if (keyModal) {
+    keyModal.addEventListener("click", (e) => {
+        if (e.target === keyModal) closeKeyModal();
     });
-    btnToggleKeyVisibility.innerHTML = isPassword 
-        ? `<i class="fa-solid fa-eye-slash text-xs"></i> <span>Ocultar chaves</span>`
-        : `<i class="fa-solid fa-eye text-xs"></i> <span>Mostrar chaves</span>`;
-});
+}
 
-btnSaveKey.addEventListener("click", async () => {
-    const gKey = inputGeminiKey ? inputGeminiKey.value.trim() : "";
-    const dKey = inputDeepseekKey ? inputDeepseekKey.value.trim() : "";
-    const hKey = inputHy3Key ? inputHy3Key.value.trim() : "";
-    const hBaseUrl = inputHy3BaseUrl ? inputHy3BaseUrl.value.trim() : "";
-    const hModel = inputHy3Model ? inputHy3Model.value.trim() : "";
+if (btnToggleKeyVisibility) {
+    btnToggleKeyVisibility.addEventListener("click", () => {
+        const inputs = [inputGeminiKey, inputDeepseekKey, inputHy3Key];
+        const isPassword = inputs[0].type === "password";
+        inputs.forEach(inp => {
+            if (inp) inp.type = isPassword ? "text" : "password";
+        });
+        btnToggleKeyVisibility.innerHTML = isPassword 
+            ? `<i class="fa-solid fa-eye-slash text-xs"></i> <span>Ocultar chaves</span>`
+            : `<i class="fa-solid fa-eye text-xs"></i> <span>Mostrar chaves</span>`;
+    });
+}
 
-    if (gKey) {
-        localStorage.setItem("jw_search_gemini_key", gKey);
-        localStorage.setItem("jw_search_user_api_key", gKey);
-    } else {
-        localStorage.removeItem("jw_search_gemini_key");
-    }
+if (btnSaveKey) {
+    btnSaveKey.addEventListener("click", async () => {
+        const gKey = inputGeminiKey ? inputGeminiKey.value.trim() : "";
+        const dKey = inputDeepseekKey ? inputDeepseekKey.value.trim() : "";
+        const hKey = inputHy3Key ? inputHy3Key.value.trim() : "";
+        const hBaseUrl = inputHy3BaseUrl ? inputHy3BaseUrl.value.trim() : "";
+        const hModel = inputHy3Model ? inputHy3Model.value.trim() : "";
 
-    if (dKey) localStorage.setItem("jw_search_deepseek_key", dKey);
-    else localStorage.removeItem("jw_search_deepseek_key");
+        if (gKey) {
+            localStorage.setItem("jw_search_gemini_key", gKey);
+            localStorage.setItem("jw_search_user_api_key", gKey);
+        } else {
+            localStorage.removeItem("jw_search_gemini_key");
+        }
 
-    if (hKey) localStorage.setItem("jw_search_hy3_key", hKey);
-    else localStorage.removeItem("jw_search_hy3_key");
+        if (dKey) localStorage.setItem("jw_search_deepseek_key", dKey);
+        else localStorage.removeItem("jw_search_deepseek_key");
 
-    if (hBaseUrl) localStorage.setItem("jw_search_hy3_base_url", hBaseUrl);
-    else localStorage.removeItem("jw_search_hy3_base_url");
+        if (hKey) localStorage.setItem("jw_search_hy3_key", hKey);
+        else localStorage.removeItem("jw_search_hy3_key");
 
-    if (hModel) localStorage.setItem("jw_search_hy3_model", hModel);
-    else localStorage.removeItem("jw_search_hy3_model");
+        if (hBaseUrl) localStorage.setItem("jw_search_hy3_base_url", hBaseUrl);
+        else localStorage.removeItem("jw_search_hy3_base_url");
 
-    keyStatusMsg.className = "text-xs p-3 rounded-lg bg-green-50 text-green-700 border border-green-200 mt-3 flex items-center space-x-2";
-    keyStatusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> <span>Configurações salvas e ativadas com sucesso!</span>`;
-    keyStatusMsg.classList.remove("hidden");
-    
-    checkKeyStatus();
-    setTimeout(() => {
-        closeKeyModal();
-    }, 1200);
-});
+        if (hModel) localStorage.setItem("jw_search_hy3_model", hModel);
+        else localStorage.removeItem("jw_search_hy3_model");
+
+        keyStatusMsg.className = "text-xs p-3 rounded-lg bg-green-50 text-green-700 border border-green-200 mt-3 flex items-center space-x-2";
+        keyStatusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> <span>Configurações salvas com sucesso!</span>`;
+        keyStatusMsg.classList.remove("hidden");
+        
+        checkKeyStatus();
+        setTimeout(() => {
+            closeKeyModal();
+        }, 1000);
+    });
+}
 
 // Check API key presence on startup
 async function checkKeyStatus() {
     const gKey = localStorage.getItem("jw_search_gemini_key") || localStorage.getItem("jw_search_user_api_key");
     const dKey = localStorage.getItem("jw_search_deepseek_key");
     const hKey = localStorage.getItem("jw_search_hy3_key");
-
-    let hasLocalKey = false;
-    if (currentProvider === "gemini" && gKey) hasLocalKey = true;
-    else if (currentProvider === "deepseek" && dKey) hasLocalKey = true;
-    else if (currentProvider === "hy3" && hKey) hasLocalKey = true;
-
+    let hasLocalKey = (currentProvider === "gemini" && gKey) || (currentProvider === "deepseek" && dKey) || (currentProvider === "hy3" && hKey);
     if (hasLocalKey) {
-        keyBadgeText.innerHTML = `<span class="text-green-300">●</span> Minha Chave`;
-        btnOpenKeyModal.title = `Sua chave pessoal está ativa no navegador para ${currentProvider}. Clique para alterar.`;
+        if (keyBadgeText) keyBadgeText.innerHTML = `<span class="text-green-300">●</span> Minha Chave`;
         return;
     }
-
     try {
         const res = await fetch(`${API_BASE}/api/config`);
         if (res.ok) {
             const data = await res.json();
-            window.serverConfig = data;
-            window.serverHasKey = data.has_key;
-            
-            let serverHasForActive = false;
-            if (currentProvider === "gemini" && data.has_gemini) serverHasForActive = true;
-            else if (currentProvider === "deepseek" && data.has_deepseek) serverHasForActive = true;
-            else if (currentProvider === "hy3" && data.has_hy3) serverHasForActive = true;
-
-            if (serverHasForActive) {
-                keyBadgeText.innerHTML = `<span class="text-blue-300">●</span> Servidor Ativo`;
-                btnOpenKeyModal.title = `Chave padrão do servidor ativa para ${currentProvider}. Você também pode inserir sua própria chave se preferir.`;
-            } else {
-                keyBadgeText.innerHTML = `<span class="text-amber-300">●</span> Inserir Chave`;
-                btnOpenKeyModal.title = `Nenhuma chave configurada para ${currentProvider}. Clique para configurar sua chave gratuita.`;
-            }
+            let serverHasForActive = (currentProvider === "gemini" && data.has_gemini) || (currentProvider === "deepseek" && data.has_deepseek) || (currentProvider === "hy3" && data.has_hy3);
+            if (keyBadgeText) keyBadgeText.innerHTML = serverHasForActive ? `<span class="text-blue-300">●</span> Servidor Ativo` : `<span class="text-amber-300">●</span> Inserir Chave`;
         }
-    } catch (e) {
-        window.serverHasKey = false;
-        keyBadgeText.innerHTML = `<span class="text-amber-300">●</span> Inserir Chave`;
-    }
+    } catch { if (keyBadgeText) keyBadgeText.innerHTML = `<span class="text-amber-300">●</span> Inserir Chave`; }
 }
-
-// Initial status check
 checkKeyStatus();

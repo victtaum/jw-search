@@ -68,18 +68,34 @@ O sistema foi arquitetado para ser **100% resiliente a limites de cota** atravé
 
 ---
 
+## 💬 Agente Conversacional Interativo & Geração de Documentos
+
+O **JW Search** funciona como um agente de pesquisa contínua e interativa (estilo **Perplexity AI**), com suporte a histórico contextual acumulado e geração de múltiplos formatos:
+
+- 📊 **Tabelas Comparativas:** Geração e renderização de tabelas completas em Markdown com bordas e cabeçalhos nítidos.
+- 👨‍👩‍👧‍👦 **Roteiros & Esboços Teocráticos:** Elaboração de resumos práticos para estudo pessoal e em família.
+- 📄 **Exportação em 4 Formatos:**
+  - **Markdown (`.md`):** Exportação rápida e completa com textos bíblicos e links do WOL.
+  - **Sessão JSON (`.json`):** Backup completo do estudo com metadados para restaurar no futuro.
+  - **Word (`.docx`):** Documento formal diagramado para edição no Microsoft Word e Google Docs.
+  - **PDF (`.pdf`):** Layout otimizado para impressão e leitura offline.
+- 📥 **Importação & Continuidade de Estudos:** Permite carregar arquivos `.json` ou `.md` de estudos anteriores e continuar conversando de onde parou.
+- 🛡️ **Guarda de Saída / Confirmação ao Fechar:** Diálogo inteligente que pergunta se você deseja exportar ou salvar seu estudo no histórico local antes de iniciar uma nova busca.
+
+---
+
 ## 🛠️ Tecnologias e Plataformas Utilizadas
 
 ### 1. 🌐 Frontend & Web App (PWA)
-- **HTML5 & Vanilla JavaScript (ES6+ Moderno):** Arquitetura leve e de alta performance, sem frameworks pesados de compilação no cliente.
-- **Tailwind CSS (JIT via CDN):** Interface moderna, limpa, responsiva e otimizada para temas escuros e claros.
+- **HTML5 & Vanilla JavaScript (ES6+ Moderno):** Arquitetura conversacional leve e de alta performance, sem frameworks pesados de compilação no cliente.
+- **Tailwind CSS (JIT via CDN):** Interface moderna, responsiva, com suporte a tabelas responsivas e layout de impressão.
 - **FontAwesome 6 Pro & Google Fonts (Inter):** Tipografia e iconografia refinada.
 - **Progressive Web App (PWA):** `manifest.json` e Service Worker (`sw.js`) para instalação em tela cheia no iOS (Safari) e Android, com suporte a cache.
 - **Leitor Lateral de Artigos (Drawer):** Renderização direta do artigo do WOL sem anúncios ou distrações.
 
 ### 2. ⚡ Backend & APIs (Python)
-- **FastAPI:** Framework web assíncrono de alto desempenho em Python.
-- **Uvicorn (ASGI):** Servidor de produção ultra-rápido.
+- **FastAPI:** Framework web assíncrono com endpoints de busca simples (`/api/search`), chat contínuo (`/api/chat`) e exportação de documentos (`/api/export/docx`).
+- **Python-Docx:** Motor autônomo de conversão de Markdown e tabelas para arquivos `.docx` do Word.
 - **BeautifulSoup4 & Urllib:** Extração e higienização precisa do DOM de artigos, notas de estudo e referências bíblicas da Biblioteca Online.
 - **OpenAI Python SDK:** Comunicação padronizada com gateways (OpenRouter, DeepSeek, Tencent, Ollama).
 - **Google GenAI SDK:** Integração oficial de última geração com o Gemini 2.5 Flash e ferramentas de Grounding.

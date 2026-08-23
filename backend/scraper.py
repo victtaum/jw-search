@@ -164,7 +164,7 @@ class ApiKeyRequiredException(Exception):
     """Raised when no API key is provided on client or server."""
     pass
 
-def perform_ai_grounded_search(query, include_external=False, lang='pt', custom_api_key=None):
+def perform_ai_grounded_search(query, include_external=False, lang='pt', custom_api_key=None, history=None):
     active_client = None
     if custom_api_key and str(custom_api_key).strip():
         try:
@@ -196,14 +196,22 @@ SEPARAÇÃO OBRIGATÓRIA: Qualquer informação ou fonte externa que não venha 
 - Toda explicação doutrinária, moral ou histórica deve estar fundamentada nas publicações oficiais (A Sentinela, Despertai!, Estudo Perspicaz das Escrituras, Livros da Torre de Vigia, etc.).
 - Se um determinado aspecto não for abordado nas fontes oficiais, declare isso com humildade e fidelidade ao registro teocrático."""
 
+    conversation_context = ""
+    if history:
+        conversation_context = "\nHISTÓRICO ANTERIOR DA CONVERSA:\n"
+        for msg in history:
+            role_label = "Usuário" if msg.get("role") == "user" else "Assistente Teocrático"
+            conversation_context += f"{role_label}: {msg.get('content')}\n\n"
+
     prompt = f"""Você é um assistente de pesquisa teocrática avançado e profundo (no estilo de um motor de busca analítico como Perplexity AI / RAG Especializado), focado no acervo da Biblioteca Online da Torre de Vigia (wol.jw.org) e do site oficial (jw.org).
 
 IDIOMA DA RESPOSTA: Responda obrigatoriamente em {target_lang}.
 
 DIRETRIZES DE ESCOPO E FONTES:
 {source_directive}
+- CAPACIDADE DE FORMATAÇÃO: Você tem capacidade de gerar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 |), listas, roteiros de estudo, resumos e documentos detalhados sempre que solicitado.
 
-ESTRUTURA OBRIGATÓRIA DA RESPOSTA (Use formatação Markdown elegante com títulos e tópicos):
+ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas ou formatos específicos):
 
 ### 📌 Resposta Direta & Síntese
 (Apresente um resumo claro, objetivo e bíblico que responde diretamente à pergunta do usuário).
@@ -223,7 +231,8 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA (Use formatação Markdown elegante com títu
 
 {"### 🌐 Fontes Externas (Internet)" if include_external else ""}
 
-PERGUNTA DO USUÁRIO: "{query}"
+{conversation_context}
+PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
 """
 
     try:

@@ -100,18 +100,19 @@ def fetch_rag_context(articles: list, max_articles: int = 4, max_chars_per_artic
 
 def perform_custom_rag_search(
     query: str,
-    provider: str = "deepseek",
+    provider: str = "hy3",
     api_key: str = None,
     base_url: str = None,
     model: str = None,
     include_external: bool = False,
-    lang: str = "pt"
-):
+    lang: str = "pt",
+    history: Optional[List[Dict[str, str]]] = None
+) -> Dict[str, Any]:
     """
-    Executes a complete RAG workflow:
-    1. Searches WOL directly for theocratic articles.
-    2. Fetches and scrapes article bodies.
-    3. Augments the prompt with real citations and links.
+    Autonomous Theocratic RAG Flow with Multi-Turn Conversation History:
+    1. Direct search on wol.jw.org.
+    2. Deep scraping of the top theocratic articles.
+    3. Augments prompt with context and accumulated conversation history.
     4. Generates synthesized response with DeepSeek, Hy3, or OpenAI-compatible model.
     """
     # 1. Retrieval
@@ -131,18 +132,19 @@ def perform_custom_rag_search(
 
 IDIOMA DA RESPOSTA: Responda obrigatoriamente em {target_lang}.
 
-DIRETRIZES DE FONTES:
-- Baseie sua resposta PRINCIPALMENTE nos DOCUMENTOS TEOCRÁTICOS OFICIAIS fornecidos no contexto abaixo.
+DIRETRIZES DE FONTES & CAPACIDADES:
+- Baseie sua resposta PRINCIPALMENTE nos DOCUMENTOS TEOCRÁTICOS OFICIAIS fornecidos no contexto abaixo e no histórico da conversa.
 - Cite nominalmente as publicações (ex: A Sentinela, Despertai!, Estudo Perspicaz das Escrituras, Livros de Estudo).
 - Sempre que citar uma informação, inclua o link clicável em formato Markdown exatamente como fornecido nos documentos oficiais (ex: [Título do Artigo](https://wol.jw.org/pt/...)).
+- CAPACIDADE DE ESTRUTURAÇÃO: Você pode criar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 | Coluna 3 |), listas ordenadas/não-ordenadas, resumos para estudo em família, esboços teocráticos e documentos detalhados de pesquisa sempre que solicitado.
 - Mantenha tom respeitoso, teocrático, bíblico e instrutivo.
 
-ESTRUTURA DA RESPOSTA:
+ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas ou formatos específicos):
 ### 📌 Resposta Direta & Síntese
-(Apresente um resumo claro e bíblico que responde diretamente à dúvida).
+(Apresente um resumo claro e bíblico que responde diretamente à dúvida ou solicitação).
 
 ### 📖 Análise Teocrática Detalhada
-(Explique detalhadamente os pontos teocráticos com base nos documentos fornecidos, inserindo links Markdown).
+(Explique detalhadamente os pontos teocráticos com base nos documentos fornecidos e tabelas se solicitado, inserindo links Markdown).
 
 ### 📜 Textos Bíblicos Principais
 (Destaque os textos bíblicos e como eles se aplicam ao assunto).
@@ -155,7 +157,7 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
 {theocratic_context}
 """
 
-    user_prompt = f"Pergunta do usuário: \"{query}\""
+    user_prompt = f"Pergunta ou solicitação do usuário: \"{query}\""
 
     # 4. Configure LLM Client with Smart Auto-Detection
     clean_key = str(api_key).strip() if api_key else ""
@@ -192,13 +194,20 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
         }
     )
 
+    # Build conversation messages payload
+    messages = [{"role": "system", "content": system_prompt}]
+    if history:
+        for msg in history:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role in ["user", "assistant", "system"] and content:
+                messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": user_prompt})
+
     try:
         response = client.chat.completions.create(
             model=active_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
+            messages=messages,
             temperature=0.3
         )
         ai_text = response.choices[0].message.content
@@ -207,5 +216,7 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
 
     return {
         "ai_response": ai_text,
-        "results": retrieved_results
+        "results": retrieved_results,
+        "provider": provider,
+        "model": active_model
     }

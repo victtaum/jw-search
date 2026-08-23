@@ -78,5 +78,39 @@ class TestMultiModelAndRAGFlow(unittest.TestCase):
         self.assertIn("content", response.json())
         print("PASS: WOL reader accessed article cleanly without requiring an AI key.")
 
+    def test_export_docx_endpoint(self):
+        """The /api/export/docx endpoint must convert markdown into a valid docx binary."""
+        md_sample = """# Estudo Bíblico
+### 📌 Síntese
+Este é um teste de **exportação DOCX**.
+
+| Personagem | Lição |
+| :--- | :--- |
+| Noé | Obediência e Fé |
+| Abraão | Confiança Plena |
+"""
+        response = self.client.post("/api/export/docx", json={
+            "title": "Estudo de Teste",
+            "content": md_sample
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        self.assertGreater(len(response.content), 1000)
+        print(f"PASS: /api/export/docx generated valid Word document ({len(response.content)} bytes).")
+
+    def test_chat_endpoint_validates_payload(self):
+        """The /api/chat endpoint must accept conversation history."""
+        response = self.client.post("/api/chat", json={
+            "query": "crie uma tabela comparando os pontos anteriores",
+            "history": [
+                {"role": "user", "content": "Quem foi Noé?"},
+                {"role": "assistant", "content": "Noé foi um homem justo que construiu a arca."}
+            ],
+            "provider": "hy3"
+        })
+        # If no key, returns 401, or if key present returns 200
+        self.assertIn(response.status_code, [200, 401, 429])
+        print(f"PASS: /api/chat accepted multi-turn history payload (Status: {response.status_code}).")
+
 if __name__ == "__main__":
     unittest.main()
