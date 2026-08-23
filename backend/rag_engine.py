@@ -36,6 +36,9 @@ def _query_wol_html(search_term: str, config: dict, headers: dict, max_results: 
 
             # 1. Primary Card Extraction
             cards = soup.select('.result, .resultItem, .resultItems, .resultContentTopic, .directory')
+            seen_titles = set()
+            pub_counts = {}
+
             for card in cards:
                 link_el = card.select_one('a[href*="/wol/d/"], a[href*="/wol/b/"], a.title, h3 a, a')
                 if not link_el or not link_el.has_attr('href'):
@@ -47,18 +50,28 @@ def _query_wol_html(search_term: str, config: dict, headers: dict, max_results: 
                 clean_href = href.split('?')[0].split('#')[0]
                 if clean_href in seen_urls:
                     continue
-                seen_urls.add(clean_href)
 
                 raw_title = link_el.get_text(strip=True)
                 if not raw_title or len(raw_title) < 2:
                     continue
 
-                snippet_el = card.select_one('.snippet, .body, p')
-                snippet = snippet_el.get_text(strip=True) if snippet_el else ""
-
                 full_url = f"{config['host']}{clean_href}" if clean_href.startswith('/') else clean_href
                 pub = infer_publication_info(raw_title, full_url)
                 title = clean_result_title(raw_title, full_url)
+
+                # Deduplicate exact titles and limit duplicate publication entries
+                title_norm = title.lower().strip()
+                if title_norm in seen_titles:
+                    continue
+                if pub_counts.get(pub, 0) >= 2 and len(cards) > max_results:
+                    continue
+
+                snippet_el = card.select_one('.snippet, .body, p')
+                snippet = snippet_el.get_text(strip=True) if snippet_el else ""
+
+                seen_urls.add(clean_href)
+                seen_titles.add(title_norm)
+                pub_counts[pub] = pub_counts.get(pub, 0) + 1
 
                 results.append({
                     "title": title,

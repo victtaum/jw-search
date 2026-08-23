@@ -425,3 +425,149 @@ def get_clean_document(url):
             a['href'] = f"https://wol.jw.org{href}"
             
     return str(doc_copy)
+
+# =====================================================================
+# Bible Verse Extraction & Floating Tooltip Parser (TNM / wol.jw.org)
+# =====================================================================
+BIBLE_BOOKS_MAP = {
+    "gênesis": 1, "genesis": 1, "gên": 1, "gen": 1, "gn": 1,
+    "êxodo": 2, "exodo": 2, "êx": 2, "ex": 2,
+    "levítico": 3, "levitico": 3, "lev": 3, "lv": 3,
+    "números": 4, "numeros": 4, "núm": 4, "num": 4, "nm": 4,
+    "deuteronômio": 5, "deuteronomio": 5, "deut": 5, "dt": 5,
+    "josué": 6, "josue": 6, "jos": 6, "js": 6,
+    "juízes": 7, "juizes": 7, "juí": 7, "jui": 7, "jz": 7,
+    "rute": 8, "rut": 8, "rt": 8,
+    "1 samuel": 9, "1samuel": 9, "1 sam": 9, "1sam": 9, "1 sm": 9, "1sm": 9,
+    "2 samuel": 10, "2samuel": 10, "2 sam": 10, "2sam": 10, "2 sm": 10, "2sm": 10,
+    "1 reis": 11, "1reis": 11, "1 rs": 11, "1rs": 11,
+    "2 reis": 12, "2reis": 12, "2 rs": 12, "2rs": 12,
+    "1 crônicas": 13, "1 cronicas": 13, "1 crô": 13, "1 cro": 13, "1 cr": 13,
+    "2 crônicas": 14, "2 cronicas": 14, "2 crô": 14, "2 cro": 14, "2 cr": 14,
+    "esdras": 15, "esd": 15,
+    "neemias": 16, "ne": 16, "nee": 16,
+    "ester": 17, "est": 17,
+    "jó": 18, "jo": 18,
+    "salmos": 19, "salmo": 19, "sal": 19, "sl": 19,
+    "provérbios": 20, "proverbios": 20, "prov": 20, "pr": 20,
+    "eclesiastes": 21, "ecl": 21, "ec": 21,
+    "cântico de salomão": 22, "cantico de salomao": 22, "cânticos": 22, "canticos": 22, "cânt": 22, "cant": 22, "ct": 22,
+    "isaías": 23, "isaias": 23, "isa": 23, "is": 23,
+    "jeremias": 24, "jer": 24, "jr": 24,
+    "lamentações": 25, "lamentacoes": 25, "lam": 25, "lm": 25,
+    "ezequiel": 26, "eze": 26, "ez": 26,
+    "daniel": 27, "dan": 27, "dn": 27,
+    "oseias": 28, "os": 28,
+    "joel": 29, "joe": 29, "jl": 29,
+    "amós": 30, "amos": 30, "am": 30,
+    "obadias": 31, "ob": 31,
+    "jonas": 32, "jon": 32, "jn": 32,
+    "miqueias": 33, "miq": 33, "mq": 33,
+    "naum": 34, "na": 34,
+    "habacuque": 35, "hab": 35, "hc": 35,
+    "sofonias": 36, "sof": 36, "sf": 36,
+    "ageu": 37, "ag": 37,
+    "zacarias": 38, "zac": 38, "zc": 38,
+    "malaquias": 39, "mal": 39, "ml": 39,
+
+    # Novo Testamento
+    "mateus": 40, "mat": 40, "mt": 40,
+    "marcos": 41, "mar": 41, "mc": 41,
+    "lucas": 42, "luc": 42, "lc": 42,
+    "joão": 43, "joao": 43, "jo": 43,
+    "atos": 44, "at": 44,
+    "romanos": 45, "rom": 45, "rm": 45,
+    "1 coríntios": 46, "1 corintios": 46, "1 cor": 46, "1cor": 46, "1 co": 46,
+    "2 coríntios": 47, "2 corintios": 47, "2 cor": 47, "2cor": 47, "2 co": 47,
+    "gálatas": 48, "galatas": 48, "gál": 48, "gal": 48, "gl": 48,
+    "efésios": 49, "efesios": 49, "ef": 49,
+    "filipenses": 50, "fil": 50, "fp": 50,
+    "colossenses": 51, "col": 51, "cl": 51,
+    "1 tessalonicenses": 52, "1 tes": 52, "1ts": 52,
+    "2 tessalonicenses": 53, "2 tes": 53, "2ts": 53,
+    "1 timóteo": 54, "1 timoteo": 54, "1 tim": 54, "1tm": 54,
+    "2 timóteo": 55, "2 timoteo": 55, "2 tim": 55, "2tm": 55,
+    "tito": 56, "tit": 56, "tt": 56,
+    "filemom": 57, "flm": 57,
+    "hebreus": 58, "heb": 58, "hb": 58,
+    "tiago": 59, "tia": 59, "tg": 59,
+    "1 pedro": 60, "1 ped": 60, "1 pe": 60,
+    "2 pedro": 61, "2 ped": 61, "2 pe": 61,
+    "1 joão": 62, "1 joao": 62, "1 jo": 62,
+    "2 joão": 63, "2 joao": 63, "2 jo": 63,
+    "3 joão": 64, "3 joao": 64, "3 jo": 64,
+    "judas": 65, "jud": 65, "jd": 65,
+    "apocalipse": 66, "apoc": 66, "ap": 66, "revelação": 66, "revelacao": 66, "rev": 66
+}
+
+_verse_cache = {}
+
+def parse_bible_ref(ref_str: str):
+    m = re.match(r'^(1\s*|2\s*|3\s*)?([a-zA-ZáéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ\s]+?)\.?\s+(\d+)[\:\.]\s*(\d+)(?:-(\d+))?', ref_str.strip())
+    if not m:
+        return None
+    prefix = (m.group(1) or "").strip()
+    book_raw = (prefix + " " + m.group(2)).strip().lower()
+    chapter = int(m.group(3))
+    v_start = int(m.group(4))
+    v_end = int(m.group(5)) if m.group(5) else v_start
+    book_num = BIBLE_BOOKS_MAP.get(book_raw)
+    if not book_num:
+        clean_name = re.sub(r'[^\w\s]', '', book_raw)
+        book_num = BIBLE_BOOKS_MAP.get(clean_name)
+    if not book_num:
+        return None
+    name_fmt = m.group(2).capitalize() if not prefix else f"{prefix} {m.group(2).capitalize()}"
+    return {
+        "book_num": book_num,
+        "book_name": name_fmt,
+        "chapter": chapter,
+        "v_start": v_start,
+        "v_end": v_end,
+        "reference": f"{name_fmt} {chapter}:{v_start}" + (f"-{v_end}" if v_end != v_start else "")
+    }
+
+def fetch_verse_content(ref_str: str, lang: str = "pt"):
+    cache_key = f"{lang}:{ref_str.strip()}"
+    if cache_key in _verse_cache:
+        return _verse_cache[cache_key]
+    parsed = parse_bible_ref(ref_str)
+    if not parsed:
+        return None
+    chapter_url = f"https://wol.jw.org/{lang}/wol/b/r5/lp-t/nwt/{parsed['book_num']}/{parsed['chapter']}"
+    try:
+        req = urllib.request.Request(chapter_url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        })
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+        soup = BeautifulSoup(html, 'html.parser')
+        doc = soup.select_one('#doc, .document, article')
+        if not doc:
+            return None
+        text = doc.get_text(separator=" ", strip=True)
+        text = re.sub(r'[\+\*]', '', text)
+        
+        v_start = parsed['v_start']
+        v_end = parsed['v_end']
+        
+        pat = rf'{v_start}\s+(.*?)(?={v_end + 1}\s+|$)'
+        m = re.search(pat, text, re.DOTALL)
+        if m:
+            clean_verse = re.sub(r'\s+', ' ', m.group(1)).strip()
+        else:
+            clean_verse = text[:450]
+            
+        result = {
+            "reference": parsed["reference"],
+            "verse_text": clean_verse,
+            "chapter_url": chapter_url,
+            "book_num": parsed["book_num"],
+            "chapter": parsed["chapter"],
+            "publication": "Bíblia Sagrada (Tradução do Novo Mundo)"
+        }
+        _verse_cache[cache_key] = result
+        return result
+    except Exception as e:
+        print(f"Error fetching verse for '{ref_str}': {e}")
+        return None

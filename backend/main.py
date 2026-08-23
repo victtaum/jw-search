@@ -6,7 +6,16 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from pydantic import BaseModel
-from scraper import perform_ai_grounded_search, get_clean_document, set_api_key, get_api_status, ApiKeyRequiredException
+from scraper import (
+    perform_ai_grounded_search,
+    get_clean_document,
+    infer_publication_info,
+    clean_result_title,
+    fetch_verse_content,
+    client,
+    GEMINI_API_KEY,
+    ApiKeyRequiredException
+)
 from rag_engine import perform_custom_rag_search
 
 class KeyConfigRequest(BaseModel):
@@ -225,6 +234,16 @@ def api_export_docx(data: ExportDocxRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {e}")
+
+
+@app.get("/api/verse")
+def api_get_verse(ref: str = Query(..., description="Bible reference, e.g. 'Hebreus 11:24-25'"), lang: str = "pt"):
+    if not ref or not ref.strip():
+        raise HTTPException(status_code=400, detail="Referência bíblica vazia.")
+    verse_data = fetch_verse_content(ref.strip(), lang=lang)
+    if not verse_data:
+        raise HTTPException(status_code=404, detail="Texto bíblico não encontrado no acervo.")
+    return verse_data
 
 
 def handle_theocratic_search(

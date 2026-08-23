@@ -494,6 +494,7 @@ function renderConversationThread() {
         turnCard.innerHTML = headerHtml + sourcesHtml + bodyHtml;
         chatMessagesList.appendChild(turnCard);
     });
+    markBibleVersesInHtml(chatMessagesList);
     attachThreadInteractiveListeners();
     setTimeout(() => {
         const turns = document.querySelectorAll(".chat-turn");
@@ -501,7 +502,184 @@ function renderConversationThread() {
     }, 100);
 }
 
+// ==========================================
+// Bible Verse Tooltip & Interactive References
+// ==========================================
+const bibleTooltip = document.getElementById("bible-verse-tooltip");
+const bvTooltipRef = document.getElementById("bv-tooltip-ref");
+const bvTooltipBody = document.getElementById("bv-tooltip-body");
+const bvTooltipBtnRead = document.getElementById("bv-tooltip-btn-read");
+const _clientVerseCache = {};
+let _activeTooltipRef = null;
+let _tooltipHideTimeout = null;
+let _currentVerseChapterUrl = null;
+
+function markBibleVersesInHtml(containerEl) {
+    if (!containerEl) return;
+    const bibleRegex = /\b(?:1\s*|2\s*|3\s*)?(?:Gênesis|Gên|Genesis|Gen|Êxodo|Êx|Exodo|Ex|Levítico|Lev|Levitico|Números|Núm|Numeros|Num|Deuteronômio|Deut|Deuteronomio|Josué|Jos|Josue|Juízes|Juí|Juizes|Jui|Rute|Rut|Samuel|Sam|Reis|Rs|Crônicas|Crô|Cronicas|Cro|Esdras|Esd|Neemias|Ne|Ester|Est|Jó|Salmos?|Sal|Provérbios|Prov|Proverbios|Eclesiastes|Ecl|Cântico\s*de\s*Salomão|Cânticos|Cânt|Isaías|Isa|Isaias|Jeremias|Jer|Lamentações|Lam|Lamentacoes|Ezequiel|Eze|Daniel|Dan|Oseias|Os|Joel|Joe|Amós|Am|Amos|Obadias|Ob|Jonas|Jon|Miqueias|Miq|Naum|Na|Habacuque|Hab|Sofonias|Sof|Ageu|Ag|Zacarias|Zac|Malaquias|Mal|Mateus|Mat|Marcos|Mar|Lucas|Luc|João|Jo|Joao|Atos|At|Romanos|Rom|Coríntios|Cor|Corintios|Gálatas|Gál|Galatas|Gal|Efésios|Ef|Efesios|Filipenses|Fil|Colossenses|Col|Tessalonicenses|Tes|Timóteo|Tim|Timoteo|Tito|Tit|Filemom|Flm|Hebreus|Heb|Tiago|Tia|Pedro|Ped|Judas|Jud|Apocalipse|Ap|Revelação|Rev)\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+)?\b/gi;
+
+    const walker = document.createTreeWalker(containerEl, NodeFilter.SHOW_TEXT, {
+        acceptNode: function(node) {
+            if (node.parentElement && (node.parentElement.tagName === 'A' || node.parentElement.tagName === 'BUTTON' || node.parentElement.classList.contains('bible-verse-ref') || node.parentElement.tagName === 'CODE' || node.parentElement.tagName === 'PRE')) {
+                return NodeFilter.FILTER_REJECT;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
+
+    const nodesToReplace = [];
+    while (walker.nextNode()) {
+        if (bibleRegex.test(walker.currentNode.nodeValue)) {
+            nodesToReplace.push(walker.currentNode);
+        }
+        bibleRegex.lastIndex = 0;
+    }
+
+    nodesToReplace.forEach(node => {
+        const parent = node.parentNode;
+        if (!parent) return;
+        const text = node.nodeValue;
+        const frag = document.createDocumentFragment();
+        let lastIdx = 0;
+        bibleRegex.lastIndex = 0;
+        let match;
+        while ((match = bibleRegex.exec(text)) !== null) {
+            if (match.index > lastIdx) {
+                frag.appendChild(document.createTextNode(text.substring(lastIdx, match.index)));
+            }
+            const span = document.createElement('span');
+            span.className = 'bible-verse-ref cursor-pointer text-blue-600 font-semibold underline decoration-dotted decoration-blue-400 hover:text-blue-800 hover:bg-blue-50 px-1 py-0.5 rounded transition-colors';
+            span.textContent = match[0];
+            span.setAttribute('data-ref', match[0]);
+            frag.appendChild(span);
+            lastIdx = match.index + match[0].length;
+        }
+        if (lastIdx < text.length) {
+            frag.appendChild(document.createTextNode(text.substring(lastIdx)));
+        }
+        parent.replaceChild(frag, node);
+    });
+}
+
+async function showBibleVerseTooltip(e, ref) {
+    if (!bibleTooltip) return;
+    clearTimeout(_tooltipHideTimeout);
+    _activeTooltipRef = ref;
+    _currentVerseChapterUrl = null;
+
+    if (bvTooltipRef) bvTooltipRef.textContent = ref;
+    if (bvTooltipBody) {
+        if (_clientVerseCache[ref]) {
+            bvTooltipBody.textContent = `"${_clientVerseCache[ref].verse_text}"`;
+            _currentVerseChapterUrl = _clientVerseCache[ref].chapter_url;
+        } else {
+            bvTooltipBody.innerHTML = `
+                <div class="flex items-center justify-center py-4 text-slate-400">
+                    <i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando versículo...
+                </div>
+            `;
+        }
+    }
+
+    const rect = e.target.getBoundingClientRect();
+    const tooltipWidth = 320;
+    let left = rect.left;
+    if (left + tooltipWidth > window.innerWidth - 16) {
+        left = window.innerWidth - tooltipWidth - 16;
+    }
+    if (left < 16) left = 16;
+
+    let top = rect.bottom + 8;
+    if (top + 200 > window.innerHeight) {
+        top = rect.top - 180;
+    }
+
+    bibleTooltip.style.left = `${left}px`;
+    bibleTooltip.style.top = `${top}px`;
+    bibleTooltip.classList.remove("hidden");
+    requestAnimationFrame(() => {
+        bibleTooltip.classList.remove("scale-95", "opacity-0");
+        bibleTooltip.classList.add("scale-100", "opacity-100");
+    });
+
+    if (!_clientVerseCache[ref]) {
+        try {
+            const res = await fetch(`${API_BASE}/api/verse?ref=${encodeURIComponent(ref)}`);
+            if (res.ok) {
+                const data = await res.json();
+                _clientVerseCache[ref] = data;
+                if (_activeTooltipRef === ref && bvTooltipBody) {
+                    bvTooltipBody.textContent = `"${data.verse_text}"`;
+                    _currentVerseChapterUrl = data.chapter_url;
+                }
+            } else {
+                if (_activeTooltipRef === ref && bvTooltipBody) {
+                    bvTooltipBody.innerHTML = `<span class="text-slate-400 italic">Texto não encontrado na Biblioteca Online.</span>`;
+                }
+            }
+        } catch (err) {
+            if (_activeTooltipRef === ref && bvTooltipBody) {
+                bvTooltipBody.innerHTML = `<span class="text-rose-400">Erro ao carregar versículo.</span>`;
+            }
+        }
+    }
+}
+
+function hideBibleVerseTooltip() {
+    clearTimeout(_tooltipHideTimeout);
+    _tooltipHideTimeout = setTimeout(() => {
+        if (!bibleTooltip) return;
+        bibleTooltip.classList.remove("scale-100", "opacity-100");
+        bibleTooltip.classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+            if (bibleTooltip.classList.contains("opacity-0")) {
+                bibleTooltip.classList.add("hidden");
+            }
+        }, 150);
+    }, 200);
+}
+
+if (bibleTooltip) {
+    bibleTooltip.addEventListener("mouseenter", () => clearTimeout(_tooltipHideTimeout));
+    bibleTooltip.addEventListener("mouseleave", hideBibleVerseTooltip);
+}
+
+if (bvTooltipBtnRead) {
+    bvTooltipBtnRead.addEventListener("click", () => {
+        if (_activeTooltipRef) {
+            const cached = _clientVerseCache[_activeTooltipRef];
+            const url = _currentVerseChapterUrl || (cached ? cached.chapter_url : null);
+            if (url) {
+                hideBibleVerseTooltip();
+                openReader(url, _activeTooltipRef, "Bíblia Sagrada (Tradução do Novo Mundo)");
+            }
+        }
+    });
+}
+
 function attachThreadInteractiveListeners() {
+    document.querySelectorAll(".bible-verse-ref").forEach(span => {
+        const ref = span.getAttribute("data-ref");
+        span.addEventListener("mouseenter", (e) => showBibleVerseTooltip(e, ref));
+        span.addEventListener("mouseleave", hideBibleVerseTooltip);
+        span.addEventListener("click", (e) => {
+            e.preventDefault();
+            const cached = _clientVerseCache[ref];
+            if (cached && cached.chapter_url) {
+                hideBibleVerseTooltip();
+                openReader(cached.chapter_url, ref, "Bíblia Sagrada (Tradução do Novo Mundo)");
+            } else {
+                fetch(`${API_BASE}/api/verse?ref=${encodeURIComponent(ref)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        _clientVerseCache[ref] = data;
+                        hideBibleVerseTooltip();
+                        if (data.chapter_url) openReader(data.chapter_url, ref, "Bíblia Sagrada (Tradução do Novo Mundo)");
+                    });
+            }
+        });
+    });
+
     document.querySelectorAll(".wol-inline-link").forEach(link => {
         link.addEventListener("click", (e) => {
             e.preventDefault();

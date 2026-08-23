@@ -132,5 +132,15 @@ Este é um teste de **exportação DOCX**.
         self.assertIn("wol_library", data["providers"])
         print(f"PASS: /api/diagnostics returned system health and WOL latency ({data['providers']['wol_library'].get('latency_ms')} ms).")
 
+    def test_bible_verse_endpoint(self):
+        """The /api/verse endpoint must fetch clean verse text and chapter link from wol.jw.org."""
+        response = self.client.get("/api/verse?ref=Hebreus+11:24-25")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["reference"], "Hebreus 11:24-25")
+        self.assertIn("Moisés", data["verse_text"])
+        self.assertIn("/wol/b/r5/lp-t/nwt/58/11", data["chapter_url"])
+        print(f"PASS: /api/verse returned scripture tooltip for 'Hebreus 11:24-25': {data['verse_text'][:60]}...")
+
 if __name__ == "__main__":
     unittest.main()

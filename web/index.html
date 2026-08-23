@@ -89,9 +89,7 @@
     <header class="bg-slate-700 text-white shadow-md sticky top-0 z-30 no-print">
         <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
             <a href="/" id="btn-header-home" class="flex items-center space-x-3 cursor-pointer group hover:opacity-90 transition-opacity select-none" title="Início / Novo Estudo">
-                <div class="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-600/70 flex items-center justify-center text-blue-300 shadow-inner group-hover:scale-105 transition-transform">
-                    <i class="fa-solid fa-book-open-reader text-xl"></i>
-                </div>
+                <img src="/icons/icon-192.png" alt="JW Search" class="w-10 h-10 rounded-xl shadow-md border border-slate-600/60 group-hover:scale-105 transition-transform object-cover">
                 <div>
                     <span class="text-xl font-bold tracking-wide text-white group-hover:text-blue-100 transition-colors">JW Search</span>
                     <span class="text-[10px] text-blue-200 block -mt-1 font-normal">Estudo & Chat RAG</span>
@@ -577,6 +575,28 @@
                     Fechar
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Bible Verse Floating Tooltip (WOL Style) -->
+    <div id="bible-verse-tooltip" class="fixed hidden z-50 max-w-sm w-80 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl shadow-2xl border border-slate-700/80 p-3.5 text-xs transition-all pointer-events-auto transform scale-95 opacity-0 duration-150 ease-out">
+        <div class="flex items-center justify-between border-b border-slate-700/70 pb-2 mb-2">
+            <div class="flex items-center space-x-1.5 font-bold text-blue-300">
+                <i class="fa-solid fa-book-bible text-amber-400"></i>
+                <span id="bv-tooltip-ref">Texto Bíblico</span>
+            </div>
+            <span class="text-[9px] bg-blue-900/80 text-blue-200 border border-blue-700/60 px-1.5 py-0.5 rounded-full font-semibold">TNM</span>
+        </div>
+        <div id="bv-tooltip-body" class="text-slate-200 leading-relaxed font-serif text-[12px] max-h-48 overflow-y-auto pr-1">
+            <div class="flex items-center justify-center py-4 text-slate-400">
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando versículo...
+            </div>
+        </div>
+        <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+            <span><i class="fa-regular fa-hand-pointer text-amber-400 mr-1"></i> Clique para ler o capítulo</span>
+            <button id="bv-tooltip-btn-read" class="text-blue-400 hover:text-blue-200 font-semibold flex items-center gap-1">
+                <span>Abrir</span> <i class="fa-solid fa-arrow-right text-[9px]"></i>
+            </button>
         </div>
     </div>
 
