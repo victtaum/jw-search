@@ -38,10 +38,30 @@ No iOS, a extensão de pacotes compilados é **.ipa**. Para instalar aplicativos
 
 ---
 
+## 🌐 Hospedagem em Nuvem Gratuita (Render) & UptimeRobot (24/7 Sem Suspender)
+
+Como o **Render** oferece hospedagem gratuita para o backend FastAPI, por padrão ele suspende o container (*spin down / sleep*) após 15 minutos de inatividade, fazendo a primeira requisição demorar cerca de 50 segundos para acordar.
+
+Para resolver isso e manter o **JW Search 100% ativo 24 horas por dia sem suspender**:
+
+### 🤖 Configurando o UptimeRobot (Gratuito):
+1. Crie uma conta gratuita em [UptimeRobot](https://uptimerobot.com/).
+2. Clique em **"+ Add New Monitor"**.
+3. Configure:
+   - **Monitor Type:** `HTTP(s)`
+   - **Friendly Name:** `JW Search Server`
+   - **URL (or IP):** `https://seu-app.onrender.com/api/config` *(ou o link do seu Render)*
+   - **Monitoring Interval:** `5 minutes` (a cada 5 minutos)
+4. Clique em **"Create Monitor"**.
+
+> **💡 Como funciona:** O UptimeRobot envia uma requisição automática a cada 5 minutos para a API do JW Search, impedindo que o Render entre em modo de espera e garantindo respostas instantâneas a qualquer hora do dia ou da noite para todos os usuários!
+
+---
+
 ## 📂 Estrutura do Projeto
-- **`backend/`**: Servidor FastAPI em Python com busca RAG em IA e leitor WOL.
+- **`backend/`**: Servidor FastAPI em Python com motor RAG teocrático, integração multi-modelos (Hy3 / Tencent / OpenRouter, Google Gemini 2.5 e DeepSeek) e leitor de artigos WOL.
 - **`web/`**: Frontend responsivo em HTML5, Tailwind CSS e Progressive Web App (PWA) compatível com iOS/Android.
-- **`android/`**: Código-fonte do app nativo Android em Kotlin e Jetpack Compose.
+- **`android/`**: Código-fonte do app nativo Android em Kotlin e Jetpack Compose com ícones oficiais.
 - **`ios/`**: Código-fonte do app nativo iOS em Swift e SwiftUI.
 - **JW-Search.apk**: Aplicativo Android compilado pronto para instalar.
 - **start.bat**: Inicializador automático para Windows.
