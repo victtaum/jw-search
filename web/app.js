@@ -59,6 +59,11 @@ const btnExportJson = document.getElementById("btn-export-json");
 const btnExportDocx = document.getElementById("btn-export-docx");
 const btnExportPdf = document.getElementById("btn-export-pdf");
 
+// Followup Bar Controls
+const btnToggleFollowupExternal = document.getElementById("btn-toggle-followup-external");
+const iconFollowupExternal = document.getElementById("icon-followup-external");
+const labelFollowupExternal = document.getElementById("label-followup-external");
+
 // Modals
 const confirmExitModal = document.getElementById("confirm-exit-modal");
 const btnConfirmExportMd = document.getElementById("btn-confirm-export-md");
@@ -139,6 +144,36 @@ provBtns.forEach(btn => {
 
 updateProviderUI();
 
+
+// ==========================================
+// External Internet Search UI Sync
+// ==========================================
+function updateExternalSearchUI(enabled) {
+    if (externalCheckbox) externalCheckbox.checked = enabled;
+    if (btnToggleFollowupExternal && labelFollowupExternal && iconFollowupExternal) {
+        if (enabled) {
+            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-amber-400 text-amber-700 bg-amber-50/90 flex items-center space-x-1.5 transition-all text-[11px] font-semibold select-none shadow-xs cursor-pointer";
+            iconFollowupExternal.className = "fa-solid fa-globe text-amber-600 animate-pulse";
+            labelFollowupExternal.textContent = "Internet: Ativada";
+        } else {
+            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-slate-300 text-slate-600 hover:border-amber-400 hover:text-amber-700 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer";
+            iconFollowupExternal.className = "fa-solid fa-globe text-slate-400";
+            labelFollowupExternal.textContent = "Internet: Desativada";
+        }
+    }
+}
+
+if (btnToggleFollowupExternal) {
+    btnToggleFollowupExternal.addEventListener("click", () => {
+        const isNowActive = !(externalCheckbox && externalCheckbox.checked);
+        updateExternalSearchUI(isNowActive);
+    });
+}
+if (externalCheckbox) {
+    externalCheckbox.addEventListener("change", () => {
+        updateExternalSearchUI(externalCheckbox.checked);
+    });
+}
 
 // ==========================================
 // Quick Suggestion Pills

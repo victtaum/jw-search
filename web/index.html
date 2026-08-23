@@ -252,44 +252,58 @@
             <p id="status-text" class="text-gray-500 text-sm">Pesquisando extensivamente no acervo oficial...</p>
         </div>
 
-        <!-- Sticky Follow-Up Interactive Bar (When conversation is active) -->
-        <div id="followup-container" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 py-3.5 px-4 shadow-lg z-20">
+        <!-- Sticky Follow-Up Interactive Bar (Modern Floating Dock) -->
+        <div id="followup-container" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 py-3.5 px-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] z-20 transition-all">
             <div class="max-w-4xl mx-auto space-y-2.5">
-                <!-- Quick Suggestions Pills -->
-                <div class="flex items-center space-x-2 overflow-x-auto pb-1 text-xs no-scrollbar">
-                    <span class="text-gray-400 font-semibold flex-shrink-0"><i class="fa-solid fa-wand-magic-sparkles text-amber-500 mr-1"></i> Sugestões:</span>
-                    <button type="button" class="btn-prompt-pill px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 rounded-full border border-gray-200 text-gray-600 flex-shrink-0 transition-colors" data-prompt="Crie uma tabela comparativa com os pontos principais">
-                        📊 Tabela Comparativa
-                    </button>
-                    <button type="button" class="btn-prompt-pill px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 rounded-full border border-gray-200 text-gray-600 flex-shrink-0 transition-colors" data-prompt="Faça um resumo em tópicos práticos para estudo em família">
-                        👨‍👩‍👧‍👦 Estudo em Família
-                    </button>
-                    <button type="button" class="btn-prompt-pill px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 rounded-full border border-gray-200 text-gray-600 flex-shrink-0 transition-colors" data-prompt="Quais outros textos bíblicos complementam esse entendimento?">
-                        📜 Textos Bíblicos
-                    </button>
-                    <button type="button" class="btn-prompt-pill px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 rounded-full border border-gray-200 text-gray-600 flex-shrink-0 transition-colors" data-prompt="Organize um esboço estruturado com títulos e subtítulos">
-                        📝 Esboço Estruturado
-                    </button>
+                <!-- Quick Suggestions & Scope Controls Row -->
+                <div class="flex items-center justify-between gap-3 text-xs">
+                    <!-- Suggestion Chips (Scrollable) -->
+                    <div class="flex items-center space-x-1.5 overflow-x-auto pb-0.5 no-scrollbar flex-grow">
+                        <span class="text-slate-400 font-semibold flex-shrink-0 flex items-center mr-1">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-500 mr-1.5 text-[11px]"></i> Sugestões:
+                        </span>
+                        <button type="button" class="btn-prompt-pill px-3 py-1 bg-slate-100/80 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 rounded-full border border-slate-200 text-slate-700 font-medium flex-shrink-0 transition-all shadow-xs" data-prompt="Crie uma tabela comparativa com os pontos principais">
+                            📊 Tabela Comparativa
+                        </button>
+                        <button type="button" class="btn-prompt-pill px-3 py-1 bg-slate-100/80 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 rounded-full border border-slate-200 text-slate-700 font-medium flex-shrink-0 transition-all shadow-xs" data-prompt="Faça um resumo em tópicos práticos para estudo em família">
+                            👨‍👩‍👧‍👦 Estudo em Família
+                        </button>
+                        <button type="button" class="btn-prompt-pill px-3 py-1 bg-slate-100/80 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 rounded-full border border-slate-200 text-slate-700 font-medium flex-shrink-0 transition-all shadow-xs" data-prompt="Quais outros textos bíblicos complementam esse entendimento?">
+                            📜 Textos Bíblicos
+                        </button>
+                        <button type="button" class="btn-prompt-pill px-3 py-1 bg-slate-100/80 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 rounded-full border border-slate-200 text-slate-700 font-medium flex-shrink-0 transition-all shadow-xs" data-prompt="Organize um esboço estruturado com títulos e subtítulos">
+                            📝 Esboço Estruturado
+                        </button>
+                    </div>
+
+                    <!-- Follow-up Internet Toggle -->
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                        <button type="button" id="btn-toggle-followup-external" class="px-3 py-1 rounded-full border border-slate-300 text-slate-600 hover:border-amber-400 hover:text-amber-700 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer" title="Alternar pesquisa também na Internet">
+                            <i class="fa-solid fa-globe text-slate-400" id="icon-followup-external"></i>
+                            <span id="label-followup-external">Internet: Desativada</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Interactive Follow-up Input Row -->
                 <form id="followup-form" class="flex items-center gap-2">
-                    <button type="button" id="btn-new-chat" class="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors flex-shrink-0" title="Iniciar nova conversa">
-                        <i class="fa-solid fa-plus mr-1"></i> Novo Estudo
+                    <button type="button" id="btn-new-chat" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-semibold rounded-xl transition-all flex-shrink-0 flex items-center shadow-xs cursor-pointer" title="Iniciar novo estudo">
+                        <i class="fa-solid fa-plus mr-1.5 text-blue-600"></i>
+                        <span>Novo Estudo</span>
                     </button>
                     <div class="relative flex-grow flex items-center">
                         <input 
                             type="text" 
                             id="followup-input" 
                             placeholder="Faça uma pergunta de acompanhamento, peça tabelas ou aprofunde..." 
-                            class="w-full pl-4 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
+                            class="w-full pl-4 pr-12 py-3 bg-slate-50/90 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-blue-500 transition-all text-sm text-slate-800 placeholder-slate-400 shadow-inner font-normal"
                             required
                         >
                         <button 
                             type="submit" 
                             id="btn-send-followup"
-                            class="absolute right-1.5 p-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition-colors flex items-center justify-center text-sm"
-                            title="Enviar pergunta"
+                            class="absolute right-1.5 p-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg transition-all flex items-center justify-center text-sm shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
+                            title="Enviar pergunta de acompanhamento"
                         >
                             <i class="fa-solid fa-arrow-up"></i>
                         </button>
