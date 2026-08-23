@@ -275,18 +275,50 @@ ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas
 PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
 """
 
-    try:
-        # Run search grounding with strict token limits for high speed
-        response = active_client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                tools=[{"google_search": {}}],
-                temperature=0.3,
-                max_output_tokens=2500
+    # Run search grounding with multi-model resilience and retry
+    models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+    response = None
+    last_err = None
+
+    for m in models_to_try:
+        try:
+            response = active_client.models.generate_content(
+                model=m,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    tools=[{"google_search": {}}],
+                    temperature=0.3,
+                    max_output_tokens=2500
+                )
             )
-        )
-        
+            if response and response.text and len(response.text.strip()) > 20:
+                break
+        except Exception as err:
+            last_err = err
+            import time
+            time.sleep(0.4)
+
+    # Fallback without search tool if grounding had a temporary 503 spike
+    if not response or not response.text or len(response.text.strip()) < 20:
+        for m in ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']:
+            try:
+                response = active_client.models.generate_content(
+                    model=m,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.3,
+                        max_output_tokens=2500
+                    )
+                )
+                if response and response.text and len(response.text.strip()) > 20:
+                    break
+            except Exception as err:
+                last_err = err
+
+    if not response or not response.text or len(response.text.strip()) < 10:
+        raise Exception(f"Erro ao gerar ponderações da IA: {last_err or 'Modelo indisponível no momento'}")
+
+    try:
         ai_response = response.text or ""
         results = []
         raw_chunks = []

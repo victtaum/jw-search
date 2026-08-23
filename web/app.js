@@ -246,7 +246,9 @@ async function executeTurnSearch(userQuery) {
         const newTurn = {
             query: query,
             answer: data.ai_response || "Nenhuma resposta gerada.",
-            results: data.results || [],
+            results: (data.results && data.results.length > 0) 
+                ? data.results 
+                : (activeConversation.turns.length > 0 ? (activeConversation.turns[activeConversation.turns.length - 1].results || []) : []),
             provider: data.provider || currentProvider,
             model: data.model || "",
             latency: durationSec,
