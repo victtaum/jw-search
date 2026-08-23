@@ -166,11 +166,20 @@ async function executeTurnSearch(userQuery) {
     const hy3Model = localStorage.getItem("jw_search_hy3_model") || "";
 
     statusContainer.classList.remove("hidden");
-    if (statusText) {
-        statusText.innerText = activeConversation.turns.length === 0
-            ? "Pesquisando extensivamente no acervo oficial (WOL / JW.ORG)..."
-            : "Analisando contexto anterior e aprofundando estudo teocrático...";
-    }
+    let progressTimer = null;
+    let stepCount = 0;
+    const steps = [
+        "🔎 Consultando acervo oficial no wol.jw.org...",
+        "📚 Extraindo artigos, notas de estudo e referências...",
+        "✨ Sintetizando ponderações teocráticas e estruturando resposta..."
+    ];
+    if (statusText) statusText.innerText = steps[0];
+    progressTimer = setInterval(() => {
+        stepCount++;
+        if (statusText && stepCount < steps.length) {
+            statusText.innerText = steps[stepCount];
+        }
+    }, 2400);
 
     statusContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
@@ -179,6 +188,9 @@ async function executeTurnSearch(userQuery) {
         historyPayload.push({ role: "user", content: turn.query });
         historyPayload.push({ role: "assistant", content: turn.answer });
     }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
 
     try {
         const headers = { "Content-Type": "application/json" };
@@ -199,8 +211,11 @@ async function executeTurnSearch(userQuery) {
         const res = await fetch(`${API_BASE}/api/chat`, {
             method: "POST",
             headers: headers,
-            body: JSON.stringify(bodyData)
+            body: JSON.stringify(bodyData),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!res.ok) {
             const errData = await res.json().catch(() => ({ detail: "Erro de comunicação com o servidor." }));
@@ -209,7 +224,6 @@ async function executeTurnSearch(userQuery) {
             } else {
                 alert(`Erro na pesquisa: ${errData.detail || "Falha desconhecida"}`);
             }
-            statusContainer.classList.add("hidden");
             return;
         }
 
@@ -233,8 +247,13 @@ async function executeTurnSearch(userQuery) {
         if (followupInput) followupInput.value = "";
 
     } catch (err) {
-        alert(`Erro de conexão: ${err.message}`);
+        if (err.name === 'AbortError') {
+            alert("A consulta excedeu o tempo limite. O servidor pode estar iniciando (cold start). Por favor, tente novamente.");
+        } else {
+            alert(`Erro de conexão: ${err.message}`);
+        }
     } finally {
+        if (progressTimer) clearInterval(progressTimer);
         statusContainer.classList.add("hidden");
     }
 }
@@ -933,3 +952,10 @@ async function checkKeyStatus() {
     } catch { if (keyBadgeText) keyBadgeText.innerHTML = `<span class="text-amber-300">●</span> Inserir Chave`; }
 }
 checkKeyStatus();
+
+// Auto-restore last active thread if available
+const _savedThreads = getStoredThreads();
+if (_savedThreads.length > 0 && _savedThreads[0].turns && _savedThreads[0].turns.length > 0) {
+    activeConversation = _savedThreads[0];
+    renderConversationThread();
+}

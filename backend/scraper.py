@@ -85,6 +85,12 @@ def get_api_status():
 
 
 
+_session = requests.Session()
+_session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+})
+
 def clean_text(text):
     if not text:
         return ""
@@ -96,38 +102,27 @@ def get_headers():
     }
 
 def fetch_url(url):
-    req = urllib.request.Request(url, headers=get_headers())
     try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            return response.read().decode('utf-8', errors='ignore')
+        r = _session.get(url, timeout=4.0)
+        if r.status_code == 200:
+            return r.text
     except Exception as e:
-        print(f"Error fetching URL {url}: {e}")
-        return None
+        pass
+    return None
 
 def resolve_redirect_url(url):
     if not url or "grounding-api-redirect" not in url:
         return url
     try:
-        r = requests.head(
-            url,
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'},
-            allow_redirects=True,
-            timeout=5
-        )
+        r = _session.head(url, allow_redirects=True, timeout=2.0)
         return r.url
-    except Exception as e:
-        print(f"Error resolving redirect URL {url} with HEAD: {e}")
+    except Exception:
         try:
-            r = requests.get(
-                url,
-                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'},
-                allow_redirects=True,
-                timeout=5
-            )
+            r = _session.get(url, allow_redirects=True, timeout=2.0)
             return r.url
-        except Exception as e2:
-            print(f"Error resolving redirect URL {url} with GET: {e2}")
+        except Exception:
             return url
+
 def infer_publication_info(title, url):
     url_lower = (url or "").lower()
     title_lower = (title or "").lower()
@@ -204,31 +199,30 @@ SEPARAÇÃO OBRIGATÓRIA: Qualquer informação ou fonte externa que não venha 
             role_label = "Usuário" if msg.get("role") == "user" else "Assistente Teocrático"
             conversation_context += f"{role_label}: {msg.get('content')}\n\n"
 
-    prompt = f"""Você é um assistente de pesquisa teocrática avançado e profundo (no estilo de um motor de busca analítico como Perplexity AI / RAG Especializado), focado no acervo da Biblioteca Online da Torre de Vigia (wol.jw.org) e do site oficial (jw.org).
+    prompt = f"""Você é um assistente de pesquisa teocrática avançado e objetivo (no estilo de um motor de busca analítico como Perplexity AI / RAG Especializado), focado no acervo da Biblioteca Online da Torre de Vigia (wol.jw.org) e do site oficial (jw.org).
 
 IDIOMA DA RESPOSTA: Responda obrigatoriamente em {target_lang}.
 
 DIRETRIZES DE ESCOPO E FONTES:
 {source_directive}
+- OBJETIVIDADE: Seja claro, direto, fiel e profundo. Evite prolixidade.
 - CAPACIDADE DE FORMATAÇÃO: Você tem capacidade de gerar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 |), listas, roteiros de estudo, resumos e documentos detalhados sempre que solicitado.
 
 ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas ou formatos específicos):
 
 ### 📌 Resposta Direta & Síntese
-(Apresente um resumo claro, objetivo e bíblico que responde diretamente à pergunta do usuário).
+(Apresente um resumo claro, objetivo e bíblico que responde diretamente à dúvida do usuário).
 
 ### 📖 Análise Teocrática Detalhada
-(Desenvolva os pontos fundamentais com profundidade, lógica e consideração respeitosa):
+(Desenvolva os pontos fundamentais com clareza e fidelidade teocrática):
 - Explique o contexto e o raciocínio das publicações das Testemunhas de Jeová.
-- Crie tópicos bem explicados para cada nuance da pergunta.
-- Mencione nominalmente as publicações relevantes quando aplicável (ex: *A Sentinela*, *Despertai!*, *Estudo Perspicaz das Escrituras*, seções *Perguntas dos Leitores*, etc.).
-- Inclua links clicáveis em Markdown diretamente no texto sempre que citar um artigo ou publicação (ex: `[Título do Artigo](https://wol.jw.org/pt/...)`).
+- Mencione nominalmente as publicações relevantes e insira links Markdown clicáveis (ex: `[Título do Artigo](https://wol.jw.org/pt/...)`).
 
 ### 📜 Textos Bíblicos Principais
-(Destaque os textos bíblicos mais relevantes para o assunto, explicando em uma frase como cada um se aplica ao tema).
+(Destaque os textos bíblicos principais e sua aplicação).
 
 ### 📚 Publicações e Fontes Oficiais
-(Liste em tópicos os artigos, capítulos ou tópicos do wol.jw.org e jw.org que o leitor pode consultar para se aprofundar, sempre com o link Markdown formatado).
+(Liste em tópicos os artigos do wol.jw.org e jw.org para aprofundamento com seus links Markdown).
 
 {"### 🌐 Fontes Externas (Internet)" if include_external else ""}
 
@@ -237,12 +231,14 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
 """
 
     try:
-        # Run search grounding
+        # Run search grounding with strict token limits for high speed
         response = active_client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
-                tools=[{"google_search": {}}]
+                tools=[{"google_search": {}}],
+                temperature=0.3,
+                max_output_tokens=2500
             )
         )
         
@@ -283,11 +279,10 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
                     "title": title
                 })
                 
-        raw_chunks.extend(extracted_chunks)
-
+        raw_chunks = raw_chunks[:12]
         
         # Resolve redirect URLs in parallel to get direct jw.org or wol.jw.org links
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=12) as executor:
             resolved_uris = list(executor.map(lambda c: resolve_redirect_url(c['uri']), raw_chunks))
             
         seen_uris = set()

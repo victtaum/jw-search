@@ -70,34 +70,47 @@ def search_wol_direct(query: str, lang: str = "pt", max_results: int = 8):
         
     return results
 
-def fetch_rag_context(articles: list, max_articles: int = 4, max_chars_per_article: int = 3500):
+from concurrent.futures import ThreadPoolExecutor
+
+_article_cache = {}
+
+def _fetch_single_article(art, max_chars_per_article=3500):
+    url = art["link"]
+    if url in _article_cache:
+        return _article_cache[url]
+    try:
+        html_content = get_clean_document(url)
+        if html_content:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            text = soup.get_text(separator=' ', strip=True)
+            clean_t = re.sub(r'\s+', ' ', text)
+            if len(clean_t) > max_chars_per_article:
+                clean_t = clean_t[:max_chars_per_article] + "..."
+            chunk = (
+                f"TÍTULO: {art['title']}\n"
+                f"PUBLICAÇÃO: {art.get('publication', 'WOL')}\n"
+                f"LINK OFICIAL: {url}\n"
+                f"CONTEÚDO:\n{clean_t}"
+            )
+            _article_cache[url] = chunk
+            return chunk
+    except Exception as e:
+        print(f"Error fetching article content for {url}: {e}")
+    return None
+
+def fetch_rag_context(articles: list, max_articles: int = 3, max_chars_per_article: int = 3500):
     """
-    Fetches the full clean text of the top WOL articles to build the theocratic RAG context.
+    Fetches clean text of top WOL articles in parallel with thread pool.
     """
-    context_chunks = []
+    target = articles[:max_articles]
+    if not target:
+        return ""
     
-    for idx, art in enumerate(articles[:max_articles]):
-        url = art["link"]
-        try:
-            html_content = get_clean_document(url)
-            if html_content:
-                soup = BeautifulSoup(html_content, 'html.parser')
-                text = soup.get_text(separator=' ', strip=True)
-                clean_t = re.sub(r'\s+', ' ', text)
-                if len(clean_t) > max_chars_per_article:
-                    clean_t = clean_t[:max_chars_per_article] + "..."
-                
-                context_chunks.append(
-                    f"--- DOCUMENTO #{idx+1} ---\n"
-                    f"TÍTULO: {art['title']}\n"
-                    f"PUBLICAÇÃO: {art['publication']}\n"
-                    f"LINK OFICIAL: {url}\n"
-                    f"CONTEÚDO:\n{clean_t}\n"
-                )
-        except Exception as e:
-            print(f"Error fetching article content for {url}: {e}")
-            
-    return "\n\n".join(context_chunks)
+    with ThreadPoolExecutor(max_workers=len(target)) as executor:
+        chunks = list(executor.map(lambda a: _fetch_single_article(a, max_chars_per_article), target))
+    
+    valid = [f"--- DOCUMENTO #{i+1} ---\n{c}" for i, c in enumerate(chunks) if c]
+    return "\n\n".join(valid)
 
 def perform_custom_rag_search(
     query: str,
@@ -111,16 +124,16 @@ def perform_custom_rag_search(
 ) -> Dict[str, Any]:
     """
     Autonomous Theocratic RAG Flow with Multi-Turn Conversation History:
-    1. Direct search on wol.jw.org.
-    2. Deep scraping of the top theocratic articles.
+    1. Direct search on wol.jw.org (Parallel retrieval).
+    2. Parallel deep scraping of the top theocratic articles.
     3. Augments prompt with context and accumulated conversation history.
     4. Generates synthesized response with DeepSeek, Hy3, or OpenAI-compatible model.
     """
     # 1. Retrieval
-    retrieved_results = search_wol_direct(query, lang=lang, max_results=8)
+    retrieved_results = search_wol_direct(query, lang=lang, max_results=6)
     
-    # 2. Context Scraping
-    theocratic_context = fetch_rag_context(retrieved_results, max_articles=4)
+    # 2. Context Scraping (Parallel)
+    theocratic_context = fetch_rag_context(retrieved_results, max_articles=3)
     
     if not theocratic_context:
         theocratic_context = "Nenhum documento específico foi baixado. Use seu conhecimento das publicações oficiais das Testemunhas de Jeová (jw.org e wol.jw.org) para responder com fidelidade bíblica."
@@ -160,7 +173,7 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
 
     user_prompt = f"Pergunta ou solicitação do usuário: \"{query}\""
 
-    # 4. Configure LLM Client with Smart Auto-Detection
+    # 4. Configure LLM Client with Smart Auto-Detection & Strict Timeout
     clean_key = str(api_key).strip() if api_key else ""
     
     if provider == "deepseek":
@@ -185,10 +198,12 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
         active_base_url = base_url or "https://api.openai.com/v1"
         active_model = model or "gpt-4o-mini"
 
-    # Initialize client with OpenRouter identification headers
+    # Initialize client with OpenRouter identification headers and 14s timeout
     client = OpenAI(
         api_key=clean_key,
         base_url=active_base_url,
+        timeout=14.0,
+        max_retries=1,
         default_headers={
             "HTTP-Referer": "https://jw-search.org",
             "X-Title": "JW Search Theocratic RAG"
