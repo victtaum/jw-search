@@ -6,58 +6,61 @@ from bs4 import BeautifulSoup
 from openai import OpenAI
 from scraper import get_clean_document, infer_publication_info, clean_result_title
 
-def search_wol_direct(query: str, lang: str = "pt", max_results: int = 8):
+def extract_theocratic_keywords(query: str) -> str:
     """
-    Directly queries the Watchtower Online Library (wol.jw.org) search engine.
+    Cleans natural language questions and conversational phrases into theocratic search keywords for WOL.
     """
-    lang_configs = {
-        "pt": {"url": "https://wol.jw.org/pt/wol/s/r5/lp-t", "host": "https://wol.jw.org"},
-        "en": {"url": "https://wol.jw.org/en/wol/s/r1/lp-e", "host": "https://wol.jw.org"},
-        "es": {"url": "https://wol.jw.org/es/wol/s/r4/lp-s", "host": "https://wol.jw.org"},
+    clean_q = re.sub(r'[^\w\s]', ' ', query, flags=re.UNICODE)
+    stop_words = {
+        "o", "a", "os", "as", "um", "uma", "uns", "umas", "de", "do", "da", "dos", "das",
+        "em", "no", "na", "nos", "nas", "por", "para", "com", "sem", "sob", "sobre",
+        "que", "qual", "quais", "quem", "como", "onde", "quando", "porque", "por que",
+        "foi", "era", "ser", "sendo", "sao", "são", "é", "esta", "está", "estava", "ter", "tinha",
+        "cara", "pessoa", "legal", "bom", "ruim", "qualidades", "fazer", "dizer", "explicar",
+        "the", "a", "an", "in", "on", "at", "by", "for", "with", "about", "what", "how", "who", "why", "is", "was"
     }
-    config = lang_configs.get(lang, lang_configs["pt"])
-    encoded_q = urllib.parse.quote(query)
+    words = [w for w in clean_q.split() if w.lower() not in stop_words and len(w) > 2]
+    return " ".join(words[:4]) if words else query
+
+def _query_wol_html(search_term: str, config: dict, headers: dict, max_results: int = 6) -> list:
+    encoded_q = urllib.parse.quote(search_term)
     search_url = f"{config['url']}?q={encoded_q}"
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-    }
-    
     results = []
     seen_urls = set()
-    
+
     try:
         req = urllib.request.Request(search_url, headers=headers)
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=5) as resp:
             html = resp.read().decode('utf-8', errors='ignore')
             soup = BeautifulSoup(html, 'html.parser')
-            
-            items = soup.select('.results .resultItem, .resultItem, .results li')
-            for item in items:
-                link_el = item.select_one('h3 a, a.title, .caption a, a')
+
+            # 1. Primary Card Extraction
+            cards = soup.select('.result, .resultItem, .resultItems, .resultContentTopic, .directory')
+            for card in cards:
+                link_el = card.select_one('a[href*="/wol/d/"], a[href*="/wol/b/"], a.title, h3 a, a')
                 if not link_el or not link_el.has_attr('href'):
                     continue
-                
+
                 href = link_el['href']
-                if href.startswith('/'):
-                    href = f"{config['host']}{href}"
-                
                 clean_href = href.split('?')[0].split('#')[0]
                 if clean_href in seen_urls:
                     continue
                 seen_urls.add(clean_href)
-                
+
                 raw_title = link_el.get_text(strip=True)
-                snippet_el = item.select_one('.snippet, .body, p')
+                if not raw_title or len(raw_title) < 2:
+                    continue
+
+                snippet_el = card.select_one('.snippet, .body, p')
                 snippet = snippet_el.get_text(strip=True) if snippet_el else ""
-                
-                pub = infer_publication_info(raw_title, clean_href)
-                title = clean_result_title(raw_title, clean_href)
-                
+
+                full_url = f"{config['host']}{clean_href}" if clean_href.startswith('/') else clean_href
+                pub = infer_publication_info(raw_title, full_url)
+                title = clean_result_title(raw_title, full_url)
+
                 results.append({
                     "title": title,
-                    "link": clean_href,
+                    "link": full_url,
                     "snippet": snippet,
                     "publication": pub,
                     "is_external": False,
@@ -65,9 +68,60 @@ def search_wol_direct(query: str, lang: str = "pt", max_results: int = 8):
                 })
                 if len(results) >= max_results:
                     break
+
+            # 2. Direct document links fallback
+            if not results:
+                for a in soup.find_all('a', href=True):
+                    href = a['href']
+                    if '/wol/d/' in href or '/wol/b/' in href:
+                        clean_href = href.split('?')[0].split('#')[0]
+                        if clean_href in seen_urls:
+                            continue
+                        seen_urls.add(clean_href)
+                        raw_title = a.get_text(strip=True)
+                        if raw_title and len(raw_title) > 2:
+                            full_url = f"{config['host']}{clean_href}" if clean_href.startswith('/') else clean_href
+                            pub = infer_publication_info(raw_title, full_url)
+                            title = clean_result_title(raw_title, full_url)
+                            results.append({
+                                "title": title,
+                                "link": full_url,
+                                "snippet": "",
+                                "publication": pub,
+                                "is_external": False,
+                                "source_site": "wol.jw.org"
+                            })
+                            if len(results) >= max_results:
+                                break
     except Exception as e:
-        print(f"Direct WOL search notice: {e}")
-        
+        print(f"WOL query exception for '{search_term}': {e}")
+
+    return results
+
+def search_wol_direct(query: str, lang: str = "pt", max_results: int = 6):
+    """
+    Directly queries the Watchtower Online Library (wol.jw.org) search engine with keyword fallback.
+    """
+    lang_configs = {
+        "pt": {"url": "https://wol.jw.org/pt/wol/s/r5/lp-t", "host": "https://wol.jw.org"},
+        "en": {"url": "https://wol.jw.org/en/wol/s/r1/lp-e", "host": "https://wol.jw.org"},
+        "es": {"url": "https://wol.jw.org/es/wol/s/r4/lp-s", "host": "https://wol.jw.org"},
+    }
+    config = lang_configs.get(lang, lang_configs["pt"])
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+    }
+
+    # 1. Search with raw query
+    results = _query_wol_html(query, config, headers, max_results=max_results)
+
+    # 2. If 0 results, search with extracted theocratic keywords
+    if not results:
+        keywords = extract_theocratic_keywords(query)
+        if keywords and keywords.lower() != query.lower():
+            results = _query_wol_html(keywords, config, headers, max_results=max_results)
+
     return results
 
 from concurrent.futures import ThreadPoolExecutor
@@ -224,7 +278,8 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
         response = client.chat.completions.create(
             model=active_model,
             messages=messages,
-            temperature=0.3
+            temperature=0.3,
+            max_tokens=1800
         )
         ai_text = response.choices[0].message.content
     except Exception as e:

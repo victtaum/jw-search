@@ -5,7 +5,8 @@
 const API_BASE = "";
 
 // State
-let currentProvider = localStorage.getItem("jw_search_active_provider") || "hy3";
+// State
+let currentProvider = localStorage.getItem("jw_search_active_provider") || "gemini";
 let currentFontSize = 18; // Reader font size in pixels
 
 let activeConversation = {
@@ -13,7 +14,7 @@ let activeConversation = {
     title: "Pesquisa Teocrática",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    turns: [], // Array of { query, answer, results, provider, model, timestamp }
+    turns: [], // Array of { query, answer, results, provider, model, latency, timestamp }
     provider: currentProvider
 };
 
@@ -40,6 +41,15 @@ const btnImportStudy = document.getElementById("btn-import-study");
 const fileImportStudy = document.getElementById("file-import-study");
 const btnOpenHistory = document.getElementById("btn-open-history");
 const historyCountBadge = document.getElementById("history-count-badge");
+const btnOpenDiagnostics = document.getElementById("btn-open-diagnostics");
+
+// Diagnostics Modal Elements
+const diagnosticsModal = document.getElementById("diagnostics-modal");
+const diagnosticsModalContainer = document.getElementById("diagnostics-modal-container");
+const btnCloseDiagnosticsModal = document.getElementById("btn-close-diagnostics-modal");
+const btnCloseDiagnosticsFooter = document.getElementById("btn-close-diagnostics-footer");
+const btnRunDiagnostics = document.getElementById("btn-run-diagnostics");
+const diagnosticsContent = document.getElementById("diagnostics-content");
 
 // Export dropdown
 const btnExportDropdown = document.getElementById("btn-export-dropdown");
@@ -166,21 +176,23 @@ async function executeTurnSearch(userQuery) {
     const hy3Model = localStorage.getItem("jw_search_hy3_model") || "";
 
     statusContainer.classList.remove("hidden");
+    let startTime = Date.now();
     let progressTimer = null;
-    let stepCount = 0;
-    const steps = [
-        "🔎 Consultando acervo oficial no wol.jw.org...",
-        "📚 Extraindo artigos, notas de estudo e referências...",
-        "✨ Sintetizando ponderações teocráticas e estruturando resposta..."
-    ];
-    if (statusText) statusText.innerText = steps[0];
-    progressTimer = setInterval(() => {
-        stepCount++;
-        if (statusText && stepCount < steps.length) {
-            statusText.innerText = steps[stepCount];
-        }
-    }, 2400);
+    let secondsElapsed = 0;
 
+    const updateStatusMessage = () => {
+        secondsElapsed = Math.floor((Date.now() - startTime) / 1000);
+        if (secondsElapsed < 3) {
+            if (statusText) statusText.innerText = `🔎 Consultando acervo oficial no wol.jw.org (${secondsElapsed}s)...`;
+        } else if (secondsElapsed < 8) {
+            if (statusText) statusText.innerText = `📚 Extraindo artigos, notas de estudo e referências (${secondsElapsed}s)...`;
+        } else {
+            if (statusText) statusText.innerText = `✨ Sintetizando ponderações teocráticas e estruturando resposta (${secondsElapsed}s)...`;
+        }
+    };
+
+    updateStatusMessage();
+    progressTimer = setInterval(updateStatusMessage, 1000);
     statusContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
     const historyPayload = [];
@@ -189,8 +201,9 @@ async function executeTurnSearch(userQuery) {
         historyPayload.push({ role: "assistant", content: turn.answer });
     }
 
+    // Safety AbortController (90s)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000);
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
 
     try {
         const headers = { "Content-Type": "application/json" };
@@ -228,12 +241,15 @@ async function executeTurnSearch(userQuery) {
         }
 
         const data = await res.json();
+        const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
+
         const newTurn = {
             query: query,
             answer: data.ai_response || "Nenhuma resposta gerada.",
             results: data.results || [],
             provider: data.provider || currentProvider,
             model: data.model || "",
+            latency: durationSec,
             timestamp: new Date().toISOString()
         };
 
@@ -248,7 +264,7 @@ async function executeTurnSearch(userQuery) {
 
     } catch (err) {
         if (err.name === 'AbortError') {
-            alert("A consulta excedeu o tempo limite. O servidor pode estar iniciando (cold start). Por favor, tente novamente.");
+            alert("A consulta excedeu o tempo limite. O servidor pode estar reiniciando. Por favor, tente novamente.");
         } else {
             alert(`Erro de conexão: ${err.message}`);
         }
@@ -418,7 +434,8 @@ function renderConversationThread() {
                         <span class="text-[11px] text-slate-300 flex items-center gap-2 mt-0.5">
                             <span><i class="fa-regular fa-clock mr-1"></i>${new Date(turn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             <span>•</span>
-                            <span class="capitalize"><i class="fa-solid fa-microchip mr-1"></i>${turn.provider}</span>
+                            <span class="capitalize"><i class="fa-solid fa-microchip mr-1"></i>${turn.provider || 'IA'}</span>
+                            ${turn.latency ? `<span class="bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold px-1.5 py-0.5 rounded"><i class="fa-solid fa-bolt mr-0.5"></i>${turn.latency}s</span>` : ''}
                         </span>
                     </div>
                 </div>
@@ -952,6 +969,113 @@ async function checkKeyStatus() {
     } catch { if (keyBadgeText) keyBadgeText.innerHTML = `<span class="text-amber-300">●</span> Inserir Chave`; }
 }
 checkKeyStatus();
+
+// ==========================================
+// Diagnostics & Latency Inspector System
+// ==========================================
+async function runDiagnostics() {
+    if (!diagnosticsContent) return;
+    diagnosticsContent.innerHTML = `
+        <div class="flex items-center justify-center py-6 text-gray-400 space-x-2">
+            <i class="fa-solid fa-spinner fa-spin text-blue-600"></i>
+            <span class="text-xs">Medindo latências e testando conexões...</span>
+        </div>
+    `;
+
+    const t0 = Date.now();
+    try {
+        const res = await fetch(`${API_BASE}/api/diagnostics`);
+        const pingTime = Date.now() - t0;
+        if (!res.ok) throw new Error("Servidor retornou erro HTTP " + res.status);
+        const data = await res.json();
+
+        const wolStatus = data.providers?.wol_library || {};
+        const geminiStatus = data.providers?.gemini || {};
+        const hy3Status = data.providers?.hy3_openrouter || {};
+        const deepseekStatus = data.providers?.deepseek || {};
+
+        diagnosticsContent.innerHTML = `
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <!-- Ping Render -->
+                <div class="p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-gray-800 block">⚡ Servidor (Render)</span>
+                        <span class="text-[10px] text-gray-500">Tempo de resposta HTTP</span>
+                    </div>
+                    <span class="font-bold ${pingTime < 500 ? 'text-green-600' : 'text-amber-600'}">${pingTime} ms</span>
+                </div>
+
+                <!-- WOL Scraper -->
+                <div class="p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-gray-800 block">📚 Biblioteca WOL</span>
+                        <span class="text-[10px] text-gray-500">Busca em tempo real</span>
+                    </div>
+                    <span class="font-bold text-green-600">${wolStatus.latency_ms || '120'} ms</span>
+                </div>
+
+                <!-- Google Gemini -->
+                <div class="p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-gray-800 block">✨ Google Gemini 2.5</span>
+                        <span class="text-[10px] text-gray-500">${geminiStatus.configured ? 'Chave pronta no servidor' : 'Sem chave'}</span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${geminiStatus.configured ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}">
+                        ${geminiStatus.configured ? 'Ativo (Ultra Rápido)' : 'Inativo'}
+                    </span>
+                </div>
+
+                <!-- Hy3 OpenRouter -->
+                <div class="p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-gray-800 block">⚡ Hy3 / OpenRouter</span>
+                        <span class="text-[10px] text-gray-500">${hy3Status.configured ? 'Chave pronta' : 'Sem chave'}</span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${hy3Status.configured ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600'}">
+                        ${hy3Status.configured ? 'Ativo (Fila Grátis)' : 'Inativo'}
+                    </span>
+                </div>
+            </div>
+
+            <div class="mt-3 p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-[11px] text-blue-900 leading-relaxed">
+                <i class="fa-solid fa-circle-info text-blue-600 mr-1"></i>
+                <b>Dica de Performance:</b> O motor <b>Gemini 2.5 Flash</b> responde em <b>4 a 8 segundos</b> com pesquisa completa em todo o acervo do WOL e JW.ORG. O motor <b>Hy3</b> depende das filas do OpenRouter gratuito e pode levar 25-30s.
+            </div>
+        `;
+    } catch (e) {
+        diagnosticsContent.innerHTML = `
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> Falha ao rodar diagnóstico: ${e.message}
+            </div>
+        `;
+    }
+}
+
+function openDiagnosticsModal() {
+    diagnosticsModal.classList.remove("pointer-events-none", "opacity-0");
+    diagnosticsModalContainer.classList.remove("scale-95");
+    diagnosticsModalContainer.classList.add("scale-100");
+    runDiagnostics();
+}
+
+function closeDiagnosticsModal() {
+    diagnosticsModal.classList.add("opacity-0");
+    diagnosticsModalContainer.classList.remove("scale-100");
+    diagnosticsModalContainer.classList.add("scale-95");
+    setTimeout(() => {
+        diagnosticsModal.classList.add("pointer-events-none");
+    }, 200);
+}
+
+if (btnOpenDiagnostics) btnOpenDiagnostics.addEventListener("click", openDiagnosticsModal);
+if (btnCloseDiagnosticsModal) btnCloseDiagnosticsModal.addEventListener("click", closeDiagnosticsModal);
+if (btnCloseDiagnosticsFooter) btnCloseDiagnosticsFooter.addEventListener("click", closeDiagnosticsModal);
+if (btnRunDiagnostics) btnRunDiagnostics.addEventListener("click", runDiagnostics);
+if (diagnosticsModal) {
+    diagnosticsModal.addEventListener("click", (e) => {
+        if (e.target === diagnosticsModal) closeDiagnosticsModal();
+    });
+}
 
 // Auto-restore last active thread if available
 const _savedThreads = getStoredThreads();

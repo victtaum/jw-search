@@ -112,5 +112,15 @@ Este é um teste de **exportação DOCX**.
         self.assertIn(response.status_code, [200, 401, 429])
         print(f"PASS: /api/chat accepted multi-turn history payload (Status: {response.status_code}).")
 
+    def test_diagnostics_endpoint(self):
+        """The /api/diagnostics endpoint must return system latency and provider status."""
+        response = self.client.get("/api/diagnostics")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "online")
+        self.assertIn("providers", data)
+        self.assertIn("wol_library", data["providers"])
+        print(f"PASS: /api/diagnostics returned system health and WOL latency ({data['providers']['wol_library'].get('latency_ms')} ms).")
+
 if __name__ == "__main__":
     unittest.main()

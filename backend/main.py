@@ -402,6 +402,51 @@ def api_read(
 def api_get_config():
     return get_api_status()
 
+@app.get("/api/diagnostics")
+def api_diagnostics():
+    import time
+    report = {
+        "status": "online",
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "providers": {}
+    }
+    
+    # 1. Test WOL scraper speed
+    t0 = time.time()
+    try:
+        wol_res = search_wol_direct("amor leal", lang="pt", max_results=3)
+        wol_time = round((time.time() - t0) * 1000, 1)
+        report["providers"]["wol_library"] = {
+            "status": "ok",
+            "latency_ms": wol_time,
+            "sample_results": len(wol_res)
+        }
+    except Exception as e:
+        report["providers"]["wol_library"] = {"status": "error", "error": str(e)}
+
+    # 2. Check Gemini config
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    report["providers"]["gemini"] = {
+        "configured": bool(gemini_key),
+        "status": "ready" if gemini_key else "not_configured"
+    }
+
+    # 3. Check Hy3 config
+    hy3_key = os.environ.get("HY3_API_KEY") or os.environ.get("OPENAI_API_KEY")
+    report["providers"]["hy3_openrouter"] = {
+        "configured": bool(hy3_key),
+        "status": "ready" if hy3_key else "not_configured"
+    }
+
+    # 4. Check DeepSeek config
+    deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
+    report["providers"]["deepseek"] = {
+        "configured": bool(deepseek_key),
+        "status": "ready" if deepseek_key else "not_configured"
+    }
+
+    return report
+
 @app.post("/api/config")
 def api_set_config(data: KeyConfigRequest):
     success, msg = set_api_key(data.api_key)
