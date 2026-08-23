@@ -1,67 +1,202 @@
-# 📖 JW Search - Portal de Pesquisa Teocrática Inteligente
+# 📖 JW Search - Portal & Aplicativo de Pesquisa Teocrática Inteligente
 
-O **JW Search** é uma ferramenta de pesquisa teocrática pessoal com Inteligência Artificial (RAG com Google Search Grounding), buscando respostas estruturadas exclusivamente nas fontes oficiais (**jw.org** e **wol.jw.org**).
-
----
-
-## 🍏 Como Instalar e Usar no iPhone / iPad (iOS) SEM LOJA
-
-No iOS, a extensão de pacotes compilados é **.ipa**. Para instalar aplicativos no iPhone **sem precisar da App Store**, existem duas formas:
-
-### 🌟 Método 1: Instalação Instantânea como Web App (PWA Nativo - Recomendado)
-1. No seu iPhone ou iPad, abra o **Safari** e acesse o endereço do portal (ex: http://SEU_IP:8000 ou seu link de nuvem).
-2. Toque no botão de **Compartilhar** do Safari (ícone de um quadrado com uma seta para cima na barra inferior).
-3. Role para baixo e selecione **"Adicionar à Tela de Início"** (*Add to Home Screen*).
-4. Toque em **"Adicionar"** no canto superior direito.
-5. **Resultado:** O ícone do **JW Search** aparecerá na tela inicial do seu iPhone, abrindo em **tela cheia nativa** (sem barra de URL do navegador), com suporte a cache offline e funcionamento idêntico a um aplicativo instalado pela loja!
-
-### 🛠️ Método 2: Aplicativo Nativo em Swift (.ipa) via Sideloading
-- O código-fonte nativo em **SwiftUI / Swift** está na pasta ios/JWSearch/.
-- Pode ser compilado no Xcode gerando o arquivo .ipa e instalado no iPhone via ferramentas de assinatura como **AltStore**, **Sideloadly** ou **Scarlet** sem precisar da App Store.
+O **JW Search** é uma plataforma multiplataforma de pesquisa teocrática avançada alimentada por **Inteligência Artificial Híbrida e RAG Autônomo (Retrieval-Augmented Generation)**. A aplicação realiza consultas profundas e estruturadas exclusivamente no acervo oficial das Testemunhas de Jeová (**[wol.jw.org](https://wol.jw.org)** e **[jw.org](https://www.jw.org)**), oferecendo respostas sintetizadas com links Markdown clicáveis para os artigos oficiais e leitor integrado.
 
 ---
 
-## 🤖 Como Usar no Celular (Android)
+## 🏛️ Arquitetura Geral do Sistema
 
-1. Pegue o arquivo **JW-Search.apk** que já está pronto na raiz deste projeto.
-2. Envie para o seu celular (WhatsApp, Telegram, Drive ou cabo USB).
-3. Toque no arquivo e confirme a instalação.
-4. O app roda **100% autônomo** no seu celular: basta colar sua chave gratuita do Gemini na primeira abertura.
+```mermaid
+flowchart TD
+    subgraph Clientes["📱 Clientes e Interfaces"]
+        Web["🌐 Web e PWA (Desktop / iOS Safari / Android)"]
+        Android["🤖 App Nativo Android (Kotlin / Compose)"]
+        iOS["🍏 App Nativo iOS (Swift / SwiftUI)"]
+    end
+
+    subgraph Backend["⚡ Backend FastAPI (Python)"]
+        Router["API Gateway (/api/search, /api/read, /api/config)"]
+        Fallback["Gerenciador de Resiliência e Fallback"]
+        RAGEngine["Motor RAG Autônomo (Scraper + Synthesizer)"]
+        GeminiEngine["Motor Gemini 2.5 (Search Grounding)"]
+        WOLReader["Leitor Autônomo de Artigos (WOL HTML Parser)"]
+    end
+
+    subgraph LLMs["🧠 Provedores de Inteligência Artificial"]
+        OR["🌐 OpenRouter Gateway (Tencent Hy3 / Llama / Auto)"]
+        Google["✨ Google Gemini 2.5 Flash"]
+        DeepSeek["🧠 DeepSeek API (V3 / R1)"]
+        Local["💻 Ollama / Servidor Local"]
+    end
+
+    subgraph Fontes["📚 Fontes Teocráticas Oficiais"]
+        WOL["Biblioteca Online da Torre de Vigia (wol.jw.org)"]
+        JW["Site Oficial JW.ORG"]
+    end
+
+    Clientes --> Router
+    Router --> Fallback
+    Fallback -->|1º Padrão| RAGEngine
+    Fallback -->|Fallback Silencioso| GeminiEngine
+    
+    RAGEngine <--> Fontes
+    RAGEngine <--> OR
+    RAGEngine <--> DeepSeek
+    RAGEngine <--> Local
+    GeminiEngine <--> Google
+    Google <--> Fontes
+    Router --> WOLReader
+    WOLReader <--> WOL
+```
 
 ---
 
-## ⚡ Como Executar no Computador (Web / Backend)
+## 🚀 Motores de Inteligência Artificial & Estratégia Multi-Modelo
 
-1. Dê um duplo clique no arquivo **start.bat**.
-2. Na primeira vez, informe sua chave gratuita GEMINI_API_KEY (obtida no [Google AI Studio](https://aistudio.google.com/)).
-3. O portal abrirá automaticamente no seu navegador em **http://localhost:8000**.
+O sistema foi arquitetado para ser **100% resiliente a limites de cota** através de uma abordagem híbrida:
+
+| Motor | Provedor Principal | Tecnologia | Função no Sistema |
+| :--- | :--- | :--- | :--- |
+| ⚡ **Hy3 / OpenAI (Padrão)** | OpenRouter / Tencent | **RAG Próprio + WOL Scraper** | Motor primário padrão. Coleta artigos em tempo real no WOL e sintetiza via modelo `tencent/hy3`. |
+| ✨ **Google Gemini 2.5** | Google AI Studio | **Search Grounding Nativo** | Motor secundário e contingência automática. Se a cota do Hy3 atingir o limite, o Gemini assume instantaneamente. |
+| 🧠 **DeepSeek RAG** | DeepSeek | **RAG Próprio + DeepSeek V3/R1** | Motor especializado para raciocínio analítico profundo e estudos temáticos complexos. |
+
+### 🔄 Cadeia de Resiliência Automática:
+1. O usuário faz a pesquisa ➡️ O backend processa prioritariamente no **Hy3 / OpenRouter**.
+2. Se a cota do servidor ou a chave do Hy3 retornar erro/limite ➡️ O servidor aciona silenciosamente o **Google Gemini 2.5 Flash**.
+3. Se **ambas as cotas padrão do servidor esgotarem** ➡️ O sistema exibe um modal convidando o usuário a inserir sua própria chave gratuita no navegador (sem custo para quem hospeda o servidor).
 
 ---
 
-## 🌐 Hospedagem em Nuvem Gratuita (Render) & UptimeRobot (24/7 Sem Suspender)
+## 🛠️ Tecnologias e Plataformas Utilizadas
 
-Como o **Render** oferece hospedagem gratuita para o backend FastAPI, por padrão ele suspende o container (*spin down / sleep*) após 15 minutos de inatividade, fazendo a primeira requisição demorar cerca de 50 segundos para acordar.
+### 1. 🌐 Frontend & Web App (PWA)
+- **HTML5 & Vanilla JavaScript (ES6+ Moderno):** Arquitetura leve e de alta performance, sem frameworks pesados de compilação no cliente.
+- **Tailwind CSS (JIT via CDN):** Interface moderna, limpa, responsiva e otimizada para temas escuros e claros.
+- **FontAwesome 6 Pro & Google Fonts (Inter):** Tipografia e iconografia refinada.
+- **Progressive Web App (PWA):** `manifest.json` e Service Worker (`sw.js`) para instalação em tela cheia no iOS (Safari) e Android, com suporte a cache.
+- **Leitor Lateral de Artigos (Drawer):** Renderização direta do artigo do WOL sem anúncios ou distrações.
 
-Para resolver isso e manter o **JW Search 100% ativo 24 horas por dia sem suspender**:
+### 2. ⚡ Backend & APIs (Python)
+- **FastAPI:** Framework web assíncrono de alto desempenho em Python.
+- **Uvicorn (ASGI):** Servidor de produção ultra-rápido.
+- **BeautifulSoup4 & Urllib:** Extração e higienização precisa do DOM de artigos, notas de estudo e referências bíblicas da Biblioteca Online.
+- **OpenAI Python SDK:** Comunicação padronizada com gateways (OpenRouter, DeepSeek, Tencent, Ollama).
+- **Google GenAI SDK:** Integração oficial de última geração com o Gemini 2.5 Flash e ferramentas de Grounding.
+- **Pillow (PIL):** Script autônomo (`backend/generate_icons.py`) para geração vetorial e rasterização com supersampling 4x dos ícones oficiais.
 
-### 🤖 Configurando o UptimeRobot (Gratuito):
-1. Crie uma conta gratuita em [UptimeRobot](https://uptimerobot.com/).
+### 3. 🤖 Aplicativo Mobile Android
+- **Linguagem:** Kotlin 2.0+.
+- **Interface:** Jetpack Compose + Material Design 3.
+- **Arquitetura:** MVVM (Model-View-ViewModel) com Coroutines, StateFlow e Flow reativo.
+- **Interação:** Reconhecimento de tecla Enter no teclado virtual (`ImeAction.Search`), TopAppBar com retorno à Home ao tocar no logo, e ícones dedicados em todas as densidades mipmap (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`).
+- **Artefato Gerado:** `JW-Search.apk` pronto para distribuição direta sem necessidade de Play Store.
+
+### 4. 🍏 Aplicativo Mobile iOS
+- **Método 1 (PWA Nativo Safari):** Instalação em 1 clique via "Adicionar à Tela de Início" funcionando em tela cheia idêntico a um app da App Store.
+- **Método 2 (App Nativo Swift):** Código-fonte nativo em SwiftUI pronto para compilação no Xcode e instalação via Sideloading (.ipa).
+
+---
+
+## ☁️ Hospedagem em Nuvem Gratuita & UptimeRobot (24/7 Sem Suspender)
+
+O projeto está totalmente configurado para rodar na nuvem gratuita do **Render**:
+
+### 🤖 Por que usar o UptimeRobot?
+O plano gratuito do Render desliga os containers (*spin down / sleep mode*) após 15 minutos de inatividade, fazendo com que o primeiro acesso demore cerca de 50 segundos para acordar o servidor.
+
+Para resolver isso e manter o **JW Search 100% ativo 24/7 com resposta instantânea**:
+
+1. Crie uma conta gratuita no [UptimeRobot](https://uptimerobot.com/).
 2. Clique em **"+ Add New Monitor"**.
-3. Configure:
+3. Preencha:
    - **Monitor Type:** `HTTP(s)`
-   - **Friendly Name:** `JW Search Server`
-   - **URL (or IP):** `https://seu-app.onrender.com/api/config` *(ou o link do seu Render)*
+   - **Friendly Name:** `JW Search Cloud Server`
+   - **URL (or IP):** `https://seu-servico.onrender.com/api/config`
    - **Monitoring Interval:** `5 minutes` (a cada 5 minutos)
-4. Clique em **"Create Monitor"**.
-
-> **💡 Como funciona:** O UptimeRobot envia uma requisição automática a cada 5 minutos para a API do JW Search, impedindo que o Render entre em modo de espera e garantindo respostas instantâneas a qualquer hora do dia ou da noite para todos os usuários!
+4. Salve o monitor. O UptimeRobot fará uma requisição leve a cada 5 minutos, mantendo seu container sempre quente e disponível!
 
 ---
 
-## 📂 Estrutura do Projeto
-- **`backend/`**: Servidor FastAPI em Python com motor RAG teocrático, integração multi-modelos (Hy3 / Tencent / OpenRouter, Google Gemini 2.5 e DeepSeek) e leitor de artigos WOL.
-- **`web/`**: Frontend responsivo em HTML5, Tailwind CSS e Progressive Web App (PWA) compatível com iOS/Android.
-- **`android/`**: Código-fonte do app nativo Android em Kotlin e Jetpack Compose com ícones oficiais.
-- **`ios/`**: Código-fonte do app nativo iOS em Swift e SwiftUI.
-- **JW-Search.apk**: Aplicativo Android compilado pronto para instalar.
-- **start.bat**: Inicializador automático para Windows.
+## 🔑 Variáveis de Ambiente do Servidor (Render ou `.env`)
+
+Para disponibilizar o serviço já configurado para os usuários:
+
+| Variável | Descrição | Onde Obter |
+| :--- | :--- | :--- |
+| `HY3_API_KEY` | Chave de API do OpenRouter ou Tencent | [OpenRouter Keys](https://openrouter.ai/keys) *(Grátis)* |
+| `OPENAI_API_KEY` | Chave compatível com OpenAI/OpenRouter | [OpenRouter Keys](https://openrouter.ai/keys) |
+| `GEMINI_API_KEY` | Chave de API do Google Gemini | [Google AI Studio](https://aistudio.google.com/) *(Grátis)* |
+| `DEEPSEEK_API_KEY` | Chave de API do DeepSeek | [DeepSeek Platform](https://platform.deepseek.com/) |
+
+---
+
+## 🚀 Como Executar o Projeto
+
+### 💻 1. No Computador (Windows / Local):
+1. Dê um duplo clique no arquivo **`start.bat`**.
+2. O script instalará as dependências do Python se necessário e abrirá o navegador em **`http://localhost:8000`**.
+
+### 📱 2. No Celular Android:
+1. Transfira o arquivo **`JW-Search.apk`** (na raiz do repositório) para o seu celular.
+2. Toque nele e confirme a instalação.
+
+### 🍏 3. No iPhone ou iPad (iOS):
+1. Abra o link do seu site no **Safari**.
+2. Toque no botão de **Compartilhar** ➡️ **Adicionar à Tela de Início**.
+3. O app abrirá em tela cheia com ícone oficial.
+
+---
+
+## 🧪 Testes Automatizados
+
+O backend possui uma suíte de testes unitários e de integração contínua (`backend/test_api_keys.py`):
+- Verificação de autenticação de cada provedor (Gemini, DeepSeek, Hy3).
+- Validação do scraper do motor RAG Teocrático no acervo do `wol.jw.org`.
+- Validação do leitor autônomo offline `/api/read`.
+- Validação da cadeia de resiliência e fallbacks.
+
+Para executar os testes:
+```bash
+python backend/test_api_keys.py
+```
+
+---
+
+## 📂 Estrutura de Diretórios do Repositório
+
+```text
+├── JW-Search.apk               # Aplicativo compilado pronto para Android
+├── JW-Search-Completo.zip      # Pacote zip para distribuição offline
+├── start.bat                   # Inicializador automático para Windows
+├── README.md                   # Documentação mestre do projeto
+│
+├── backend/                    # Servidor e Motores de IA (FastAPI)
+│   ├── main.py                 # Roteador de endpoints e cadeia de fallback
+│   ├── rag_engine.py           # Motor RAG teocrático e síntese de contexto
+│   ├── scraper.py              # Motor Gemini Grounding e Leitor WOL
+│   ├── generate_icons.py       # Gerador de ícones multiplataforma
+│   ├── test_api_keys.py        # Suíte de testes automatizados
+│   └── requirements.txt        # Dependências Python
+│
+├── web/                        # Frontend Web & Progressive Web App
+│   ├── index.html              # Interface do usuário com modal multi-abas
+│   ├── app.js                  # Lógica do cliente, gerenciamento de chaves e busca
+│   ├── manifest.json           # Manifesto PWA para instalação mobile
+│   ├── sw.js                   # Service Worker para cache offline
+│   ├── favicon.ico             # Ícone do navegador
+│   └── icons/                  # Ícones em alta resolução para PWA e iOS
+│
+├── android/                    # Código-Fonte do Aplicativo Nativo Android
+│   ├── app/src/main/java/      # Telas e ViewModels em Jetpack Compose
+│   └── app/src/main/res/       # Layouts, mipmaps e recursos de ícone
+│
+└── ios/                        # Código-Fonte do Aplicativo Nativo iOS
+    └── JWSearch/               # Projeto nativo em Swift e SwiftUI
+```
+
+---
+
+## 📄 Licença e Uso
+
+Este projeto foi desenvolvido para fins de estudo, pesquisa e uso pessoal no estudo da Bíblia e das publicações oficiais das Testemunhas de Jeová disponíveis publicamente em **wol.jw.org** e **jw.org**.
