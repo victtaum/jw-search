@@ -87,25 +87,27 @@
 
     <!-- Header / Navbar -->
     <header class="bg-slate-700 text-white shadow-md sticky top-0 z-30 no-print">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-            <a href="/" id="btn-header-home" class="flex items-center space-x-3 cursor-pointer group hover:opacity-90 transition-opacity select-none" title="Início / Novo Estudo">
-                <img src="/icons/icon-192.png" alt="JW Search" class="w-10 h-10 rounded-xl shadow-md border border-slate-600/60 group-hover:scale-105 transition-transform object-cover">
-                <div>
-                    <span class="text-xl font-bold tracking-wide text-white group-hover:text-blue-100 transition-colors">JW Search</span>
-                    <span class="text-[10px] text-blue-200 block -mt-1 font-normal">Estudo & Chat RAG</span>
+        <div class="max-w-6xl mx-auto px-3 py-2.5 sm:px-4 sm:py-3 flex justify-between items-center gap-2">
+            <!-- Brand Logo & Title -->
+            <a href="/" id="btn-header-home" class="flex items-center space-x-2 sm:space-x-3 cursor-pointer group hover:opacity-90 transition-opacity select-none flex-shrink-0" title="Início / Novo Estudo">
+                <img src="/icons/icon-192.png" alt="JW Search" class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl shadow-md border border-slate-600/60 group-hover:scale-105 transition-transform object-cover flex-shrink-0">
+                <div class="min-w-0">
+                    <span class="text-base sm:text-xl font-bold tracking-wide text-white group-hover:text-blue-100 transition-colors block leading-tight">JW Search</span>
+                    <span class="text-[9px] sm:text-[10px] text-blue-200 hidden sm:block -mt-0.5 font-normal">Estudo & Chat RAG</span>
                 </div>
             </a>
             
-            <div class="flex items-center space-x-2 sm:space-x-3">
+            <!-- Navbar Actions (Compact on Mobile) -->
+            <div class="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
                 <!-- Import Session Button -->
                 <input type="file" id="file-import-study" accept=".json,.md" class="hidden">
-                <button id="btn-import-study" class="text-xs bg-slate-600/90 hover:bg-slate-500 px-3 py-1.5 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5 shadow-sm" title="Importar arquivo de estudo (.json ou .md)">
+                <button id="btn-import-study" class="p-2 sm:px-3 sm:py-1.5 text-xs bg-slate-600/90 hover:bg-slate-500 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5 shadow-sm cursor-pointer" title="Importar estudo (.json ou .md)">
                     <i class="fa-solid fa-file-import text-blue-300"></i>
                     <span class="hidden md:inline">Importar</span>
                 </button>
 
                 <!-- Saved Studies / History Button -->
-                <button id="btn-open-history" class="text-xs bg-slate-600/90 hover:bg-slate-500 px-3 py-1.5 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5 shadow-sm" title="Histórico de estudos salvos">
+                <button id="btn-open-history" class="p-2 sm:px-3 sm:py-1.5 text-xs bg-slate-600/90 hover:bg-slate-500 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5 shadow-sm cursor-pointer" title="Histórico de estudos salvos">
                     <i class="fa-solid fa-clock-rotate-left text-amber-300"></i>
                     <span class="hidden md:inline">Histórico</span>
                     <span id="history-count-badge" class="hidden px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px] font-bold">0</span>
@@ -113,10 +115,10 @@
 
                 <!-- Export / Save Dropdown -->
                 <div class="relative inline-block text-left" id="export-dropdown-wrapper">
-                    <button id="btn-export-dropdown" class="text-xs bg-slate-800 hover:bg-slate-900 px-3 py-1.5 rounded-lg text-white border border-slate-600 transition-colors flex items-center space-x-1.5 shadow-sm">
+                    <button id="btn-export-dropdown" class="px-2.5 py-1.5 sm:px-3 sm:py-1.5 text-xs bg-slate-800 hover:bg-slate-900 rounded-lg text-white border border-slate-600 transition-colors flex items-center space-x-1 sm:space-x-1.5 shadow-sm cursor-pointer" title="Exportar estudo">
                         <i class="fa-solid fa-cloud-arrow-down text-green-400"></i>
-                        <span>Exportar</span>
-                        <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>
+                        <span class="hidden sm:inline">Exportar</span>
+                        <i class="fa-solid fa-chevron-down text-[9px] ml-0.5"></i>
                     </button>
                     <!-- Dropdown Menu -->
                     <div id="export-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 text-xs text-gray-700">
@@ -153,89 +155,91 @@
                 </div>
 
                 <!-- Diagnostics & Latency Inspector Button -->
-                <button id="btn-open-diagnostics" class="text-xs bg-slate-800 hover:bg-slate-900 px-2.5 py-1.5 rounded-lg text-emerald-300 border border-slate-600 transition-colors flex items-center space-x-1 shadow-sm" title="Diagnóstico de latência e saúde dos servidores">
+                <button id="btn-open-diagnostics" class="p-2 sm:px-2.5 sm:py-1.5 text-xs bg-slate-800 hover:bg-slate-900 rounded-lg text-emerald-300 border border-slate-600 transition-colors flex items-center space-x-1 shadow-sm cursor-pointer" title="Diagnóstico de latência e conexões">
                     <i class="fa-solid fa-gauge-high"></i>
-                    <span class="hidden sm:inline">Diagnóstico</span>
+                    <span class="hidden md:inline">Diagnóstico</span>
                 </button>
 
                 <!-- API Key Manager Button -->
-                <button id="btn-open-key-modal" class="text-xs bg-slate-600 hover:bg-slate-500 px-3 py-1.5 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5 shadow-sm">
+                <button id="btn-open-key-modal" class="p-2 sm:px-3 sm:py-1.5 text-xs bg-slate-600 hover:bg-slate-500 rounded-lg text-white border border-slate-500 transition-colors flex items-center space-x-1.5 shadow-sm cursor-pointer" title="Configurar chaves de IA">
                     <i class="fa-solid fa-key text-amber-300"></i>
-                    <span id="key-badge-text">Chaves IA</span>
+                    <span class="hidden sm:inline" id="key-badge-text">Chaves IA</span>
                 </button>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-6">
+    <main class="flex-grow max-w-4xl w-full mx-auto px-3 py-4 sm:px-4 sm:py-6">
         
         <!-- Search Card (Initial State) -->
-        <div id="search-card" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 mb-6 transition-all">
-            <h1 class="text-2xl font-bold text-gray-800 mb-2 text-center md:text-left">
+        <div id="search-card" class="bg-white rounded-2xl shadow-sm border border-gray-200/90 p-4 sm:p-6 md:p-8 mb-6 transition-all">
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-800 mb-1.5 text-center sm:text-left">
                 Pesquisa Teocrática & Chat Contínuo
             </h1>
-            <p class="text-sm text-gray-500 mb-6 text-center md:text-left">
+            <p class="text-xs sm:text-sm text-gray-500 mb-5 text-center sm:text-left">
                 Consulte a Biblioteca Online (WOL), peça tabelas comparativas, resumos e interaja com o contexto.
             </p>
             
             <form id="search-form" class="space-y-4">
-                <!-- AI Engine / Provider Selector -->
-                <div class="flex flex-wrap items-center justify-between gap-2 pb-1">
-                    <div class="inline-flex bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs">
-                        <button type="button" id="tab-prov-hy3" class="prov-selector-btn px-3 py-1.5 rounded-lg font-semibold bg-white text-slate-800 shadow-sm transition-all" data-provider="hy3">
-                            <i class="fa-solid fa-bolt text-amber-500 mr-1"></i> Hy3 / OpenAI
+                <!-- AI Engine / Provider Selector (Mobile Responsive Grid) -->
+                <div class="space-y-2 pb-1">
+                    <div class="grid grid-cols-3 gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs w-full">
+                        <button type="button" id="tab-prov-hy3" class="prov-selector-btn py-2 px-1 text-center rounded-lg font-semibold bg-white text-slate-800 shadow-sm transition-all text-[11px] sm:text-xs flex items-center justify-center gap-1 cursor-pointer" data-provider="hy3">
+                            <i class="fa-solid fa-bolt text-amber-500"></i> <span class="truncate">Hy3 / OpenAI</span>
                         </button>
-                        <button type="button" id="tab-prov-gemini" class="prov-selector-btn px-3 py-1.5 rounded-lg font-medium text-gray-600 hover:text-slate-800 transition-all" data-provider="gemini">
-                            <i class="fa-solid fa-wand-magic-sparkles text-blue-500 mr-1"></i> Gemini 2.5
+                        <button type="button" id="tab-prov-gemini" class="prov-selector-btn py-2 px-1 text-center rounded-lg font-medium text-gray-600 hover:text-slate-800 transition-all text-[11px] sm:text-xs flex items-center justify-center gap-1 cursor-pointer" data-provider="gemini">
+                            <i class="fa-solid fa-wand-magic-sparkles text-blue-500"></i> <span class="truncate">Gemini 2.5</span>
                         </button>
-                        <button type="button" id="tab-prov-deepseek" class="prov-selector-btn px-3 py-1.5 rounded-lg font-medium text-gray-600 hover:text-slate-800 transition-all" data-provider="deepseek">
-                            <i class="fa-solid fa-brain text-indigo-500 mr-1"></i> DeepSeek RAG
+                        <button type="button" id="tab-prov-deepseek" class="prov-selector-btn py-2 px-1 text-center rounded-lg font-medium text-gray-600 hover:text-slate-800 transition-all text-[11px] sm:text-xs flex items-center justify-center gap-1 cursor-pointer" data-provider="deepseek">
+                            <i class="fa-solid fa-brain text-indigo-500"></i> <span class="truncate">DeepSeek</span>
                         </button>
                     </div>
-                    <span id="active-engine-badge" class="text-[11px] text-gray-500 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
-                        Motor: <b class="text-amber-600">Hy3 / OpenAI (RAG WOL)</b>
-                    </span>
+                    <div class="flex items-center justify-between text-[11px] text-gray-500 px-0.5">
+                        <span id="active-engine-badge">
+                            Motor: <b class="text-amber-600">Hy3 / OpenAI (RAG WOL)</b>
+                        </span>
+                    </div>
                 </div>
 
                 <!-- Search Input Row -->
-                <div class="relative flex items-center">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 text-gray-400"></i>
+                <div class="relative flex items-center w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-gray-400 text-sm"></i>
                     <input 
                         type="text" 
                         id="search-input" 
                         placeholder="Digite o assunto, pergunta ou pedido de estudo..." 
-                        class="w-full pl-11 pr-24 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-base"
+                        class="w-full pl-10 pr-22 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm sm:text-base"
                         required
                         autofocus
                     >
                     <button 
                         type="submit" 
                         id="btn-main-search"
-                        class="absolute right-2 px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2"
+                        class="absolute right-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors flex items-center space-x-1.5 shadow-sm cursor-pointer"
                     >
                         <span>Buscar</span>
                     </button>
                 </div>
                 
-                <!-- Toggle Switches & Options -->
-                <div class="flex flex-wrap items-center justify-between pt-2 text-sm gap-4">
-                    <div class="flex items-center space-x-3">
+                <!-- Toggle Switches & Scope Options (Mobile Friendly Row) -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between pt-1 gap-2.5 text-sm">
+                    <div class="flex items-center space-x-2">
                         <label class="relative inline-flex items-center cursor-pointer group" title="Clique para alternar entre o modo protegido 100% JW ou incluir fontes da internet">
                             <input type="checkbox" id="external-checkbox" class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-100 rounded-full peer peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                            <div class="ml-3 select-none flex items-center gap-1.5" id="search-card-scope-badge">
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs">
-                                    <i class="fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]"></i>
+                            <div class="w-10 h-5 sm:w-11 sm:h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-100 rounded-full peer peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 sm:after:h-5 sm:after:w-5 after:transition-all"></div>
+                            <div class="ml-2.5 select-none flex items-center" id="search-card-scope-badge">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs">
+                                    <i class="fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[10px] sm:text-[11px]"></i>
                                     <span>100% Acervo Oficial JW (Protegido)</span>
                                 </span>
                             </div>
                         </label>
                     </div>
                     
-                    <div class="flex items-center space-x-2 text-gray-500">
-                        <i class="fa-solid fa-language text-base"></i>
-                        <select id="lang-select" class="bg-transparent border-none py-1 focus:outline-none font-medium cursor-pointer text-gray-600">
+                    <div class="flex items-center space-x-1.5 text-gray-500 self-end sm:self-auto text-xs sm:text-sm">
+                        <i class="fa-solid fa-language text-sm text-gray-400"></i>
+                        <select id="lang-select" class="bg-transparent border border-gray-200 sm:border-none rounded-lg px-2 py-1 focus:outline-none font-medium cursor-pointer text-gray-700 text-xs sm:text-sm">
                             <option value="pt" selected>Português</option>
                             <option value="en">English</option>
                             <option value="es">Español</option>
@@ -301,23 +305,23 @@
                 </div>
 
                 <!-- Interactive Follow-up Input Row -->
-                <form id="followup-form" class="flex items-center gap-2">
-                    <button type="button" id="btn-new-chat" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-semibold rounded-xl transition-all flex-shrink-0 flex items-center shadow-xs cursor-pointer" title="Iniciar novo estudo">
-                        <i class="fa-solid fa-plus mr-1.5 text-blue-600"></i>
-                        <span>Novo Estudo</span>
+                <form id="followup-form" class="flex items-center gap-1.5 sm:gap-2">
+                    <button type="button" id="btn-new-chat" class="p-2.5 sm:px-3.5 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-semibold rounded-xl transition-all flex-shrink-0 flex items-center justify-center shadow-xs cursor-pointer" title="Iniciar novo estudo do zero">
+                        <i class="fa-solid fa-plus text-blue-600 sm:mr-1.5"></i>
+                        <span class="hidden sm:inline">Novo Estudo</span>
                     </button>
                     <div class="relative flex-grow flex items-center">
                         <input 
                             type="text" 
                             id="followup-input" 
-                            placeholder="Faça uma pergunta de acompanhamento, peça tabelas ou aprofunde..." 
-                            class="w-full pl-4 pr-12 py-3 bg-slate-50/90 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-blue-500 transition-all text-sm text-slate-800 placeholder-slate-400 shadow-inner font-normal"
+                            placeholder="Faça uma pergunta de acompanhamento..." 
+                            class="w-full pl-3.5 pr-11 py-2.5 sm:py-3 bg-slate-50/90 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-blue-500 transition-all text-xs sm:text-sm text-slate-800 placeholder-slate-400 shadow-inner font-normal"
                             required
                         >
                         <button 
                             type="submit" 
                             id="btn-send-followup"
-                            class="absolute right-1.5 p-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg transition-all flex items-center justify-center text-sm shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
+                            class="absolute right-1 p-2 sm:p-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg transition-all flex items-center justify-center text-xs sm:text-sm shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
                             title="Enviar pergunta de acompanhamento"
                         >
                             <i class="fa-solid fa-arrow-up"></i>
