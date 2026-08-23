@@ -39,6 +39,22 @@ fontIncBtn.addEventListener("click", () => {
     }
 });
 
+// Clickable Header Icon / Title (Return to Home)
+const btnHeaderHome = document.getElementById("btn-header-home");
+if (btnHeaderHome) {
+    btnHeaderHome.addEventListener("click", (e) => {
+        e.preventDefault();
+        searchInput.value = "";
+        resultsContainer.innerHTML = "";
+        aiResponseCard.classList.add("hidden");
+        aiResponseContent.innerHTML = "";
+        statusContainer.classList.add("hidden");
+        closeReader();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        searchInput.focus();
+    });
+}
+
 // ==========================================
 // Provider & Multi-Model Engine Selector
 // ==========================================

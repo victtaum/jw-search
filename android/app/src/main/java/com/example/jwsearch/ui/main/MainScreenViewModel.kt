@@ -30,6 +30,18 @@ class MainScreenViewModel : ViewModel() {
         _uiState.update { it.copy(query = query) }
     }
 
+    fun onResetToHome() {
+        _uiState.update {
+            it.copy(
+                query = "",
+                results = emptyList(),
+                aiResponse = "",
+                errorMessage = null,
+                isLoading = false
+            )
+        }
+    }
+
     fun onExternalChanged(external: Boolean) {
         _uiState.update { it.copy(includeExternal = external) }
     }
