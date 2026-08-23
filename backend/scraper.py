@@ -135,7 +135,7 @@ def infer_publication_info(title, url):
         return "A Sentinela"
     elif any(k in url_lower or k in title_lower for k in ["/g20", "/g19", "/g18", "/g17", "/g16", "/g15", "/g14", "/g13", "/g12", "/g0", "/g9", "/g8", "/g7", "despertai", "awake"]):
         return "Despertai!"
-    elif any(k in url_lower or k in title_lower for k in ["it-1", "it-2", "perspicaz", "insight", "estudo-perspicaz"]):
+    elif any(k in url_lower or k in title_lower for k in ["it-1", "it-2", "perspicaz", "insight", "estudo-perspicaz", "/1200"]):
         return "Estudo Perspicaz das Escrituras"
     elif any(k in url_lower or k in title_lower for k in ["nwt", "bi12", "biblia", "bible", "/bc/", "/b/"]):
         return "Bíblia Sagrada (Tradução do Novo Mundo)"
@@ -143,8 +143,8 @@ def infer_publication_info(title, url):
         return "Perguntas Bíblicas Respondidas"
     elif any(k in url_lower or k in title_lower for k in ["ijwyp", "jovens-perguntam"]):
         return "Os Jovens Perguntam"
-    elif any(k in url_lower for k in ["/lfb/", "/my/", "historias-biblia", "aprenda-historias"]):
-        return "Histórias da Bíblia"
+    elif any(k in url_lower for k in ["/lfb/", "/my/", "historias-biblia", "aprenda-historias", "/110"]):
+        return "Histórias da Bíblia / Livros"
     elif any(k in url_lower for k in ["/mwb", "vida-e-ministerio"]):
         return "Apostila Vida e Ministério"
     elif any(k in url_lower for k in ["/lff", "seja-feliz-para-sempre"]):

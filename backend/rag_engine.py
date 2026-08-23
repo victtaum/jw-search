@@ -42,6 +42,8 @@ def _query_wol_html(search_term: str, config: dict, headers: dict, max_results: 
                     continue
 
                 href = link_el['href']
+                if '/wol/dx/' in href:
+                    continue
                 clean_href = href.split('?')[0].split('#')[0]
                 if clean_href in seen_urls:
                     continue
