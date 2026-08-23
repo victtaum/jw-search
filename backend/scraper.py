@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict, Any
 from google import genai
 from google.genai import types
 import os
@@ -245,7 +246,7 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
             )
         )
         
-        ai_response = response.text
+        ai_response = response.text or ""
         results = []
         raw_chunks = []
         
