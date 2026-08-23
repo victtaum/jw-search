@@ -148,35 +148,32 @@ updateProviderUI();
 // ==========================================
 // Theocratic Purity & Scope UI Sync (100% JW vs Web)
 // ==========================================
-const searchCardScopeBadge = document.getElementById("search-card-scope-badge");
+const btnToggleSearchScope = document.getElementById("btn-toggle-search-scope");
+const searchScopeIcon = document.getElementById("search-scope-icon");
+const searchScopeLabel = document.getElementById("search-scope-label");
 const tooltipScopeTitle = document.getElementById("tooltip-scope-title");
 const tooltipScopeDesc = document.getElementById("tooltip-scope-desc");
+let isExternalSearch = false;
 
 function updateExternalSearchUI(includeExternal) {
-    if (externalCheckbox) externalCheckbox.checked = includeExternal;
+    isExternalSearch = !!includeExternal;
     
-    // Update Search Card scope badge
-    if (searchCardScopeBadge) {
-        if (!includeExternal) {
-            searchCardScopeBadge.innerHTML = `
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs">
-                    <i class="fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]"></i>
-                    <span>100% Acervo Oficial JW (Protegido)</span>
-                </span>
-            `;
+    // Update Search Card scope button
+    if (btnToggleSearchScope && searchScopeLabel && searchScopeIcon) {
+        if (!isExternalSearch) {
+            btnToggleSearchScope.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs";
+            searchScopeIcon.className = "fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]";
+            searchScopeLabel.textContent = "100% Acervo Oficial JW (Protegido)";
         } else {
-            searchCardScopeBadge.innerHTML = `
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-300">
-                    <i class="fa-solid fa-globe text-slate-500 text-[11px]"></i>
-                    <span>Incluindo Web Externa (Fontes Seculares)</span>
-                </span>
-            `;
+            btnToggleSearchScope.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-xs transition-all cursor-pointer select-none hover:bg-slate-200 active:scale-95 text-[11px] sm:text-xs";
+            searchScopeIcon.className = "fa-solid fa-globe text-slate-500 text-[11px]";
+            searchScopeLabel.textContent = "Web Externa Incluída (Não-oficial)";
         }
     }
 
     // Update Followup Scope button & Tooltip
     if (btnToggleFollowupExternal && labelFollowupExternal && iconFollowupExternal) {
-        if (!includeExternal) {
+        if (!isExternalSearch) {
             btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-emerald-300 text-emerald-900 bg-emerald-50/95 flex items-center space-x-1.5 transition-all text-[11px] font-semibold select-none shadow-xs cursor-pointer ring-2 ring-emerald-200/60";
             iconFollowupExternal.className = "fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]";
             labelFollowupExternal.textContent = "100% Acervo Oficial JW";
@@ -192,15 +189,14 @@ function updateExternalSearchUI(includeExternal) {
     }
 }
 
-if (btnToggleFollowupExternal) {
-    btnToggleFollowupExternal.addEventListener("click", () => {
-        const isNowActive = !(externalCheckbox && externalCheckbox.checked);
-        updateExternalSearchUI(isNowActive);
+if (btnToggleSearchScope) {
+    btnToggleSearchScope.addEventListener("click", () => {
+        updateExternalSearchUI(!isExternalSearch);
     });
 }
-if (externalCheckbox) {
-    externalCheckbox.addEventListener("change", () => {
-        updateExternalSearchUI(externalCheckbox.checked);
+if (btnToggleFollowupExternal) {
+    btnToggleFollowupExternal.addEventListener("click", () => {
+        updateExternalSearchUI(!isExternalSearch);
     });
 }
 
@@ -230,7 +226,7 @@ async function executeTurnSearch(userQuery) {
         activeConversation.title = query.length > 50 ? query.substring(0, 47) + "..." : query;
     }
 
-    const includeExternal = externalCheckbox ? externalCheckbox.checked : false;
+    const includeExternal = isExternalSearch;
     const lang = langSelect ? langSelect.value : "pt";
 
     const geminiKey = localStorage.getItem("jw_search_gemini_key") || localStorage.getItem("jw_search_user_api_key") || "";

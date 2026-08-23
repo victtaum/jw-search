@@ -204,12 +204,13 @@
 
                 <!-- Search Input Row -->
                 <div class="relative flex items-center w-full">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-gray-400 text-sm"></i>
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 text-gray-400 text-sm pointer-events-none"></i>
                     <input 
                         type="text" 
                         id="search-input" 
-                        placeholder="Digite o assunto ou pergunta bíblica..." 
-                        class="w-full pl-10 pr-24 sm:pr-28 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm sm:text-base text-slate-800 placeholder-slate-400"
+                        placeholder="Pesquisar assunto ou pergunta..." 
+                        class="w-full py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm sm:text-base text-slate-800 placeholder-slate-400"
+                        style="padding-left: 2.25rem; padding-right: 5.5rem;"
                         required
                         autofocus
                     >
@@ -222,24 +223,18 @@
                     </button>
                 </div>
                 
-                <!-- Toggle Switches & Scope Options (Mobile Friendly Row) -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between pt-1 gap-2.5 text-sm">
-                    <div class="flex items-center space-x-2">
-                        <label class="relative inline-flex items-center cursor-pointer group" title="Clique para alternar entre o modo protegido 100% JW ou incluir fontes da internet">
-                            <input type="checkbox" id="external-checkbox" class="sr-only peer">
-                            <div class="w-10 h-5 sm:w-11 sm:h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-100 rounded-full peer peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 sm:after:h-5 sm:after:w-5 after:transition-all"></div>
-                            <div class="ml-2.5 select-none flex items-center" id="search-card-scope-badge">
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs">
-                                    <i class="fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[10px] sm:text-[11px]"></i>
-                                    <span>100% Acervo Oficial JW (Protegido)</span>
-                                </span>
-                            </div>
-                        </label>
-                    </div>
+                <!-- Scope Mode & Language Row -->
+                <div class="flex items-center justify-between pt-1 gap-2 text-xs">
+                    <!-- Clean Interactive Scope Selector -->
+                    <button type="button" id="btn-toggle-search-scope" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs" title="Clique para alternar entre Acervo Oficial JW e Web Externa">
+                        <i class="fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]" id="search-scope-icon"></i>
+                        <span id="search-scope-label">100% Acervo Oficial JW (Protegido)</span>
+                        <i class="fa-solid fa-arrows-rotate text-[10px] text-emerald-700/60 ml-0.5"></i>
+                    </button>
                     
-                    <div class="flex items-center space-x-1.5 text-gray-500 self-end sm:self-auto text-xs sm:text-sm">
+                    <div class="flex items-center space-x-1 text-gray-500 flex-shrink-0">
                         <i class="fa-solid fa-language text-sm text-gray-400"></i>
-                        <select id="lang-select" class="bg-transparent border border-gray-200 sm:border-none rounded-lg px-2 py-1 focus:outline-none font-medium cursor-pointer text-gray-700 text-xs sm:text-sm">
+                        <select id="lang-select" class="bg-transparent border border-gray-200 sm:border-none rounded-lg px-2 py-1 focus:outline-none font-medium cursor-pointer text-gray-700 text-xs">
                             <option value="pt" selected>Português</option>
                             <option value="en">English</option>
                             <option value="es">Español</option>
