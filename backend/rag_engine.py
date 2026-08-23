@@ -177,48 +177,58 @@ def perform_custom_rag_search(
     history: Optional[List[Dict[str, str]]] = None
 ) -> Dict[str, Any]:
     """
-    Autonomous Theocratic RAG Flow with Multi-Turn Conversation History:
-    1. Direct search on wol.jw.org (Parallel retrieval).
+    Autonomous Theocratic RAG Flow with Multi-Turn Conversation History & Model Resilience:
+    1. Direct search on wol.jw.org with context-aware query augmentation.
     2. Parallel deep scraping of the top theocratic articles.
     3. Augments prompt with context and accumulated conversation history.
-    4. Generates synthesized response with DeepSeek, Hy3, or OpenAI-compatible model.
+    4. Generates synthesized response with OpenRouter/DeepSeek multi-model fallback chain.
     """
-    # 1. Retrieval
-    retrieved_results = search_wol_direct(query, lang=lang, max_results=6)
+    # 1. Retrieval (Context-Aware for follow-up prompts)
+    search_query = query
+    if history and len(query.split()) < 10:
+        first_user_msg = next((m.get("content") for m in history if m.get("role") == "user"), None)
+        if first_user_msg:
+            first_kw = extract_theocratic_keywords(first_user_msg)
+            if first_kw and first_kw.lower() not in query.lower():
+                search_query = f"{first_kw} {query}"
+
+    retrieved_results = search_wol_direct(search_query, lang=lang, max_results=6)
     
     # 2. Context Scraping (Parallel)
-    theocratic_context = fetch_rag_context(retrieved_results, max_articles=3)
+    theocratic_context = fetch_rag_context(retrieved_results, max_articles=4)
     
     if not theocratic_context:
-        theocratic_context = "Nenhum documento específico foi baixado. Use seu conhecimento das publicações oficiais das Testemunhas de Jeová (jw.org e wol.jw.org) para responder com fidelidade bíblica."
+        theocratic_context = "Nenhum documento específico foi baixado. Use seu conhecimento profundo das publicações oficiais das Testemunhas de Jeová (jw.org e wol.jw.org) para responder com fidelidade bíblica."
 
     # 3. Prompt Construction
     lang_map = {'pt': 'Português (Brasil)', 'en': 'English', 'es': 'Español'}
     target_lang = lang_map.get(lang, 'Português (Brasil)')
     
-    system_prompt = f"""Você é um assistente de pesquisa teocrática avançado (estilo Perplexity AI / RAG Teocrático Especializado), focado no acervo da Biblioteca Online da Torre de Vigia (wol.jw.org) e do site oficial (jw.org).
+    system_prompt = f"""Você é um assistente de pesquisa teocrática avançado e profundo (no estilo de um motor de busca analítico como Perplexity AI / RAG Especializado), focado no acervo da Biblioteca Online da Torre de Vigia (wol.jw.org) e do site oficial (jw.org).
 
 IDIOMA DA RESPOSTA: Responda obrigatoriamente em {target_lang}.
 
-DIRETRIZES DE FONTES & CAPACIDADES:
+DIRETRIZES DE ESCOPO E FONTES:
 - Baseie sua resposta PRINCIPALMENTE nos DOCUMENTOS TEOCRÁTICOS OFICIAIS fornecidos no contexto abaixo e no histórico da conversa.
-- Cite nominalmente as publicações (ex: A Sentinela, Despertai!, Estudo Perspicaz das Escrituras, Livros de Estudo).
-- Sempre que citar uma informação, inclua o link clicável em formato Markdown exatamente como fornecido nos documentos oficiais (ex: [Título do Artigo](https://wol.jw.org/pt/...)).
-- CAPACIDADE DE ESTRUTURAÇÃO: Você pode criar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 | Coluna 3 |), listas ordenadas/não-ordenadas, resumos para estudo em família, esboços teocráticos e documentos detalhados de pesquisa sempre que solicitado.
+- Preserve o sentido de perguntas coloquiais (ex: "cara legal", "como lidar com...", etc.) explicando com base nas qualidades bíblicas (fé, mansidão, coragem, paciência, sentimentos humanos).
+- Cite nominalmente as publicações oficiais quando aplicável (ex: *A Sentinela*, *Despertai!*, *Estudo Perspicaz das Escrituras*, *Histórias da Bíblia*, etc.).
+- Sempre que citar uma informação ou artigo dos documentos abaixo, inclua o link clicável em formato Markdown exatamente como fornecido (ex: `[Título do Artigo](https://wol.jw.org/pt/...)`).
+- CAPACIDADE DE ESTRUTURAÇÃO: Você tem capacidade total de gerar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 | Coluna 3 |), listas ordenadas/não-ordenadas, resumos para estudo em família, esboços teocráticos detalhados com tópicos e subtópicos sempre que solicitado.
 - Mantenha tom respeitoso, teocrático, bíblico e instrutivo.
 
 ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas ou formatos específicos):
+
 ### 📌 Resposta Direta & Síntese
-(Apresente um resumo claro e bíblico que responde diretamente à dúvida ou solicitação).
+(Apresente um resumo claro, objetivo e bíblico que responde diretamente à dúvida ou solicitação).
 
 ### 📖 Análise Teocrática Detalhada
-(Explique detalhadamente os pontos teocráticos com base nos documentos fornecidos e tabelas se solicitado, inserindo links Markdown).
+(Desenvolva os pontos teocráticos fundamentais com clareza e fidelidade, inserindo links Markdown das publicações).
 
 ### 📜 Textos Bíblicos Principais
-(Destaque os textos bíblicos e como eles se aplicam ao assunto).
+(Destaque os textos bíblicos principais e sua aplicação).
 
 ### 📚 Publicações e Fontes Oficiais
-(Liste em tópicos os artigos consultados com seus respectivos links em Markdown).
+(Liste em tópicos os artigos do wol.jw.org e jw.org para aprofundamento com seus links Markdown).
 
 ---
 DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
@@ -227,17 +237,15 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
 
     user_prompt = f"Pergunta ou solicitação do usuário: \"{query}\""
 
-    # 4. Configure LLM Client with Smart Auto-Detection & Strict Timeout
+    # 4. Configure LLM Client with Smart Auto-Detection
     clean_key = str(api_key).strip() if api_key else ""
     
     if provider == "deepseek":
         active_base_url = base_url or "https://api.deepseek.com"
         active_model = model or "deepseek-chat"
     elif provider in ["hy3", "tencent", "hunyuan", "openrouter", "openai"]:
-        # Auto-detect OpenRouter keys (sk-or-v1-...) or OpenRouter base_url
         if clean_key.startswith("sk-or-") or (base_url and "openrouter.ai" in base_url) or not base_url:
             active_base_url = base_url or "https://openrouter.ai/api/v1"
-            # Map model aliases to OpenRouter's exact model ID
             m_lower = (model or "").lower().strip()
             if not m_lower or m_lower in ["hy3", "hunyuan", "tencent", "tencent/hunyuan-standard", "tencent/hy3", "tencent/hy3-preview"]:
                 active_model = "tencent/hy3"
@@ -252,11 +260,11 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
         active_base_url = base_url or "https://api.openai.com/v1"
         active_model = model or "gpt-4o-mini"
 
-    # Initialize client with OpenRouter identification headers and 14s timeout
+    # Initialize client with OpenRouter identification headers and 15s timeout
     client = OpenAI(
         api_key=clean_key,
         base_url=active_base_url,
-        timeout=14.0,
+        timeout=15.0,
         max_retries=1,
         default_headers={
             "HTTP-Referer": "https://jw-search.org",
@@ -274,20 +282,41 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
                 messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": user_prompt})
 
-    try:
-        response = client.chat.completions.create(
-            model=active_model,
-            messages=messages,
-            temperature=0.3,
-            max_tokens=1800
-        )
-        ai_text = response.choices[0].message.content
-    except Exception as e:
-        raise Exception(f"Erro na API {provider.upper()} ({active_model} @ {active_base_url}): {e}")
+    # Multi-model resilience list for OpenRouter
+    models_to_try = [active_model]
+    if "openrouter.ai" in active_base_url:
+        for alt in ["meta-llama/llama-3.3-70b-instruct:free", "google/gemini-2.0-flash-exp:free", "deepseek/deepseek-chat", "tencent/hy3", "openai/gpt-4o-mini"]:
+            if alt not in models_to_try:
+                models_to_try.append(alt)
+
+    ai_text = None
+    used_model = active_model
+    last_err = None
+
+    for candidate_m in models_to_try:
+        try:
+            response = client.chat.completions.create(
+                model=candidate_m,
+                messages=messages,
+                temperature=0.3,
+                max_tokens=2200
+            )
+            if response and response.choices and response.choices[0].message and response.choices[0].message.content:
+                content = response.choices[0].message.content.strip()
+                if len(content) > 20:
+                    ai_text = content
+                    used_model = candidate_m
+                    break
+        except Exception as e:
+            last_err = e
+            continue
+
+    if not ai_text:
+        raise Exception(f"Erro na API {provider.upper()} ({used_model} @ {active_base_url}): {last_err or 'Sem resposta'}")
 
     return {
         "ai_response": ai_text,
         "results": retrieved_results,
         "provider": provider,
-        "model": active_model
+        "model": used_model
     }
