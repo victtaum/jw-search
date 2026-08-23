@@ -376,7 +376,7 @@ const inputHy3Model = document.getElementById("input-hy3-model");
 const selectHy3Preset = document.getElementById("select-hy3-preset");
 
 const hy3Presets = {
-    "openrouter": { baseUrl: "https://openrouter.ai/api/v1", model: "tencent/hunyuan-standard" },
+    "openrouter": { baseUrl: "https://openrouter.ai/api/v1", model: "tencent/hy3" },
     "tencent": { baseUrl: "https://api.hunyuan.tencent.com/v1", model: "hy3" },
     "siliconflow": { baseUrl: "https://api.siliconflow.cn/v1", model: "tencent/Hunyuan-A52B-Instruct" },
     "together": { baseUrl: "https://api.together.xyz/v1", model: "togethercomputer/hy3" },
@@ -403,8 +403,8 @@ if (inputHy3Key) {
             if (inputHy3BaseUrl && (!inputHy3BaseUrl.value || inputHy3BaseUrl.value.includes("together"))) {
                 inputHy3BaseUrl.value = "https://openrouter.ai/api/v1";
             }
-            if (inputHy3Model && (!inputHy3Model.value || inputHy3Model.value === "hy3")) {
-                inputHy3Model.value = "tencent/hunyuan-standard";
+            if (inputHy3Model && (!inputHy3Model.value || inputHy3Model.value === "hy3" || inputHy3Model.value.includes("hunyuan-standard"))) {
+                inputHy3Model.value = "tencent/hy3";
             }
         }
     });
@@ -444,7 +444,7 @@ function openKeyModal(noticeMessage = null) {
     if (inputDeepseekKey) inputDeepseekKey.value = localStorage.getItem("jw_search_deepseek_key") || "";
     if (inputHy3Key) inputHy3Key.value = localStorage.getItem("jw_search_hy3_key") || "";
     if (inputHy3BaseUrl) inputHy3BaseUrl.value = localStorage.getItem("jw_search_hy3_base_url") || "https://openrouter.ai/api/v1";
-    if (inputHy3Model) inputHy3Model.value = localStorage.getItem("jw_search_hy3_model") || "tencent/hunyuan-standard";
+    if (inputHy3Model) inputHy3Model.value = localStorage.getItem("jw_search_hy3_model") || "tencent/hy3";
     
     switchModalTab(currentProvider);
 

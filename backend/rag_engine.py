@@ -167,14 +167,17 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
         # Auto-detect OpenRouter keys (sk-or-v1-...) or OpenRouter base_url
         if clean_key.startswith("sk-or-") or (base_url and "openrouter.ai" in base_url) or not base_url:
             active_base_url = base_url or "https://openrouter.ai/api/v1"
-            # Map generic 'hy3' shorthand to OpenRouter's model identifier
-            if not model or model.lower() in ["hy3", "hunyuan", "tencent"]:
-                active_model = "tencent/hunyuan-standard"
+            # Map model aliases to OpenRouter's exact model ID
+            m_lower = (model or "").lower().strip()
+            if not m_lower or m_lower in ["hy3", "hunyuan", "tencent", "tencent/hunyuan-standard", "tencent/hy3", "tencent/hy3-preview"]:
+                active_model = "tencent/hy3"
+            elif m_lower == "auto":
+                active_model = "openrouter/auto"
             else:
                 active_model = model
         else:
             active_base_url = base_url
-            active_model = model or "hy3"
+            active_model = model or "tencent/hy3"
     else: # Generic openai-compatible
         active_base_url = base_url or "https://api.openai.com/v1"
         active_model = model or "gpt-4o-mini"
