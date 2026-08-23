@@ -152,13 +152,13 @@ function updateExternalSearchUI(enabled) {
     if (externalCheckbox) externalCheckbox.checked = enabled;
     if (btnToggleFollowupExternal && labelFollowupExternal && iconFollowupExternal) {
         if (enabled) {
-            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-amber-400 text-amber-700 bg-amber-50/90 flex items-center space-x-1.5 transition-all text-[11px] font-semibold select-none shadow-xs cursor-pointer";
-            iconFollowupExternal.className = "fa-solid fa-globe text-amber-600 animate-pulse";
-            labelFollowupExternal.textContent = "Internet: Ativada";
+            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-amber-400 text-amber-800 bg-amber-50/95 flex items-center space-x-1.5 transition-all text-[11px] font-semibold select-none shadow-xs cursor-pointer ring-2 ring-amber-200/60";
+            iconFollowupExternal.className = "fa-solid fa-globe text-amber-600 animate-pulse text-[11px]";
+            labelFollowupExternal.textContent = "Fontes além do JW: Ativadas";
         } else {
-            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-slate-300 text-slate-600 hover:border-amber-400 hover:text-amber-700 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer";
-            iconFollowupExternal.className = "fa-solid fa-globe text-slate-400";
-            labelFollowupExternal.textContent = "Internet: Desativada";
+            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:border-amber-400 hover:text-amber-800 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer";
+            iconFollowupExternal.className = "fa-solid fa-globe text-slate-400 text-[11px]";
+            labelFollowupExternal.textContent = "Fontes além do JW: Desativadas";
         }
     }
 }

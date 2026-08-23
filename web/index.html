@@ -221,10 +221,13 @@
                 <!-- Toggle Switches & Options -->
                 <div class="flex flex-wrap items-center justify-between pt-2 text-sm gap-4">
                     <div class="flex items-center space-x-3">
-                        <label class="relative inline-flex items-center cursor-pointer">
+                        <label class="relative inline-flex items-center cursor-pointer group" title="Ative para consultar fontes históricas e enciclopédias na web além do acervo oficial">
                             <input type="checkbox" id="external-checkbox" class="sr-only peer">
                             <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                            <span class="ml-3 text-sm font-medium text-gray-600 select-none">Pesquisar também na Internet (outras fontes)</span>
+                            <span class="ml-3 text-sm font-medium text-gray-700 select-none flex items-center gap-1.5">
+                                <span>Consultar fontes da Web (além do acervo JW)</span>
+                                <i class="fa-solid fa-circle-info text-xs text-gray-400 group-hover:text-blue-600 transition-colors"></i>
+                            </span>
                         </label>
                     </div>
                     
@@ -276,12 +279,22 @@
                         </button>
                     </div>
 
-                    <!-- Follow-up Internet Toggle -->
-                    <div class="flex items-center space-x-2 flex-shrink-0">
-                        <button type="button" id="btn-toggle-followup-external" class="px-3 py-1 rounded-full border border-slate-300 text-slate-600 hover:border-amber-400 hover:text-amber-700 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer" title="Alternar pesquisa também na Internet">
-                            <i class="fa-solid fa-globe text-slate-400" id="icon-followup-external"></i>
-                            <span id="label-followup-external">Internet: Desativada</span>
+                    <!-- Follow-up Internet Toggle with Rich Floating Tooltip -->
+                    <div class="relative group flex items-center flex-shrink-0">
+                        <button type="button" id="btn-toggle-followup-external" class="px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:border-amber-400 hover:text-amber-800 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer" title="Alternar busca em fontes da internet">
+                            <i class="fa-solid fa-globe text-slate-400 text-[11px]" id="icon-followup-external"></i>
+                            <span id="label-followup-external">Fontes além do JW: Desativadas</span>
                         </button>
+                        <!-- Rich Floating Tooltip -->
+                        <div class="absolute bottom-full right-0 mb-2.5 hidden group-hover:block w-72 p-3 bg-slate-900/95 backdrop-blur-md text-white text-[11px] rounded-xl shadow-2xl border border-slate-700/80 z-50 pointer-events-none transition-all leading-relaxed">
+                            <div class="flex items-center gap-1.5 text-amber-400 font-bold mb-1">
+                                <i class="fa-solid fa-circle-info text-xs"></i>
+                                <span>Consultas na Web (Fontes Externas)</span>
+                            </div>
+                            <p class="text-slate-200 font-normal">
+                                Por padrão, a pesquisa foca <b>100% no acervo oficial</b> (wol.jw.org e jw.org). Ao ativar esta opção, a IA consultará também artigos históricos, enciclopédias e páginas públicas de toda a internet.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
