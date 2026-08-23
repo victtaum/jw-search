@@ -1351,3 +1351,109 @@ if (_savedThreads.length > 0 && _savedThreads[0].turns && _savedThreads[0].turns
     activeConversation = _savedThreads[0];
     renderConversationThread();
 }
+
+
+// ==========================================
+// PWA Installation & Onboarding Handler
+// ==========================================
+let deferredInstallPrompt = null;
+const pwaInstallBanner = document.getElementById("pwa-install-banner");
+const btnPwaInstall = document.getElementById("btn-pwa-install");
+const btnPwaDismiss = document.getElementById("btn-pwa-dismiss");
+const btnPwaLater = document.getElementById("btn-pwa-later");
+const btnHeaderInstall = document.getElementById("btn-header-install-app");
+const pwaIosInstructions = document.getElementById("pwa-ios-instructions");
+const pwaBannerActions = document.getElementById("pwa-banner-actions");
+
+const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+function showPwaInstallBanner() {
+    if (isStandaloneApp) return; // Already installed/running standalone
+    const dismissedTime = localStorage.getItem("jw_search_pwa_dismissed");
+    // If dismissed recently (under 48h), keep header button visible but don't show the big floating banner
+    if (dismissedTime && (Date.now() - parseInt(dismissedTime, 10)) < 48 * 60 * 60 * 1000) {
+        if (btnHeaderInstall) {
+            btnHeaderInstall.classList.remove("hidden");
+            btnHeaderInstall.classList.add("inline-flex");
+        }
+        return;
+    }
+
+    if (pwaInstallBanner) {
+        pwaInstallBanner.classList.remove("pointer-events-none", "translate-y-24", "opacity-0");
+        pwaInstallBanner.classList.add("pointer-events-auto", "translate-y-0", "opacity-100");
+    }
+    if (btnHeaderInstall) {
+        btnHeaderInstall.classList.remove("hidden");
+        btnHeaderInstall.classList.add("inline-flex");
+    }
+}
+
+function dismissPwaInstallBanner() {
+    if (pwaInstallBanner) {
+        pwaInstallBanner.classList.add("pointer-events-none", "translate-y-24", "opacity-0");
+        pwaInstallBanner.classList.remove("pointer-events-auto", "translate-y-0", "opacity-100");
+    }
+    localStorage.setItem("jw_search_pwa_dismissed", Date.now().toString());
+}
+
+// 1. Android / Chrome / Edge Install Prompt Event
+window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    setTimeout(showPwaInstallBanner, 1500);
+});
+
+// 2. iOS Safari Handling
+if (isIosDevice && !isStandaloneApp) {
+    setTimeout(() => {
+        if (pwaIosInstructions) pwaIosInstructions.classList.remove("hidden");
+        if (pwaBannerActions) pwaBannerActions.classList.add("hidden");
+        showPwaInstallBanner();
+    }, 2000);
+}
+
+// 3. Fallback for mobile browser without beforeinstallprompt
+setTimeout(() => {
+    if (!isStandaloneApp && !isIosDevice && !deferredInstallPrompt) {
+        showPwaInstallBanner();
+    }
+}, 3000);
+
+if (btnPwaInstall) {
+    btnPwaInstall.addEventListener("click", async () => {
+        if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            dismissPwaInstallBanner();
+        } else {
+            alert("Para instalar: abra o menu de 3 pontinhos (⋮) do seu navegador e toque em 'Instalar aplicativo' ou 'Adicionar à tela inicial'.");
+            dismissPwaInstallBanner();
+        }
+    });
+}
+
+if (btnHeaderInstall) {
+    btnHeaderInstall.addEventListener("click", async () => {
+        if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+        } else if (isIosDevice) {
+            alert("No iPhone/iPad: Toque no botão Compartilhar na barra do Safari e selecione 'Adicionar à Tela de Início'.");
+        } else {
+            alert("Para instalar: toque no menu do seu navegador (⋮) e escolha 'Instalar aplicativo' ou 'Adicionar à tela inicial'.");
+        }
+    });
+}
+
+if (btnPwaDismiss) btnPwaDismiss.addEventListener("click", dismissPwaInstallBanner);
+if (btnPwaLater) btnPwaLater.addEventListener("click", dismissPwaInstallBanner);
+
+window.addEventListener("appinstalled", () => {
+    dismissPwaInstallBanner();
+    if (btnHeaderInstall) btnHeaderInstall.classList.add("hidden");
+    console.log("JW Search instalado com sucesso como PWA!");
+});

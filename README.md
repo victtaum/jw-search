@@ -119,15 +119,18 @@ Diretamente no cabeçalho da interface, o botão **"⚡ Diagnóstico"** permite 
 - **Google GenAI SDK:** Integração com o Gemini 2.5 Flash, 2.0 Flash e Search Grounding.
 - **Pillow (PIL):** Script autônomo (`backend/generate_icons.py`) com supersampling 4x para geração dos ícones oficiais.
 
-### 3. 🤖 Aplicativo Mobile Android
-- **Linguagem:** Kotlin 2.0+.
-- **Interface:** Jetpack Compose + Material Design 3.
-- **Arquitetura:** MVVM (Model-View-ViewModel) com Coroutines e StateFlow.
-- **Artefato Gerado:** `JW-Search.apk` pronto para instalação direta sem necessidade de loja de aplicativos.
+### 3. 📲 PWA First (Progressive Web App)
+- **Instalação em 1 Toque:** Ao acessar o site no Android, iPhone ou Computador, um balão inteligente sugere a instalação direta na tela inicial.
+- **Experiência Idêntica a App Nativo:** Executa em modo *Standalone* (sem barra de URL do navegador), com ícone oficial, transições fluidas e cache offline.
+- **Zero Complicação:** Sem necessidade de enviar APKs manualmente por WhatsApp ou lidar com permissões de "fontes desconhecidas".
 
-### 4. 🍏 Aplicativo Mobile iOS
-- **Método 1 (PWA Safari):** Instalação nativa via "Adicionar à Tela de Início" no Safari, funcionando em tela cheia com ícone dedicado.
-- **Método 2 (App Nativo Swift):** Código-fonte nativo em SwiftUI pronto para compilação no Xcode.
+### 4. 🤖 Estrutura para Geração de APK (Futuro)
+- O diretório `android/` permanece preservado no repositório.
+- Se desejar gerar um arquivo `.apk` no futuro, basta compilar o projeto Android Studio em `android/` ou utilizar o Capacitor / Bubblewrap TWA:
+  ```bash
+  cd android
+  ./gradlew assembleRelease
+  ```
 
 ---
 
@@ -162,20 +165,20 @@ Para manter o **JW Search 100% ativo 24 horas por dia com resposta instantânea*
 
 ---
 
-## 🚀 Como Executar o Projeto
+## 🚀 Como Instalar e Usar
 
-### 💻 1. No Computador (Windows / Local):
-1. Dê um duplo clique no arquivo **`start.bat`**.
-2. O script instalará as dependências do Python automaticamente se necessário e abrirá o navegador em **`http://localhost:8000`**.
+### 📱 1. No Celular Android ou Tablet:
+1. Abra o link do JW Search no **Google Chrome**.
+2. Ao acessar, toque no balão flutuante **"Instalar Aplicativo"** (ou no menu `⋮` ➡️ **"Instalar aplicativo"**).
+3. O ícone oficial aparecerá na tela de início do seu celular e abrirá como aplicativo nativo em tela cheia!
 
-### 📱 2. No Celular Android:
-1. Transfira o arquivo **`JW-Search.apk`** para o seu celular.
-2. Toque nele e confirme a instalação.
+### 🍏 2. No iPhone ou iPad (iOS):
+1. Abra o link do JW Search no **Safari**.
+2. Toque no botão de **Compartilhar** (ícone de quadrado com seta para cima) ➡️ **Adicionar à Tela de Início**.
+3. Toque em **"Adicionar"**. O JW Search abrirá sem barras do Safari, como um app da App Store.
 
-### 🍏 3. No iPhone ou iPad (iOS):
-1. Abra o link do seu site no **Safari**.
-2. Toque no botão de **Compartilhar** ➡️ **Adicionar à Tela de Início**.
-3. O app abrirá em tela cheia com ícone oficial.
+### 💻 3. No Computador (Windows / Mac / Linux):
+1. Acesse o link no Chrome ou Edge e clique no ícone de download na barra de endereços (ou execute `start.bat` para rodar localmente).
 
 ---
 
@@ -185,6 +188,7 @@ O backend possui uma suíte de testes unitários e de integração contínua (`b
 - Verificação de autenticação de cada provedor (Gemini, DeepSeek, Hy3).
 - Validação do scraper do motor RAG Teocrático no acervo do `wol.jw.org`.
 - Validação do leitor autônomo offline `/api/read`.
+- Validação do extrator de versículos bíblicos `/api/verse`.
 - Validação da exportação de documentos Word `/api/export/docx`.
 - Validação do endpoint de diagnóstico `/api/diagnostics`.
 - Validação da cadeia de resiliência e fallbacks bidirecionais.
@@ -199,8 +203,6 @@ python backend/test_api_keys.py
 ## 📂 Estrutura de Diretórios do Repositório
 
 ```text
-├── JW-Search.apk               # Aplicativo compilado pronto para Android
-├── JW-Search-Completo.zip      # Pacote zip para distribuição offline
 ├── start.bat                   # Inicializador automático para Windows
 ├── README.md                   # Documentação mestre completa do projeto
 │
@@ -212,19 +214,19 @@ python backend/test_api_keys.py
 │   ├── test_api_keys.py        # Suíte de testes automatizados (8 testes)
 │   └── requirements.txt        # Dependências Python
 │
-├── web/                        # Frontend Web & Progressive Web App
+├── web/                        # Frontend Web & Progressive Web App (PWA)
 │   ├── index.html              # Interface do usuário com modal de diagnósticos
 │   ├── app.js                  # Lógica do cliente, gerenciamento de chaves e chat
 │   ├── manifest.json           # Manifesto PWA para instalação mobile
-│   ├── sw.js                   # Service Worker para cache offline
+│   ├── service-worker.js       # Service Worker para cache e PWA
 │   ├── favicon.ico             # Ícone do navegador
 │   └── icons/                  # Ícones em alta resolução para PWA e iOS
 │
-├── android/                    # Código-Fonte do Aplicativo Nativo Android
+├── android/                    # Código-Fonte do Aplicativo Android (Preservado para APK futuro)
 │   ├── app/src/main/java/      # Telas e ViewModels em Jetpack Compose
 │   └── app/src/main/res/       # Layouts, mipmaps e recursos de ícone
 │
-└── ios/                        # Código-Fonte do Aplicativo Nativo iOS
+└── ios/                        # Código-Fonte do Aplicativo iOS (Preservado para compilação futura)
     └── JWSearch/               # Projeto nativo em Swift e SwiftUI
 ```
 

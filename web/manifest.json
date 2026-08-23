@@ -1,11 +1,13 @@
 {
-  "name": "JW Search Portal",
+  "name": "JW Search - Estudo & Chat RAG",
   "short_name": "JW Search",
-  "description": "Portal de Consulta Unificada Teocrática",
+  "description": "Ferramenta de Pesquisa Teocrática, Consulta WOL e Chat com IA",
   "start_url": "/",
+  "id": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#F7FAFC",
-  "theme_color": "#4A5568",
+  "background_color": "#0f172a",
+  "theme_color": "#334155",
   "orientation": "any",
   "icons": [
     {
