@@ -373,6 +373,43 @@ const inputHy3Key = document.getElementById("input-hy3-key");
 const inputHy3BaseUrl = document.getElementById("input-hy3-base-url");
 const inputHy3Model = document.getElementById("input-hy3-model");
 
+const selectHy3Preset = document.getElementById("select-hy3-preset");
+
+const hy3Presets = {
+    "openrouter": { baseUrl: "https://openrouter.ai/api/v1", model: "tencent/hunyuan-standard" },
+    "tencent": { baseUrl: "https://api.hunyuan.tencent.com/v1", model: "hy3" },
+    "siliconflow": { baseUrl: "https://api.siliconflow.cn/v1", model: "tencent/Hunyuan-A52B-Instruct" },
+    "together": { baseUrl: "https://api.together.xyz/v1", model: "togethercomputer/hy3" },
+    "ollama": { baseUrl: "http://localhost:11434/v1", model: "hy3" },
+    "custom": { baseUrl: "", model: "" }
+};
+
+if (selectHy3Preset) {
+    selectHy3Preset.addEventListener("change", () => {
+        const val = selectHy3Preset.value;
+        const preset = hy3Presets[val];
+        if (preset && val !== "custom") {
+            if (inputHy3BaseUrl) inputHy3BaseUrl.value = preset.baseUrl;
+            if (inputHy3Model) inputHy3Model.value = preset.model;
+        }
+    });
+}
+
+if (inputHy3Key) {
+    inputHy3Key.addEventListener("input", () => {
+        const val = inputHy3Key.value.trim();
+        if (val.startsWith("sk-or-")) {
+            if (selectHy3Preset) selectHy3Preset.value = "openrouter";
+            if (inputHy3BaseUrl && (!inputHy3BaseUrl.value || inputHy3BaseUrl.value.includes("together"))) {
+                inputHy3BaseUrl.value = "https://openrouter.ai/api/v1";
+            }
+            if (inputHy3Model && (!inputHy3Model.value || inputHy3Model.value === "hy3")) {
+                inputHy3Model.value = "tencent/hunyuan-standard";
+            }
+        }
+    });
+}
+
 // Modal Tab Switcher
 function switchModalTab(tabName) {
     document.querySelectorAll(".modal-tab-btn").forEach(btn => {
@@ -406,8 +443,8 @@ function openKeyModal(noticeMessage = null) {
     if (inputGeminiKey) inputGeminiKey.value = localStorage.getItem("jw_search_gemini_key") || localStorage.getItem("jw_search_user_api_key") || "";
     if (inputDeepseekKey) inputDeepseekKey.value = localStorage.getItem("jw_search_deepseek_key") || "";
     if (inputHy3Key) inputHy3Key.value = localStorage.getItem("jw_search_hy3_key") || "";
-    if (inputHy3BaseUrl) inputHy3BaseUrl.value = localStorage.getItem("jw_search_hy3_base_url") || "";
-    if (inputHy3Model) inputHy3Model.value = localStorage.getItem("jw_search_hy3_model") || "";
+    if (inputHy3BaseUrl) inputHy3BaseUrl.value = localStorage.getItem("jw_search_hy3_base_url") || "https://openrouter.ai/api/v1";
+    if (inputHy3Model) inputHy3Model.value = localStorage.getItem("jw_search_hy3_model") || "tencent/hunyuan-standard";
     
     switchModalTab(currentProvider);
 
