@@ -890,11 +890,18 @@ async function openReader(url, title, pub = "Publicação Oficial") {
     readerContainer.classList.remove("translate-x-full");
     readerPub.innerText = pub;
     readerTitle.innerText = title;
+    readerContent.innerHTML = `
+        <div class="flex items-center justify-center py-12 text-slate-400 space-x-2">
+            <i class="fa-solid fa-spinner fa-spin text-blue-600 text-lg"></i>
+            <span class="text-sm">Carregando publicação oficial no wol.jw.org...</span>
+        </div>
+    `;
     try {
-        const res = await fetch(`${API_BASE}/api/read?url=${encodeURIComponent(url)}`);
+        const titleParam = title ? `&title=${encodeURIComponent(title)}` : '';
+        const res = await fetch(`${API_BASE}/api/read?url=${encodeURIComponent(url)}${titleParam}`);
         const data = await res.json();
         readerContent.innerHTML = data.content || "Conteúdo não disponível.";
-    } catch { readerContent.innerHTML = "Erro ao carregar."; }
+    } catch { readerContent.innerHTML = '<div class="p-4 bg-rose-50 text-rose-700 rounded-xl text-sm">Erro ao carregar conteúdo da publicação oficial.</div>'; }
 }
 
 function closeReader() {

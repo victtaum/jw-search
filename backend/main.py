@@ -416,12 +416,13 @@ def api_search(
 
 @app.get("/api/read")
 def api_read(
-    url: str = Query(..., description="URL absoluta do documento wol.jw.org")
+    url: str = Query(..., description="URL absoluta do documento wol.jw.org"),
+    title: Optional[str] = Query(None, description="Título do artigo clicado para validação")
 ):
     if not url.strip():
         raise HTTPException(status_code=400, detail="URL inválida")
     try:
-        content = get_clean_document(url.strip())
+        content = get_clean_document(url.strip(), requested_title=title)
         if not content:
             raise HTTPException(status_code=404, detail="Documento não encontrado ou erro ao acessar")
         return {"content": content}

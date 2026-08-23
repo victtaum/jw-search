@@ -397,7 +397,7 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
             "results": []
         }
 
-def get_clean_document(url):
+def get_clean_document(url, requested_title=None):
     html = fetch_url(url)
     if not html:
         return None
@@ -412,6 +412,26 @@ def get_clean_document(url):
         return None
         
     doc_copy = BeautifulSoup(str(doc_div), 'html.parser')
+
+    # Smart Mismatch Guard: If URL was hallucinated (e.g. JOELA instead of Faraó/Êxodo)
+    if requested_title and len(requested_title.strip()) > 5:
+        first_h = doc_copy.find(["h1", "h2", "h3", "header", "strong"])
+        if first_h:
+            h_text = first_h.get_text(strip=True).lower()
+            req_words = [w for w in requested_title.lower().split() if len(w) > 3 and w not in ["quem", "como", "onde", "quando", "sobre", "para", "artigo", "livro"]]
+            if req_words and not any(rw in h_text for rw in req_words):
+                try:
+                    from rag_engine import search_wol_direct
+                    fallback_results = search_wol_direct(requested_title, max_results=1)
+                    if fallback_results and fallback_results[0]['link'] != url:
+                        fallback_html = fetch_url(fallback_results[0]['link'])
+                        if fallback_html:
+                            fb_soup = BeautifulSoup(fallback_html, 'html.parser')
+                            fb_doc = fb_soup.find("div", class_="document") or fb_soup.find("div", id="docContent") or fb_soup.find("article")
+                            if fb_doc:
+                                doc_copy = BeautifulSoup(str(fb_doc), 'html.parser')
+                except Exception as ex:
+                    print(f"Fallback resolver error for '{requested_title}': {ex}")
     
     for tag in doc_copy.find_all(["script", "style", "nav", "footer", "button"]):
         tag.decompose()

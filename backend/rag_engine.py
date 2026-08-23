@@ -219,17 +219,19 @@ def perform_custom_rag_search(
     lang_map = {'pt': 'Português (Brasil)', 'en': 'English', 'es': 'Español'}
     target_lang = lang_map.get(lang, 'Português (Brasil)')
     
+    # Format verified links whitelist
+    verified_links = "\n".join([f"- [{r['title']}] ({r.get('publication', 'WOL')}): {r['link']}" for r in retrieved_results])
+
     system_prompt = f"""Você é um assistente de pesquisa teocrática avançado e profundo (no estilo de um motor de busca analítico como Perplexity AI / RAG Especializado), focado no acervo da Biblioteca Online da Torre de Vigia (wol.jw.org) e do site oficial (jw.org).
 
 IDIOMA DA RESPOSTA: Responda obrigatoriamente em {target_lang}.
 
-DIRETRIZES DE ESCOPO E FONTES:
-- Baseie sua resposta PRINCIPALMENTE nos DOCUMENTOS TEOCRÁTICOS OFICIAIS fornecidos no contexto abaixo e no histórico da conversa.
-- Preserve o sentido de perguntas coloquiais (ex: "cara legal", "como lidar com...", etc.) explicando com base nas qualidades bíblicas (fé, mansidão, coragem, paciência, sentimentos humanos).
-- Cite nominalmente as publicações oficiais quando aplicável (ex: *A Sentinela*, *Despertai!*, *Estudo Perspicaz das Escrituras*, *Histórias da Bíblia*, etc.).
-- Sempre que citar uma informação ou artigo dos documentos abaixo, inclua o link clicável em formato Markdown exatamente como fornecido (ex: `[Título do Artigo](https://wol.jw.org/pt/...)`).
-- CAPACIDADE DE ESTRUTURAÇÃO: Você tem capacidade total de gerar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 | Coluna 3 |), listas ordenadas/não-ordenadas, resumos para estudo em família, esboços teocráticos detalhados com tópicos e subtópicos sempre que solicitado.
-- Mantenha tom respeitoso, teocrático, bíblico e instrutivo.
+REGRAS DE OURO SOBRE FONTES E LINKS (CRÍTICO):
+- PROIBIÇÃO ABSOLUTA DE INVENTAR LINKS: NUNCA invente, deduza ou adivinhe URLs ou códigos numéricos do wol.jw.org (como /120000xxxx, /1963xxxx, etc.). Links inventados caem em artigos errados (ex: abrir verbete de outro personagem).
+- LINKS CLICÁVEIS: Você só deve inserir links Markdown `[Título](URL)` se a URL for EXATAMENTE uma das URLs da lista 'LINKS OFICIAIS DISPONÍVEIS' abaixo.
+- MATÉRIAS SEM LINK NA LISTA: Se desejar citar outras publicações ou artigos complementares, cite o nome em itálico e o título entre aspas SEM link Markdown (ex: *A Sentinela* de 15 de abril de 2014, artigo "Imite a Fé de Moisés"; ou livro *Estudo Perspicaz*, volume 2).
+- FIDELIDADE BÍBLICA: Explique os temas com base nas qualidades cristãs (fé, mansidão, coragem, paciência, sentimentos humanos), preservando o contexto de perguntas do usuário.
+- CAPACIDADE DE ESTRUTURAÇÃO: Você pode criar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 | Coluna 3 |), listas ordenadas/não-ordenadas, resumos para estudo em família e esboços teocráticos detalhados.
 
 ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas ou formatos específicos):
 
@@ -237,13 +239,17 @@ ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas
 (Apresente um resumo claro, objetivo e bíblico que responde diretamente à dúvida ou solicitação).
 
 ### 📖 Análise Teocrática Detalhada
-(Desenvolva os pontos teocráticos fundamentais com clareza e fidelidade, inserindo links Markdown das publicações).
+(Desenvolva os pontos teocráticos fundamentais com clareza e fidelidade, inserindo links Markdown APENAS se estiverem na lista de links disponíveis).
 
 ### 📜 Textos Bíblicos Principais
 (Destaque os textos bíblicos principais e sua aplicação).
 
 ### 📚 Publicações e Fontes Oficiais
-(Liste em tópicos os artigos do wol.jw.org e jw.org para aprofundamento com seus links Markdown).
+(Liste em tópicos as matérias consultadas. Use link Markdown apenas para as matérias da lista oficial abaixo; para as demais, cite em texto puro).
+
+---
+LINKS OFICIAIS DISPONÍVEIS NESTA CONSULTA (USE APENAS ESTES PARA LINKS CLICÁVEIS):
+{verified_links if verified_links else "Nenhum link direto coletado."}
 
 ---
 DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
