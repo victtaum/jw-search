@@ -148,43 +148,48 @@ updateProviderUI();
 // ==========================================
 // Theocratic Purity & Scope UI Sync (100% JW vs Web)
 // ==========================================
-const btnToggleSearchScope = document.getElementById("btn-toggle-search-scope");
-const searchScopeIcon = document.getElementById("search-scope-icon");
-const searchScopeLabel = document.getElementById("search-scope-label");
-const tooltipScopeTitle = document.getElementById("tooltip-scope-title");
-const tooltipScopeDesc = document.getElementById("tooltip-scope-desc");
 let isExternalSearch = false;
 
 function updateExternalSearchUI(includeExternal) {
-    isExternalSearch = !!includeExternal;
+    isExternalSearch = typeof includeExternal === 'boolean' ? includeExternal : !isExternalSearch;
     
-    // Update Search Card scope button
-    if (btnToggleSearchScope && searchScopeLabel && searchScopeIcon) {
+    // 1. Search Card Button
+    const searchScopeBtn = document.getElementById("btn-toggle-search-scope");
+    const searchScopeIcon = document.getElementById("search-scope-icon");
+    const searchScopeLabel = document.getElementById("search-scope-label");
+
+    if (searchScopeBtn && searchScopeLabel && searchScopeIcon) {
         if (!isExternalSearch) {
-            btnToggleSearchScope.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs";
+            searchScopeBtn.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs";
             searchScopeIcon.className = "fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]";
-            searchScopeLabel.textContent = "100% Acervo Oficial JW (Protegido)";
+            searchScopeLabel.textContent = "100% Acervo Oficial JW";
         } else {
-            btnToggleSearchScope.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-xs transition-all cursor-pointer select-none hover:bg-slate-200 active:scale-95 text-[11px] sm:text-xs";
+            searchScopeBtn.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 border border-slate-300 shadow-xs transition-all cursor-pointer select-none hover:bg-slate-200 active:scale-95 text-[11px] sm:text-xs";
             searchScopeIcon.className = "fa-solid fa-globe text-slate-500 text-[11px]";
             searchScopeLabel.textContent = "Web Externa Incluída (Não-oficial)";
         }
     }
 
-    // Update Followup Scope button & Tooltip
-    if (btnToggleFollowupExternal && labelFollowupExternal && iconFollowupExternal) {
+    // 2. Bottom Follow-up Dock Button & Tooltip
+    const followupBtn = document.getElementById("btn-toggle-followup-external");
+    const followupIcon = document.getElementById("icon-followup-external");
+    const followupLabel = document.getElementById("label-followup-external");
+    const tooltipTitle = document.getElementById("tooltip-scope-title");
+    const tooltipDesc = document.getElementById("tooltip-scope-desc");
+
+    if (followupBtn && followupLabel && followupIcon) {
         if (!isExternalSearch) {
-            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-emerald-300 text-emerald-900 bg-emerald-50/95 flex items-center space-x-1.5 transition-all text-[11px] font-semibold select-none shadow-xs cursor-pointer ring-2 ring-emerald-200/60";
-            iconFollowupExternal.className = "fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]";
-            labelFollowupExternal.textContent = "100% Acervo Oficial JW";
-            if (tooltipScopeTitle) tooltipScopeTitle.innerHTML = `<i class="fa-solid fa-shield-halved text-xs"></i><span>Modo Teocrático Protegido (Recomendado)</span>`;
-            if (tooltipScopeDesc) tooltipScopeDesc.innerHTML = `Pesquisa <b>100% focada nas Escrituras e nas publicações oficiais</b> (wol.jw.org e jw.org), blindada contra opiniões pessoais, fóruns ou especulações da internet.`;
+            followupBtn.className = "px-3 py-1 rounded-full border border-emerald-300 text-emerald-900 bg-emerald-50/95 flex items-center space-x-1.5 transition-all text-[11px] font-semibold select-none shadow-xs cursor-pointer ring-2 ring-emerald-200/60";
+            followupIcon.className = "fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]";
+            followupLabel.textContent = "100% Acervo Oficial JW";
+            if (tooltipTitle) tooltipTitle.innerHTML = `<i class="fa-solid fa-shield-halved text-xs"></i><span>Modo Teocrático Protegido (Recomendado)</span>`;
+            if (tooltipDesc) tooltipDesc.innerHTML = `Pesquisa <b>100% focada nas Escrituras e nas publicações oficiais</b> (wol.jw.org e jw.org), blindada contra opiniões pessoais, fóruns ou especulações da internet.`;
         } else {
-            btnToggleFollowupExternal.className = "px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:border-slate-400 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer";
-            iconFollowupExternal.className = "fa-solid fa-globe text-slate-500 text-[11px]";
-            labelFollowupExternal.textContent = "Web Externa Incluída";
-            if (tooltipScopeTitle) tooltipScopeTitle.innerHTML = `<i class="fa-solid fa-globe text-xs text-amber-400"></i><span>Web Externa Incluída</span>`;
-            if (tooltipScopeDesc) tooltipScopeDesc.innerHTML = `A IA também consultará dicionários seculares e páginas da internet. Pode incluir ideias ou teorias não teocráticas.`;
+            followupBtn.className = "px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:border-slate-400 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer";
+            followupIcon.className = "fa-solid fa-globe text-slate-500 text-[11px]";
+            followupLabel.textContent = "Web Externa Incluída";
+            if (tooltipTitle) tooltipTitle.innerHTML = `<i class="fa-solid fa-globe text-xs text-amber-400"></i><span>Web Externa Incluída</span>`;
+            if (tooltipDesc) tooltipDesc.innerHTML = `A IA também consultará dicionários seculares e páginas da internet. Pode incluir ideias ou teorias não teocráticas.`;
         }
     }
 }
@@ -193,11 +198,14 @@ window.toggleSearchScope = function() {
     updateExternalSearchUI(!isExternalSearch);
 };
 
-if (btnToggleSearchScope) {
-    btnToggleSearchScope.addEventListener("click", window.toggleSearchScope);
+// Initial binding
+const initSearchScopeBtn = document.getElementById("btn-toggle-search-scope");
+if (initSearchScopeBtn) {
+    initSearchScopeBtn.addEventListener("click", window.toggleSearchScope);
 }
-if (btnToggleFollowupExternal) {
-    btnToggleFollowupExternal.addEventListener("click", window.toggleSearchScope);
+const initFollowupBtn = document.getElementById("btn-toggle-followup-external");
+if (initFollowupBtn) {
+    initFollowupBtn.addEventListener("click", window.toggleSearchScope);
 }
 
 // ==========================================

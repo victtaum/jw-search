@@ -173,35 +173,15 @@
     <main class="flex-grow max-w-4xl w-full mx-auto px-3 py-4 sm:px-4 sm:py-6">
         
         <!-- Search Card (Initial State) -->
-        <div id="search-card" class="bg-white rounded-2xl shadow-sm border border-gray-200/90 p-4 sm:p-6 md:p-8 mb-6 transition-all">
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-800 mb-1.5 text-center sm:text-left">
+        <div id="search-card" class="bg-white rounded-2xl shadow-sm border border-gray-200/90 p-5 sm:p-6 md:p-8 mb-6 transition-all">
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-800 mb-1 text-center sm:text-left tracking-tight">
                 Pesquisa Teocrática & Chat Contínuo
             </h1>
             <p class="text-xs sm:text-sm text-gray-500 mb-5 text-center sm:text-left">
-                Consulte a Biblioteca Online (WOL), peça tabelas comparativas, resumos e interaja com o contexto.
+                Consulte o acervo oficial (WOL), compare pontos, gere resumos e aprofunde seu estudo bíblico.
             </p>
             
-            <form id="search-form" class="space-y-4">
-                <!-- AI Engine / Provider Selector (Mobile Responsive Grid) -->
-                <div class="space-y-2 pb-1">
-                    <div class="grid grid-cols-3 gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs w-full">
-                        <button type="button" id="tab-prov-hy3" class="prov-selector-btn py-2 px-1 text-center rounded-lg font-semibold bg-white text-slate-800 shadow-sm transition-all text-[11px] sm:text-xs flex items-center justify-center gap-1 cursor-pointer" data-provider="hy3">
-                            <i class="fa-solid fa-bolt text-amber-500"></i> <span class="truncate">Hy3 / OpenAI</span>
-                        </button>
-                        <button type="button" id="tab-prov-gemini" class="prov-selector-btn py-2 px-1 text-center rounded-lg font-medium text-gray-600 hover:text-slate-800 transition-all text-[11px] sm:text-xs flex items-center justify-center gap-1 cursor-pointer" data-provider="gemini">
-                            <i class="fa-solid fa-wand-magic-sparkles text-blue-500"></i> <span class="truncate">Gemini 2.5</span>
-                        </button>
-                        <button type="button" id="tab-prov-deepseek" class="prov-selector-btn py-2 px-1 text-center rounded-lg font-medium text-gray-600 hover:text-slate-800 transition-all text-[11px] sm:text-xs flex items-center justify-center gap-1 cursor-pointer" data-provider="deepseek">
-                            <i class="fa-solid fa-brain text-indigo-500"></i> <span class="truncate">DeepSeek</span>
-                        </button>
-                    </div>
-                    <div class="flex items-center justify-between text-[11px] text-gray-500 px-0.5">
-                        <span id="active-engine-badge">
-                            Motor: <b class="text-amber-600">Hy3 / OpenAI (RAG WOL)</b>
-                        </span>
-                    </div>
-                </div>
-
+            <form id="search-form" class="space-y-3.5">
                 <!-- Search Input Row -->
                 <div class="flex items-center gap-2 w-full">
                     <div class="relative flex-grow flex items-center">
@@ -209,7 +189,7 @@
                         <input 
                             type="text" 
                             id="search-input" 
-                            placeholder="Pesquisar no acervo teocrático..." 
+                            placeholder="Pesquisar assunto ou dúvida..." 
                             class="w-full pl-10 pr-3 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm sm:text-base text-slate-800 placeholder-slate-400 font-normal shadow-inner"
                             required
                             autofocus
@@ -218,7 +198,7 @@
                     <button 
                         type="submit" 
                         id="btn-main-search"
-                        class="px-4 sm:px-5 py-3 sm:py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer flex-shrink-0"
+                        class="px-5 py-3 sm:py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer flex-shrink-0"
                     >
                         <span>Buscar</span>
                     </button>
@@ -227,9 +207,9 @@
                 <!-- Scope Mode & Language Row -->
                 <div class="flex items-center justify-between pt-1 gap-2 text-xs">
                     <!-- Clean Interactive Scope Selector -->
-                    <button type="button" id="btn-toggle-search-scope" onclick="window.toggleSearchScope && window.toggleSearchScope()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs" title="Clique para alternar entre Acervo Oficial JW e Web Externa">
+                    <button type="button" id="btn-toggle-search-scope" onclick="window.toggleSearchScope()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs" title="Clique para alternar entre Acervo Oficial JW e Web Externa">
                         <i class="fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]" id="search-scope-icon"></i>
-                        <span id="search-scope-label">100% Acervo Oficial JW (Protegido)</span>
+                        <span id="search-scope-label">100% Acervo Oficial JW</span>
                         <i class="fa-solid fa-arrows-rotate text-[10px] text-emerald-700/60 ml-0.5"></i>
                     </button>
                     
@@ -397,7 +377,7 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-gray-100 border-t border-gray-200 py-6 mt-12 text-center text-xs text-gray-500">
+    <footer class="bg-gray-100 border-t border-gray-200 py-6 pb-16 sm:pb-8 mt-12 text-center text-xs text-gray-500">
         <p>JW Search - Projeto de Consulta de Informações Teocráticas.</p>
         <p class="mt-1">Desenvolvido como ferramenta de estudo pessoal. Os direitos das publicações pertencem aos seus respectivos autores.</p>
     </footer>
@@ -429,16 +409,21 @@
                 </div>
             </div>
             
-            <!-- Panel Body (Scrollable Article content) -->
-            <div id="reader-body" class="flex-grow overflow-y-auto px-6 md:px-10 py-8 reader-content bg-[#FCFBF9]">
-                <!-- Article Title -->
-                <h2 id="reader-title" class="text-3xl font-bold text-gray-900 mb-6 leading-tight">Título do Artigo</h2>
-                <!-- Article HTML -->
-                <div id="reader-content" class="prose max-w-none text-gray-800 text-lg leading-relaxed space-y-6">
-                    <p>Carregando conteúdo...</p>
-                </div>
+            <!-- Panel Content -->
+            <div id="reader-content" class="flex-grow p-6 sm:p-8 overflow-y-auto font-serif text-base leading-relaxed text-gray-800 space-y-4">
+                <!-- Content injected dynamically -->
             </div>
             
+            <!-- Panel Footer / Source Link -->
+            <div class="border-t border-gray-100 px-6 py-3 bg-gray-50 flex justify-between items-center text-xs">
+                <a id="reader-wol-link" href="#" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline flex items-center space-x-1">
+                    <span>Ver artigo original no WOL</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+                <button id="reader-copy-btn" class="px-3 py-1 bg-white border border-gray-200 rounded-md hover:bg-gray-50 text-gray-700 transition-colors">
+                    Copiar Texto
+                </button>
+            </div>
         </div>
     </div>
     
@@ -518,92 +503,62 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-1.5 flex-shrink-0">
                         <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-medium rounded-lg transition-colors flex items-center space-x-1">
-                            <span>OpenRouter (Grátis)</span>
+                            <span>OpenRouter</span>
                             <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                         </a>
                         <a href="https://cloud.tencent.com/product/hunyuan" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-[11px] font-medium rounded-lg transition-colors flex items-center space-x-1">
-                            <span>Tencent HY3</span>
+                            <span>Tencent Hy3</span>
                             <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                         </a>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Provedor / Endpoint:</label>
-                        <select id="select-hy3-preset" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
-                            <option value="openrouter" selected>OpenRouter (Recomendado - Gratuito)</option>
-                            <option value="tencent">Tencent Cloud Hunyuan</option>
-                            <option value="siliconflow">SiliconFlow</option>
-                            <option value="together">Together AI</option>
-                            <option value="ollama">Ollama (Servidor Local)</option>
-                            <option value="custom">Personalizado (Outro)</option>
-                        </select>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Chave da API (Token):</label>
-                        <input type="password" id="input-hy3-key" placeholder="sk-or-v1-... ou token da sua conta" class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Base URL:</label>
-                        <input type="text" id="input-hy3-base-url" value="https://openrouter.ai/api/v1" placeholder="https://openrouter.ai/api/v1" class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Modelo:</label>
-                        <input type="text" id="input-hy3-model" value="tencent/hy3" placeholder="tencent/hy3" class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">OPENAI_API_KEY / HY3_KEY:</label>
+                    <input type="password" id="input-hy3-key" placeholder="sk-..." class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Base URL (Opcional, Padrão Tencent / OpenRouter):</label>
+                    <input type="text" id="input-hy3-base-url" placeholder="https://api.openrouter.ai/v1 ou https://api.hunyuan.cloud.tencent.com/v1" class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-[11px]">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Model Name (Opcional):</label>
+                    <input type="text" id="input-hy3-model" placeholder="hunyuan-turbo ou deepseek/deepseek-r1 ou gpt-4o-mini" class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-[11px]">
                 </div>
             </div>
 
-            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-                <button id="btn-toggle-key-visibility" type="button" class="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1">
-                    <i class="fa-solid fa-eye text-xs"></i>
-                    <span>Mostrar chaves</span>
-                </button>
-                <button id="btn-save-key" type="button" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg transition-colors flex items-center space-x-1.5">
+            <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                <button id="btn-save-keys" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-medium py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-floppy-disk"></i>
                     <span>Salvar Configurações</span>
                 </button>
             </div>
-
-            <!-- Feedback Message -->
-            <div id="key-status-msg" class="hidden text-xs p-3 rounded-lg mt-3"></div>
         </div>
     </div>
 
-    <!-- Diagnostics & Health Modal -->
-    <div id="diagnostics-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
-        <div id="diagnostics-modal-container" class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 transform scale-95 transition-transform duration-200">
-            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
-                <div class="flex items-center space-x-2">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                        <i class="fa-solid fa-gauge-high text-sm"></i>
+    <!-- Diagnostics & Latency Modal -->
+    <div id="diagnostics-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xl w-full p-6 sm:p-8 transform scale-95 transition-transform duration-200">
+            <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                        <i class="fa-solid fa-gauge-high text-base"></i>
                     </div>
                     <div>
                         <h3 class="font-bold text-gray-800 text-sm">Diagnóstico do Sistema & Latência</h3>
                         <p class="text-[10px] text-gray-400">Inspeção em tempo real de servidores, APIs e scrapers</p>
                     </div>
                 </div>
-                <button id="btn-close-diagnostics-modal" class="text-gray-400 hover:text-gray-600 p-1">
-                    <i class="fa-solid fa-xmark text-base"></i>
+                <button id="btn-close-diagnostics-modal" class="text-gray-400 hover:text-gray-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-
+            <!-- Diagnostics Content Injected Here -->
             <div id="diagnostics-content" class="py-4 space-y-3">
-                <div class="flex items-center justify-center py-6 text-gray-400 space-x-2">
-                    <i class="fa-solid fa-spinner fa-spin text-blue-600"></i>
-                    <span class="text-xs">Medindo latências e testando conexões...</span>
-                </div>
+                <p class="text-xs text-gray-500 text-center animate-pulse">Testando conexões...</p>
             </div>
-
-            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-                <button id="btn-run-diagnostics" class="text-xs bg-slate-800 hover:bg-slate-900 text-white font-medium px-4 py-2 rounded-lg flex items-center space-x-1.5 transition-colors">
-                    <i class="fa-solid fa-rotate-right"></i>
-                    <span>Testar Novamente</span>
-                </button>
-                <button id="btn-close-diagnostics-footer" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition-colors">
-                    Fechar
-                </button>
-            </div>
+            <button id="btn-run-diagnostics" class="w-full mt-4 bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 text-xs font-semibold py-2.5 rounded-xl transition-colors">
+                Executar Teste Novamente
+            </button>
         </div>
     </div>
 
@@ -630,7 +585,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/app.js?v=2.3.0"></script>
+    <script src="/app.js?v=2.4.0"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
