@@ -146,64 +146,81 @@ updateProviderUI();
 
 
 // ==========================================
-// Theocratic Purity & Scope UI Sync (Segmented Control)
+// Theocratic Purity & Scope UI Sync (Modern iOS-style Toggle)
 // ==========================================
-let isExternalSearch = false;
+let isExternalSearch = false; // false = 100% Acervo JW (Padrão Protegido), true = Web Externa
 
-function setScope(includeExternal) {
-    isExternalSearch = !!includeExternal;
-    renderScopeUI();
+function toggleSearchScope(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    isExternalSearch = !isExternalSearch;
+    renderToggleUI();
 }
 
-function renderScopeUI() {
-    // 1. Search Card Segmented Buttons
-    const scopeBtnJw = document.getElementById("scope-btn-jw");
-    const scopeBtnWeb = document.getElementById("scope-btn-web");
+function renderToggleUI() {
+    // 1. Main Search Card Toggle
+    const toggleTrack = document.getElementById("toggle-track");
+    const toggleThumb = document.getElementById("toggle-thumb");
+    const toggleThumbIcon = document.getElementById("toggle-thumb-icon");
+    const toggleLabel = document.getElementById("toggle-label");
+    const toggleBadge = document.getElementById("toggle-badge");
 
-    if (scopeBtnJw && scopeBtnWeb) {
+    if (toggleTrack && toggleThumb && toggleLabel && toggleBadge) {
         if (!isExternalSearch) {
-            // JW Active (Green Solid)
-            scopeBtnJw.className = "px-3 py-1.5 rounded-lg font-semibold bg-emerald-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer";
-            scopeBtnWeb.className = "px-3 py-1.5 rounded-lg font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 cursor-pointer";
+            // ON / Protegido (100% JW)
+            toggleTrack.className = "w-11 h-6 bg-emerald-600 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center shadow-inner relative flex-shrink-0";
+            toggleThumb.className = "w-5 h-5 bg-white rounded-full shadow-md transform translate-x-5 transition-transform duration-200 ease-in-out flex items-center justify-center text-[10px] text-emerald-600";
+            if (toggleThumbIcon) toggleThumbIcon.className = "fa-solid fa-shield-halved text-[10px]";
+            toggleLabel.textContent = "100% Acervo Oficial JW";
+            toggleLabel.className = "text-slate-800 transition-colors";
+            toggleBadge.textContent = "Protegido";
+            toggleBadge.className = "px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors";
         } else {
-            // Web Active (Slate Solid)
-            scopeBtnJw.className = "px-3 py-1.5 rounded-lg font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 cursor-pointer";
-            scopeBtnWeb.className = "px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer";
+            // OFF / Secular Web Incluída
+            toggleTrack.className = "w-11 h-6 bg-slate-300 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center shadow-inner relative flex-shrink-0";
+            toggleThumb.className = "w-5 h-5 bg-white rounded-full shadow-md transform translate-x-0 transition-transform duration-200 ease-in-out flex items-center justify-center text-[10px] text-slate-500";
+            if (toggleThumbIcon) toggleThumbIcon.className = "fa-solid fa-globe text-[10px]";
+            toggleLabel.textContent = "Web Externa Incluída";
+            toggleLabel.className = "text-slate-600 transition-colors";
+            toggleBadge.textContent = "Não-oficial";
+            toggleBadge.className = "px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-amber-100 text-amber-800 border border-amber-300 transition-colors";
         }
     }
 
-    // 2. Followup Segmented Buttons
-    const fScopeBtnJw = document.getElementById("followup-scope-btn-jw");
-    const fScopeBtnWeb = document.getElementById("followup-scope-btn-web");
+    // 2. Followup Dock Toggle
+    const fTrack = document.getElementById("followup-toggle-track");
+    const fThumb = document.getElementById("followup-toggle-thumb");
+    const fThumbIcon = document.getElementById("followup-toggle-thumb-icon");
+    const fLabel = document.getElementById("followup-toggle-label");
 
-    if (fScopeBtnJw && fScopeBtnWeb) {
+    if (fTrack && fThumb && fLabel) {
         if (!isExternalSearch) {
-            // JW Active (Green Solid)
-            fScopeBtnJw.className = "px-2.5 py-1 rounded-full font-semibold bg-emerald-600 text-white shadow-xs transition-all flex items-center gap-1 cursor-pointer";
-            fScopeBtnWeb.className = "px-2.5 py-1 rounded-full font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1 cursor-pointer";
+            fTrack.className = "w-9 h-5 bg-emerald-600 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center shadow-inner relative flex-shrink-0";
+            fThumb.className = "w-4 h-4 bg-white rounded-full shadow-md transform translate-x-4 transition-transform duration-200 ease-in-out flex items-center justify-center text-[8px] text-emerald-600";
+            if (fThumbIcon) fThumbIcon.className = "fa-solid fa-shield-halved";
+            fLabel.textContent = "100% JW";
+            fLabel.className = "text-[11px] font-semibold text-emerald-900";
         } else {
-            // Web Active (Slate Solid)
-            fScopeBtnJw.className = "px-2.5 py-1 rounded-full font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1 cursor-pointer";
-            fScopeBtnWeb.className = "px-2.5 py-1 rounded-full font-semibold bg-slate-800 text-white shadow-xs transition-all flex items-center gap-1 cursor-pointer";
+            fTrack.className = "w-9 h-5 bg-slate-300 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center shadow-inner relative flex-shrink-0";
+            fThumb.className = "w-4 h-4 bg-white rounded-full shadow-md transform translate-x-0 transition-transform duration-200 ease-in-out flex items-center justify-center text-[8px] text-slate-500";
+            if (fThumbIcon) fThumbIcon.className = "fa-solid fa-globe";
+            fLabel.textContent = "Web";
+            fLabel.className = "text-[11px] font-medium text-slate-600";
         }
     }
 }
 
-// Event Listeners for Segmented Controls
-const scopeBtnJw = document.getElementById("scope-btn-jw");
-if (scopeBtnJw) scopeBtnJw.addEventListener("click", () => setScope(false));
+// Bind toggle events
+const btnTheocraticToggle = document.getElementById("btn-theocratic-toggle");
+if (btnTheocraticToggle) btnTheocraticToggle.addEventListener("click", toggleSearchScope);
 
-const scopeBtnWeb = document.getElementById("scope-btn-web");
-if (scopeBtnWeb) scopeBtnWeb.addEventListener("click", () => setScope(true));
-
-const fScopeBtnJw = document.getElementById("followup-scope-btn-jw");
-if (fScopeBtnJw) fScopeBtnJw.addEventListener("click", () => setScope(false));
-
-const fScopeBtnWeb = document.getElementById("followup-scope-btn-web");
-if (fScopeBtnWeb) fScopeBtnWeb.addEventListener("click", () => setScope(true));
+const btnFollowupToggle = document.getElementById("btn-followup-toggle");
+if (btnFollowupToggle) btnFollowupToggle.addEventListener("click", toggleSearchScope);
 
 // Initial render
-renderScopeUI();
+renderToggleUI();
 
 // ==========================================
 // Quick Suggestion Pills

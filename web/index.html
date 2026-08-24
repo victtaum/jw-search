@@ -210,18 +210,22 @@
                     </button>
                 </div>
                 
-                <!-- Scope Mode Selector (Segmented 2-Pill Control) -->
-                <div class="flex items-center justify-start pt-1 text-xs">
-                    <div class="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shadow-inner gap-1">
-                        <button type="button" id="scope-btn-jw" class="px-3 py-1.5 rounded-lg font-semibold bg-emerald-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-shield-halved text-xs"></i>
-                            <span>100% Acervo JW</span>
-                        </button>
-                        <button type="button" id="scope-btn-web" class="px-3 py-1.5 rounded-lg font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-globe text-xs"></i>
-                            <span>Incluir Web</span>
-                        </button>
-                    </div>
+                <!-- Scope Mode Toggle Row (Modern Theocratic Switch) -->
+                <div class="flex items-center justify-start pt-1">
+                    <button type="button" id="btn-theocratic-toggle" class="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 transition-all cursor-pointer select-none group shadow-xs focus:outline-none active:scale-98" title="Toque para alternar entre acervo 100% oficial JW e fontes da internet">
+                        <!-- Switch Track -->
+                        <div id="toggle-track" class="w-11 h-6 bg-emerald-600 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center shadow-inner relative flex-shrink-0">
+                            <!-- Sliding Thumb -->
+                            <div id="toggle-thumb" class="w-5 h-5 bg-white rounded-full shadow-md transform translate-x-5 transition-transform duration-200 ease-in-out flex items-center justify-center text-[10px] text-emerald-600">
+                                <i class="fa-solid fa-shield-halved" id="toggle-thumb-icon"></i>
+                            </div>
+                        </div>
+                        <!-- Status Text & Badge -->
+                        <div class="flex items-center gap-1.5 text-xs font-semibold select-none leading-none">
+                            <span id="toggle-label" class="text-slate-800 transition-colors">100% Acervo Oficial JW</span>
+                            <span id="toggle-badge" class="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors">Protegido</span>
+                        </div>
+                    </button>
                 </div>
             </form>
         </div>
@@ -261,17 +265,15 @@
                         </button>
                     </div>
 
-                    <!-- Follow-up Scope Toggle (Segmented) -->
-                    <div class="inline-flex bg-slate-100 p-0.5 rounded-full border border-slate-200 text-[11px] shadow-inner flex-shrink-0 gap-0.5">
-                        <button type="button" id="followup-scope-btn-jw" class="px-2.5 py-1 rounded-full font-semibold bg-emerald-600 text-white shadow-xs transition-all flex items-center gap-1 cursor-pointer">
-                            <i class="fa-solid fa-shield-halved text-[10px]"></i>
-                            <span>100% JW</span>
-                        </button>
-                        <button type="button" id="followup-scope-btn-web" class="px-2.5 py-1 rounded-full font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1 cursor-pointer">
-                            <i class="fa-solid fa-globe text-[10px]"></i>
-                            <span>Web</span>
-                        </button>
-                    </div>
+                    <!-- Follow-up Scope Toggle (Modern Switch) -->
+                    <button type="button" id="btn-followup-toggle" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer select-none shadow-xs flex-shrink-0" title="Alternar escopo de busca">
+                        <div id="followup-toggle-track" class="w-9 h-5 bg-emerald-600 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center shadow-inner relative flex-shrink-0">
+                            <div id="followup-toggle-thumb" class="w-4 h-4 bg-white rounded-full shadow-md transform translate-x-4 transition-transform duration-200 ease-in-out flex items-center justify-center text-[8px] text-emerald-600">
+                                <i class="fa-solid fa-shield-halved" id="followup-toggle-thumb-icon"></i>
+                            </div>
+                        </div>
+                        <span id="followup-toggle-label" class="text-[11px] font-semibold text-slate-800">100% JW</span>
+                    </button>
                 </div>
 
                 <!-- Interactive Follow-up Input Row -->
@@ -616,7 +618,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/app.js?v=2.7.0"></script>
+    <script src="/app.js?v=2.8.0"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
