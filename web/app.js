@@ -146,69 +146,61 @@ updateProviderUI();
 
 
 // ==========================================
-// Theocratic Purity & Scope UI Sync (100% JW vs Web)
+// Theocratic Purity & Scope UI Sync (Segmented Control)
 // ==========================================
 let isExternalSearch = false;
 
-function renderScopeUI() {
-    // 1. Search Card Button
-    const searchScopeBtn = document.getElementById("btn-toggle-search-scope");
-    const searchScopeIcon = document.getElementById("search-scope-icon");
-    const searchScopeLabel = document.getElementById("search-scope-label");
-
-    if (searchScopeBtn && searchScopeLabel && searchScopeIcon) {
-        if (!isExternalSearch) {
-            searchScopeBtn.className = "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs";
-            searchScopeIcon.className = "fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]";
-            searchScopeLabel.textContent = "100% Acervo Oficial JW (Protegido)";
-        } else {
-            searchScopeBtn.className = "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold bg-slate-100 text-slate-700 border border-slate-300 shadow-xs transition-all cursor-pointer select-none hover:bg-slate-200 active:scale-95 text-[11px] sm:text-xs";
-            searchScopeIcon.className = "fa-solid fa-globe text-slate-500 text-[11px]";
-            searchScopeLabel.textContent = "Web Externa Incluída (Não-oficial)";
-        }
-    }
-
-    // 2. Bottom Follow-up Dock Button & Tooltip
-    const followupBtn = document.getElementById("btn-toggle-followup-external");
-    const followupIcon = document.getElementById("icon-followup-external");
-    const followupLabel = document.getElementById("label-followup-external");
-    const tooltipTitle = document.getElementById("tooltip-scope-title");
-    const tooltipDesc = document.getElementById("tooltip-scope-desc");
-
-    if (followupBtn && followupLabel && followupIcon) {
-        if (!isExternalSearch) {
-            followupBtn.className = "px-3 py-1 rounded-full border border-emerald-300 text-emerald-900 bg-emerald-50/95 flex items-center space-x-1.5 transition-all text-[11px] font-semibold select-none shadow-xs cursor-pointer ring-2 ring-emerald-200/60";
-            followupIcon.className = "fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]";
-            followupLabel.textContent = "100% Acervo Oficial JW";
-            if (tooltipTitle) tooltipTitle.innerHTML = `<i class="fa-solid fa-shield-halved text-xs"></i><span>Modo Teocrático Protegido (Recomendado)</span>`;
-            if (tooltipDesc) tooltipDesc.innerHTML = `Pesquisa <b>100% focada nas Escrituras e nas publicações oficiais</b> (wol.jw.org e jw.org), blindada contra opiniões pessoais, fóruns ou especulações da internet.`;
-        } else {
-            followupBtn.className = "px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:border-slate-400 flex items-center space-x-1.5 transition-all text-[11px] font-medium select-none bg-slate-50 shadow-xs cursor-pointer";
-            followupIcon.className = "fa-solid fa-globe text-slate-500 text-[11px]";
-            followupLabel.textContent = "Web Externa Incluída";
-            if (tooltipTitle) tooltipTitle.innerHTML = `<i class="fa-solid fa-globe text-xs text-amber-400"></i><span>Web Externa Incluída</span>`;
-            if (tooltipDesc) tooltipDesc.innerHTML = `A IA também consultará dicionários seculares e páginas da internet. Pode incluir ideias ou teorias não teocráticas.`;
-        }
-    }
-}
-
-function handleScopeToggle(e) {
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    isExternalSearch = !isExternalSearch;
+function setScope(includeExternal) {
+    isExternalSearch = !!includeExternal;
     renderScopeUI();
 }
 
-const mainScopeBtn = document.getElementById("btn-toggle-search-scope");
-if (mainScopeBtn) {
-    mainScopeBtn.addEventListener("click", handleScopeToggle);
+function renderScopeUI() {
+    // 1. Search Card Segmented Buttons
+    const scopeBtnJw = document.getElementById("scope-btn-jw");
+    const scopeBtnWeb = document.getElementById("scope-btn-web");
+
+    if (scopeBtnJw && scopeBtnWeb) {
+        if (!isExternalSearch) {
+            // JW Active (Green Solid)
+            scopeBtnJw.className = "px-3 py-1.5 rounded-lg font-semibold bg-emerald-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer";
+            scopeBtnWeb.className = "px-3 py-1.5 rounded-lg font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 cursor-pointer";
+        } else {
+            // Web Active (Slate Solid)
+            scopeBtnJw.className = "px-3 py-1.5 rounded-lg font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 cursor-pointer";
+            scopeBtnWeb.className = "px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer";
+        }
+    }
+
+    // 2. Followup Segmented Buttons
+    const fScopeBtnJw = document.getElementById("followup-scope-btn-jw");
+    const fScopeBtnWeb = document.getElementById("followup-scope-btn-web");
+
+    if (fScopeBtnJw && fScopeBtnWeb) {
+        if (!isExternalSearch) {
+            // JW Active (Green Solid)
+            fScopeBtnJw.className = "px-2.5 py-1 rounded-full font-semibold bg-emerald-600 text-white shadow-xs transition-all flex items-center gap-1 cursor-pointer";
+            fScopeBtnWeb.className = "px-2.5 py-1 rounded-full font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1 cursor-pointer";
+        } else {
+            // Web Active (Slate Solid)
+            fScopeBtnJw.className = "px-2.5 py-1 rounded-full font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1 cursor-pointer";
+            fScopeBtnWeb.className = "px-2.5 py-1 rounded-full font-semibold bg-slate-800 text-white shadow-xs transition-all flex items-center gap-1 cursor-pointer";
+        }
+    }
 }
-const followupScopeBtn = document.getElementById("btn-toggle-followup-external");
-if (followupScopeBtn) {
-    followupScopeBtn.addEventListener("click", handleScopeToggle);
-}
+
+// Event Listeners for Segmented Controls
+const scopeBtnJw = document.getElementById("scope-btn-jw");
+if (scopeBtnJw) scopeBtnJw.addEventListener("click", () => setScope(false));
+
+const scopeBtnWeb = document.getElementById("scope-btn-web");
+if (scopeBtnWeb) scopeBtnWeb.addEventListener("click", () => setScope(true));
+
+const fScopeBtnJw = document.getElementById("followup-scope-btn-jw");
+if (fScopeBtnJw) fScopeBtnJw.addEventListener("click", () => setScope(false));
+
+const fScopeBtnWeb = document.getElementById("followup-scope-btn-web");
+if (fScopeBtnWeb) fScopeBtnWeb.addEventListener("click", () => setScope(true));
 
 // Initial render
 renderScopeUI();
@@ -1359,7 +1351,7 @@ if (_savedThreads.length > 0 && _savedThreads[0].turns && _savedThreads[0].turns
 
 
 // ==========================================
-// PWA Installation & Onboarding Handler
+// PWA Installation & Onboarding Handler (Mobile Only)
 // ==========================================
 let deferredInstallPrompt = null;
 const pwaInstallBanner = document.getElementById("pwa-install-banner");
@@ -1370,28 +1362,27 @@ const btnHeaderInstall = document.getElementById("btn-header-install-app");
 const pwaIosInstructions = document.getElementById("pwa-ios-instructions");
 const pwaBannerActions = document.getElementById("pwa-banner-actions");
 
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || localStorage.getItem("jw_search_pwa_installed") === "true";
 
 function showPwaInstallBanner() {
-    if (isStandaloneApp) return; // Already installed/running standalone
+    // 1. STRICT: Never prompt on Desktop PC
+    if (!isMobileDevice) return;
+    // 2. STRICT: Never prompt if already installed
+    if (isStandaloneApp) return;
+    // 3. If previously installed, never prompt
+    if (localStorage.getItem("jw_search_pwa_installed") === "true") return;
+
     const dismissedTime = localStorage.getItem("jw_search_pwa_dismissed");
-    // If dismissed recently (under 48h), keep header button visible but don't show the big floating banner
-    if (dismissedTime && (Date.now() - parseInt(dismissedTime, 10)) < 48 * 60 * 60 * 1000) {
-        if (btnHeaderInstall) {
-            btnHeaderInstall.classList.remove("hidden");
-            btnHeaderInstall.classList.add("inline-flex");
-        }
+    // If dismissed recently (under 7 days), don't show the floating banner
+    if (dismissedTime && (Date.now() - parseInt(dismissedTime, 10)) < 7 * 24 * 60 * 60 * 1000) {
         return;
     }
 
     if (pwaInstallBanner) {
         pwaInstallBanner.classList.remove("pointer-events-none", "translate-y-24", "opacity-0");
         pwaInstallBanner.classList.add("pointer-events-auto", "translate-y-0", "opacity-100");
-    }
-    if (btnHeaderInstall) {
-        btnHeaderInstall.classList.remove("hidden");
-        btnHeaderInstall.classList.add("inline-flex");
     }
 }
 
@@ -1403,15 +1394,16 @@ function dismissPwaInstallBanner() {
     localStorage.setItem("jw_search_pwa_dismissed", Date.now().toString());
 }
 
-// 1. Android / Chrome / Edge Install Prompt Event
+// 1. Android / Chrome Install Prompt Event (Mobile Only)
 window.addEventListener("beforeinstallprompt", (e) => {
+    if (!isMobileDevice || isStandaloneApp) return;
     e.preventDefault();
     deferredInstallPrompt = e;
     setTimeout(showPwaInstallBanner, 1500);
 });
 
-// 2. iOS Safari Handling
-if (isIosDevice && !isStandaloneApp) {
+// 2. iOS Safari Handling (Mobile Only)
+if (isIosDevice && !isStandaloneApp && isMobileDevice) {
     setTimeout(() => {
         if (pwaIosInstructions) pwaIosInstructions.classList.remove("hidden");
         if (pwaBannerActions) pwaBannerActions.classList.add("hidden");
@@ -1419,18 +1411,14 @@ if (isIosDevice && !isStandaloneApp) {
     }, 2000);
 }
 
-// 3. Fallback for mobile browser without beforeinstallprompt
-setTimeout(() => {
-    if (!isStandaloneApp && !isIosDevice && !deferredInstallPrompt) {
-        showPwaInstallBanner();
-    }
-}, 3000);
-
 if (btnPwaInstall) {
     btnPwaInstall.addEventListener("click", async () => {
         if (deferredInstallPrompt) {
             deferredInstallPrompt.prompt();
             const { outcome } = await deferredInstallPrompt.userChoice;
+            if (outcome === 'accepted') {
+                localStorage.setItem("jw_search_pwa_installed", "true");
+            }
             deferredInstallPrompt = null;
             dismissPwaInstallBanner();
         } else {
@@ -1445,6 +1433,9 @@ if (btnHeaderInstall) {
         if (deferredInstallPrompt) {
             deferredInstallPrompt.prompt();
             const { outcome } = await deferredInstallPrompt.userChoice;
+            if (outcome === 'accepted') {
+                localStorage.setItem("jw_search_pwa_installed", "true");
+            }
             deferredInstallPrompt = null;
         } else if (isIosDevice) {
             alert("No iPhone/iPad: Toque no botão Compartilhar na barra do Safari e selecione 'Adicionar à Tela de Início'.");
@@ -1458,6 +1449,7 @@ if (btnPwaDismiss) btnPwaDismiss.addEventListener("click", dismissPwaInstallBann
 if (btnPwaLater) btnPwaLater.addEventListener("click", dismissPwaInstallBanner);
 
 window.addEventListener("appinstalled", () => {
+    localStorage.setItem("jw_search_pwa_installed", "true");
     dismissPwaInstallBanner();
     if (btnHeaderInstall) btnHeaderInstall.classList.add("hidden");
     console.log("JW Search instalado com sucesso como PWA!");
