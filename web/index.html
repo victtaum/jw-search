@@ -210,23 +210,14 @@
                     </button>
                 </div>
                 
-                <!-- Scope Mode & Language Row -->
-                <div class="flex items-center justify-between pt-1 gap-2 text-xs">
+                <!-- Scope Mode Selector Row -->
+                <div class="flex items-center justify-start pt-1 text-xs">
                     <!-- Clean Interactive Scope Selector -->
-                    <button type="button" id="btn-toggle-search-scope" onclick="window.toggleSearchScope()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs" title="Clique para alternar entre Acervo Oficial JW e Web Externa">
+                    <button type="button" id="btn-toggle-search-scope" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs" title="Clique para alternar entre Acervo Oficial JW e Web Externa">
                         <i class="fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]" id="search-scope-icon"></i>
                         <span id="search-scope-label">100% Acervo Oficial JW</span>
                         <i class="fa-solid fa-arrows-rotate text-[10px] text-emerald-700/60 ml-0.5"></i>
                     </button>
-                    
-                    <div class="flex items-center space-x-1 text-gray-500 flex-shrink-0">
-                        <i class="fa-solid fa-language text-sm text-gray-400"></i>
-                        <select id="lang-select" class="bg-transparent border border-gray-200 sm:border-none rounded-lg px-2 py-1 focus:outline-none font-medium cursor-pointer text-gray-700 text-xs">
-                            <option value="pt" selected>Português</option>
-                            <option value="en">English</option>
-                            <option value="es">Español</option>
-                        </select>
-                    </div>
                 </div>
             </form>
         </div>
@@ -628,7 +619,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/app.js?v=2.5.0"></script>
+    <script src="/app.js?v=2.6.0"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {

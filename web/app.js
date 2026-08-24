@@ -150,9 +150,7 @@ updateProviderUI();
 // ==========================================
 let isExternalSearch = false;
 
-function updateExternalSearchUI(includeExternal) {
-    isExternalSearch = typeof includeExternal === 'boolean' ? includeExternal : !isExternalSearch;
-    
+function renderScopeUI() {
     // 1. Search Card Button
     const searchScopeBtn = document.getElementById("btn-toggle-search-scope");
     const searchScopeIcon = document.getElementById("search-scope-icon");
@@ -160,11 +158,11 @@ function updateExternalSearchUI(includeExternal) {
 
     if (searchScopeBtn && searchScopeLabel && searchScopeIcon) {
         if (!isExternalSearch) {
-            searchScopeBtn.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs";
+            searchScopeBtn.className = "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs transition-all cursor-pointer select-none hover:bg-emerald-100/90 active:scale-95 ring-2 ring-emerald-200/50 text-[11px] sm:text-xs";
             searchScopeIcon.className = "fa-solid fa-shield-halved text-emerald-600 animate-pulse text-[11px]";
-            searchScopeLabel.textContent = "100% Acervo Oficial JW";
+            searchScopeLabel.textContent = "100% Acervo Oficial JW (Protegido)";
         } else {
-            searchScopeBtn.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 border border-slate-300 shadow-xs transition-all cursor-pointer select-none hover:bg-slate-200 active:scale-95 text-[11px] sm:text-xs";
+            searchScopeBtn.className = "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold bg-slate-100 text-slate-700 border border-slate-300 shadow-xs transition-all cursor-pointer select-none hover:bg-slate-200 active:scale-95 text-[11px] sm:text-xs";
             searchScopeIcon.className = "fa-solid fa-globe text-slate-500 text-[11px]";
             searchScopeLabel.textContent = "Web Externa Incluída (Não-oficial)";
         }
@@ -194,19 +192,26 @@ function updateExternalSearchUI(includeExternal) {
     }
 }
 
-window.toggleSearchScope = function() {
-    updateExternalSearchUI(!isExternalSearch);
-};
+function handleScopeToggle(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    isExternalSearch = !isExternalSearch;
+    renderScopeUI();
+}
 
-// Initial binding
-const initSearchScopeBtn = document.getElementById("btn-toggle-search-scope");
-if (initSearchScopeBtn) {
-    initSearchScopeBtn.addEventListener("click", window.toggleSearchScope);
+const mainScopeBtn = document.getElementById("btn-toggle-search-scope");
+if (mainScopeBtn) {
+    mainScopeBtn.addEventListener("click", handleScopeToggle);
 }
-const initFollowupBtn = document.getElementById("btn-toggle-followup-external");
-if (initFollowupBtn) {
-    initFollowupBtn.addEventListener("click", window.toggleSearchScope);
+const followupScopeBtn = document.getElementById("btn-toggle-followup-external");
+if (followupScopeBtn) {
+    followupScopeBtn.addEventListener("click", handleScopeToggle);
 }
+
+// Initial render
+renderScopeUI();
 
 // ==========================================
 // Quick Suggestion Pills
@@ -235,7 +240,7 @@ async function executeTurnSearch(userQuery) {
     }
 
     const includeExternal = isExternalSearch;
-    const lang = langSelect ? langSelect.value : "pt";
+    const lang = "pt";
 
     const geminiKey = localStorage.getItem("jw_search_gemini_key") || localStorage.getItem("jw_search_user_api_key") || "";
     const deepseekKey = localStorage.getItem("jw_search_deepseek_key") || "";
