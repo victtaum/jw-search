@@ -1359,13 +1359,6 @@ if (diagnosticsModal) {
     });
 }
 
-// Auto-restore last active thread if available
-const _savedThreads = getStoredThreads();
-if (_savedThreads.length > 0 && _savedThreads[0].turns && _savedThreads[0].turns.length > 0) {
-    activeConversation = _savedThreads[0];
-    renderConversationThread();
-}
-
 
 // ==========================================
 // PWA Installation & Onboarding Handler (Mobile Only)
