@@ -930,38 +930,97 @@ function updateHistoryBadge() {
 }
 updateHistoryBadge();
 
+function deleteSingleHistoryThread(id) {
+    const threads = getStoredThreads().filter(t => t.id !== id);
+    localStorage.setItem("jw_search_saved_threads", JSON.stringify(threads));
+    updateHistoryBadge();
+    renderHistoryModal();
+}
+
+function clearAllHistory() {
+    if (confirm("Tem certeza que deseja excluir todo o histórico de estudos?")) {
+        localStorage.removeItem("jw_search_saved_threads");
+        updateHistoryBadge();
+        renderHistoryModal();
+    }
+}
+
 function renderHistoryModal() {
     if (!historyListContainer) return;
     const threads = getStoredThreads();
     if (threads.length === 0) {
-        historyListContainer.innerHTML = `<div class="text-center py-10 text-gray-400"><p class="text-xs">Nenhum estudo salvo.</p></div>`;
+        historyListContainer.innerHTML = `
+            <div class="text-center py-10 text-gray-400">
+                <i class="fa-solid fa-folder-open text-3xl mb-2 text-gray-300"></i>
+                <p class="text-xs">Nenhum estudo salvo no histórico.</p>
+            </div>`;
         return;
     }
     historyListContainer.innerHTML = "";
     threads.forEach((t) => {
         const item = document.createElement("div");
-        item.className = "bg-gray-50 border border-gray-200/80 rounded-xl p-3.5 hover:border-blue-300 transition-all flex items-center justify-between gap-3";
+        item.className = "bg-gray-50/90 border border-gray-200/90 rounded-xl p-3.5 hover:border-blue-300 hover:bg-blue-50/20 transition-all flex items-center justify-between gap-3 shadow-xs";
+        
+        const dateStr = t.createdAt ? new Date(t.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        const turnsCount = t.turns ? t.turns.length : 0;
+
         item.innerHTML = `
-            <div class="flex-grow min-w-0"><h4 class="text-xs sm:text-sm font-bold text-gray-800 truncate">${escapeHtml(t.title || 'Pesquisa')}</h4></div>
-            <div class="flex items-center space-x-1.5 text-xs">
-                <button class="btn-load-history px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg" data-id="${t.id}">Abrir</button>
+            <div class="flex-grow min-w-0">
+                <h4 class="text-xs sm:text-sm font-bold text-gray-800 truncate" title="${escapeHtml(t.title || 'Pesquisa')}">${escapeHtml(t.title || 'Pesquisa')}</h4>
+                <div class="flex items-center gap-2 mt-1 text-[11px] text-gray-400 font-normal">
+                    <span><i class="fa-solid fa-comments text-[10px] mr-1"></i>${turnsCount} ${turnsCount === 1 ? 'pergunta' : 'perguntas'}</span>
+                    ${dateStr ? `<span>•</span><span><i class="fa-regular fa-clock text-[10px] mr-1"></i>${dateStr}</span>` : ''}
+                </div>
+            </div>
+            <div class="flex items-center space-x-1.5 text-xs flex-shrink-0">
+                <button class="btn-load-history px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer" data-id="${t.id}" title="Continuar este estudo">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    <span>Abrir</span>
+                </button>
+                <button class="btn-delete-history-item p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" data-id="${t.id}" title="Excluir este estudo do histórico">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
             </div>`;
         historyListContainer.appendChild(item);
     });
+
+    // Event listeners for Open
     document.querySelectorAll(".btn-load-history").forEach(btn => {
         btn.addEventListener("click", () => {
             const id = btn.getAttribute("data-id");
-            activeConversation = getStoredThreads().find(t => t.id === id);
-            renderConversationThread();
-            closeHistoryModal();
+            const thread = getStoredThreads().find(t => t.id === id);
+            if (thread) {
+                activeConversation = thread;
+                renderConversationThread();
+                closeHistoryModal();
+            }
+        });
+    });
+
+    // Event listeners for Individual Delete
+    document.querySelectorAll(".btn-delete-history-item").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute("data-id");
+            deleteSingleHistoryThread(id);
         });
     });
 }
 
-function openHistoryModal() { renderHistoryModal(); historyModal.classList.remove("pointer-events-none", "opacity-0"); }
-function closeHistoryModal() { historyModal.classList.add("opacity-0"); setTimeout(() => historyModal.classList.add("pointer-events-none"), 200); }
+function openHistoryModal() { 
+    renderHistoryModal(); 
+    historyModal.classList.remove("pointer-events-none", "opacity-0"); 
+}
+
+function closeHistoryModal() { 
+    historyModal.classList.add("opacity-0"); 
+    setTimeout(() => historyModal.classList.add("pointer-events-none"), 200); 
+}
+
 if (btnOpenHistory) btnOpenHistory.addEventListener("click", openHistoryModal);
 if (btnCloseHistoryModal) btnCloseHistoryModal.addEventListener("click", closeHistoryModal);
+if (btnCloseHistoryFooter) btnCloseHistoryFooter.addEventListener("click", closeHistoryModal);
+if (btnClearAllHistory) btnClearAllHistory.addEventListener("click", clearAllHistory);
 
 
 // ==========================================
