@@ -485,8 +485,13 @@ function parseMarkdownToHtml(markdown) {
 function formatInlineMarkdown(text) {
     if (!text) return "";
     let s = escapeHtml(text);
-    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, (match, label, url) => {
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline font-semibold transition-colors inline-flex items-center gap-0.5 wol-inline-link" data-url="${url}" data-title="${label}"><span>${label}</span><i class="fa-solid fa-arrow-up-right-from-square text-[9px] ml-0.5"></i></a>`;
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, (match, rawLabel, url) => {
+        const label = rawLabel.replace(/^[>\s\*\"\#\[\]]+|[>\s\*\"\#\[\]]+$/g, '').trim();
+        const isSearchLink = url.includes("/wol/s/") || url.includes("lp-t?q=");
+        if (isSearchLink) {
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline font-semibold transition-colors inline-flex items-center gap-0.5" title="Pesquisar tópico no wol.jw.org"><span>${label}</span><i class="fa-solid fa-arrow-up-right-from-square text-[9px] ml-0.5"></i></a>`;
+        }
+        return `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline font-semibold transition-colors inline-flex items-center gap-0.5 wol-inline-link cursor-pointer" data-url="${url}" data-title="${label}"><span>${label}</span><i class="fa-solid fa-book-open text-[10px] ml-0.5 opacity-80"></i></a>`;
     });
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
@@ -1072,12 +1077,13 @@ if (btnClearAllHistory) btnClearAllHistory.addEventListener("click", clearAllHis
 // ==========================================
 // Reader Panel Logic
 // ==========================================
-async function openReader(url, title, pub = "Publicação Oficial") {
+async function openReader(url, rawTitle, pub = "Publicação Oficial") {
     if (!readerPanel || !readerContainer) return;
+    const title = (rawTitle || "").replace(/^[>\s\*\"\#\[\]]+|[>\s\*\"\#\[\]]+$/g, '').trim() || "Artigo Teocrático";
     readerPanel.classList.remove("pointer-events-none", "opacity-0");
     readerContainer.classList.remove("translate-x-full");
     if (readerPub) readerPub.innerText = pub || "Publicação Oficial";
-    if (readerTitle) readerTitle.innerText = title || "Artigo Teocrático";
+    if (readerTitle) readerTitle.innerText = title;
     if (readerWolLink) readerWolLink.href = url || "#";
     if (readerContent) {
         readerContent.innerHTML = `

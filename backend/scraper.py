@@ -501,6 +501,23 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
         }
 
 def get_clean_document(url, requested_title=None):
+    clean_title = re.sub(r'[\>\*\_\"\#\[\]]', '', requested_title or '').strip()
+    
+    # If URL is a WOL search URL (/wol/s/ or ?q=), resolve real target document
+    if '/wol/s/' in url or '?q=' in url:
+        parsed_url = urllib.parse.urlparse(url)
+        q_params = urllib.parse.parse_qs(parsed_url.query)
+        extracted_q = q_params.get('q', [''])[0]
+        search_term = clean_title if (clean_title and len(clean_title) > 3) else extracted_q
+        if search_term:
+            try:
+                from rag_engine import search_wol_direct
+                results = search_wol_direct(search_term, max_results=1)
+                if results and results[0].get('link') and results[0]['link'] != url:
+                    url = results[0]['link']
+            except Exception as e:
+                print(f"Resolve search URL error: {e}")
+
     html = fetch_url(url)
     if not html:
         return None
@@ -509,6 +526,21 @@ def get_clean_document(url, requested_title=None):
     
     doc_div = soup.find("div", class_="document") or soup.find("div", id="docContent") or soup.find("article")
     if not doc_div:
+        # If it's still a search page with no direct article
+        if '/wol/s/' in url:
+            return f"""
+            <div class="p-8 text-center space-y-4">
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto text-xl">
+                    <i class="fa-solid fa-book-open"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-800">Busca na Biblioteca Online</h3>
+                <p class="text-xs text-slate-600 max-w-md mx-auto">Este item corresponde a um tópico de pesquisa no acervo teocrático. Você pode visualizar os artigos diretamente no site oficial:</p>
+                <a href="{url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow transition-all">
+                    <span>Acessar pesquisa no wol.jw.org</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+            </div>
+            """
         doc_div = soup.find("body")
         
     if not doc_div:
@@ -516,16 +548,16 @@ def get_clean_document(url, requested_title=None):
         
     doc_copy = BeautifulSoup(str(doc_div), 'html.parser')
 
-    # Smart Mismatch Guard: If URL was hallucinated (e.g. JOELA instead of Faraó/Êxodo)
-    if requested_title and len(requested_title.strip()) > 5:
+    # Smart Mismatch Guard: If URL was mismatched
+    if clean_title and len(clean_title) > 5:
         first_h = doc_copy.find(["h1", "h2", "h3", "header", "strong"])
         if first_h:
             h_text = first_h.get_text(strip=True).lower()
-            req_words = [w for w in requested_title.lower().split() if len(w) > 3 and w not in ["quem", "como", "onde", "quando", "sobre", "para", "artigo", "livro"]]
+            req_words = [w for w in clean_title.lower().split() if len(w) > 3 and w not in ["quem", "como", "onde", "quando", "sobre", "para", "artigo", "livro"]]
             if req_words and not any(rw in h_text for rw in req_words):
                 try:
                     from rag_engine import search_wol_direct
-                    fallback_results = search_wol_direct(requested_title, max_results=1)
+                    fallback_results = search_wol_direct(clean_title, max_results=1)
                     if fallback_results and fallback_results[0]['link'] != url:
                         fallback_html = fetch_url(fallback_results[0]['link'])
                         if fallback_html:
@@ -534,7 +566,7 @@ def get_clean_document(url, requested_title=None):
                             if fb_doc:
                                 doc_copy = BeautifulSoup(str(fb_doc), 'html.parser')
                 except Exception as ex:
-                    print(f"Fallback resolver error for '{requested_title}': {ex}")
+                    print(f"Fallback resolver error for '{clean_title}': {ex}")
     
     for tag in doc_copy.find_all(["script", "style", "nav", "footer", "button"]):
         tag.decompose()
