@@ -533,13 +533,15 @@ function renderConversationThread() {
         let sourcesHtml = "";
         if (turn.results && turn.results.length > 0) {
             sourcesHtml = `
-                <div class="bg-slate-50/80 border-b border-gray-100 px-5 py-3">
-                    <div class="flex items-center justify-between mb-2.5">
-                        <span class="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-book-bookmark text-amber-500"></i> Fontes Teocráticas Oficiais Consultadas (${turn.results.length})
+                <div class="border-t border-gray-100 bg-slate-50/80 px-5 py-4 sm:px-8 sm:py-5 rounded-b-2xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-book-bookmark text-emerald-600 text-sm"></i> 
+                            Fontes & Publicações Oficiais Consultadas (${turn.results.length})
                         </span>
+                        <span class="text-[11px] text-gray-400 hidden sm:inline">Clique para ler no leitor integrado</span>
                     </div>
-                    <div class="flex gap-3 overflow-x-auto pb-2 no-scrollbar">`;
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">`;
             turn.results.forEach(res => {
                 const pub = res.publication || 'Biblioteca Online';
                 let badgeClass = "bg-slate-100 text-slate-700 border-slate-200";
@@ -551,7 +553,7 @@ function renderConversationThread() {
                 else if (pub.includes("Histórias")) { badgeClass = "bg-rose-50 text-rose-700 border-rose-200"; pubIcon = "fa-graduation-cap"; }
 
                 sourcesHtml += `
-                    <div class="bg-white border border-gray-200 rounded-xl p-3 flex-shrink-0 w-72 max-w-[85vw] shadow-xs flex flex-col justify-between hover:border-blue-300 transition-colors">
+                    <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-xs flex flex-col justify-between hover:border-blue-300 hover:shadow-sm transition-all">
                         <div>
                             <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass} mb-1.5 truncate max-w-full">
                                 <i class="fa-solid ${pubIcon} text-[9px]"></i> ${escapeHtml(pub)}
@@ -560,7 +562,7 @@ function renderConversationThread() {
                             ${res.snippet ? `<p class="text-[11px] text-gray-500 line-clamp-2 mt-1 leading-relaxed">${escapeHtml(res.snippet)}</p>` : ''}
                         </div>
                         <div class="flex items-center justify-between pt-2.5 mt-2.5 border-t border-gray-100 text-[11px]">
-                            <button class="btn-open-wol-reader text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 transition-colors" data-url="${res.link}" data-title="${escapeHtml(res.title)}" data-pub="${escapeHtml(pub)}">
+                            <button class="btn-open-wol-reader text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" data-url="${res.link}" data-title="${escapeHtml(res.title)}" data-pub="${escapeHtml(pub)}">
                                 <i class="fa-solid fa-book-open text-[11px]"></i> Ler no app
                             </button>
                             <a href="${res.link}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-gray-600 flex items-center gap-1 text-[10px] transition-colors" title="Abrir link original">
@@ -573,7 +575,7 @@ function renderConversationThread() {
             sourcesHtml += `</div></div>`;
         }
         const bodyHtml = `<div class="p-6 md:p-8 markdown-body prose max-w-none">${parseMarkdownToHtml(turn.answer || 'Gerando análise teocrática...')}</div>`;
-        turnCard.innerHTML = headerHtml + sourcesHtml + bodyHtml;
+        turnCard.innerHTML = headerHtml + bodyHtml + sourcesHtml;
         chatMessagesList.appendChild(turnCard);
     });
     markBibleVersesInHtml(chatMessagesList);

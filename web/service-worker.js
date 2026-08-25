@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-search-cache-v11';
+const CACHE_NAME = 'jw-search-cache-v12';
 const ASSETS = [
   '/',
   '/index.html',

@@ -227,10 +227,9 @@ def perform_custom_rag_search(
 IDIOMA DA RESPOSTA: Responda obrigatoriamente em {target_lang}.
 
 REGRAS DE OURO SOBRE FONTES E LINKS (CRÍTICO):
-- PROIBIÇÃO ABSOLUTA DE INVENTAR LINKS: NUNCA invente, deduza ou adivinhe URLs ou códigos numéricos do wol.jw.org (como /120000xxxx, /1963xxxx, etc.). Links inventados caem em artigos errados (ex: abrir verbete de outro personagem).
-- LINKS CLICÁVEIS: Você só deve inserir links Markdown `[Título](URL)` se a URL for EXATAMENTE uma das URLs da lista 'LINKS OFICIAIS DISPONÍVEIS' abaixo.
-- MATÉRIAS SEM LINK NA LISTA: Se desejar citar outras publicações ou artigos complementares, cite o nome em itálico e o título entre aspas SEM link Markdown (ex: *A Sentinela* de 15 de abril de 2014, artigo "Imite a Fé de Moisés"; ou livro *Estudo Perspicaz*, volume 2).
-- FIDELIDADE BÍBLICA: Explique os temas com base nas qualidades cristãs (fé, mansidão, coragem, paciência, sentimentos humanos), preservando o contexto de perguntas do usuário.
+- PROIBIÇÃO DE INVENTAR CÓDIGOS NUMÉRICOS: NUNCA deduza códigos numéricos aleatórios do wol.jw.org (como /120000xxxx).
+- LINKS DAS MATÉRIAS: Para matérias da lista 'LINKS OFICIAIS DISPONÍVEIS' abaixo, use a URL exata. Para outras publicações complementares (A Sentinela, Despertai!, Livros), use o formato de busca no WOL: `[Nome da Publicação - Artigo](https://wol.jw.org/pt/wol/s/r5/lp-t?q=Nome+da+Publicacao)` para que TODAS as referências sejam 100% clicáveis.
+- FIDELIDADE BÍBLICA: Explique os temas com base nos princípios bíblicos e publicações oficiais das Testemunhas de Jeová.
 - CAPACIDADE DE ESTRUTURAÇÃO: Você pode criar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 | Coluna 3 |), listas ordenadas/não-ordenadas, resumos para estudo em família e esboços teocráticos detalhados.
 
 ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas ou formatos específicos):
@@ -239,16 +238,16 @@ ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas
 (Apresente um resumo claro, objetivo e bíblico que responde diretamente à dúvida ou solicitação).
 
 ### 📖 Análise Teocrática Detalhada
-(Desenvolva os pontos teocráticos fundamentais com clareza e fidelidade, inserindo links Markdown APENAS se estiverem na lista de links disponíveis).
+(Desenvolva os pontos teocráticos fundamentais com clareza e fidelidade, inserindo links Markdown para as matérias citadas).
 
 ### 📜 Textos Bíblicos Principais
-(Destaque os textos bíblicos principais e sua aplicação).
+(Destaque os textos bíblicos principais e sua aplicação com links para a Bíblia).
 
 ### 📚 Publicações e Fontes Oficiais
-(Liste em tópicos as matérias consultadas. Use link Markdown apenas para as matérias da lista oficial abaixo; para as demais, cite em texto puro).
+(Liste em tópicos TODAS as publicações citadas com links Markdown clicáveis).
 
 ---
-LINKS OFICIAIS DISPONÍVEIS NESTA CONSULTA (USE APENAS ESTES PARA LINKS CLICÁVEIS):
+LINKS OFICIAIS DISPONÍVEIS NESTA CONSULTA:
 {verified_links if verified_links else "Nenhum link direto coletado."}
 
 ---
@@ -334,6 +333,12 @@ DOCUMENTOS E FONTES DA BIBLIOTECA ONLINE (WOL) COLETADOS:
 
     if not ai_text:
         raise Exception(f"Erro na API {provider.upper()} ({used_model} @ {active_base_url}): {last_err or 'Sem resposta'}")
+
+    try:
+        from scraper import enrich_and_autolink_theocratic_response
+        ai_text = enrich_and_autolink_theocratic_response(ai_text, retrieved_results)
+    except Exception as e:
+        print(f"Auto-link warning in rag_engine: {e}")
 
     return {
         "ai_response": ai_text,

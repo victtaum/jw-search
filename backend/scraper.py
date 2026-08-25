@@ -200,6 +200,65 @@ def clean_result_title(title, url):
     return formatted or "Publicação Oficial"
 
 
+def enrich_and_autolink_theocratic_response(ai_response: str, resolved_chunks: list) -> str:
+    """
+    Scans the AI response for cited theocratic publications (e.g. A Sentinela, Despertai!, Livros)
+    that are in plain text, and wraps them in valid clickable Markdown links to wol.jw.org!
+    """
+    if not ai_response:
+        return ai_response
+
+    lines = ai_response.split('\n')
+    new_lines = []
+    
+    # Map publication keywords from resolved chunks
+    pub_url_map = {}
+    for c in resolved_chunks:
+        uri = c.get('link') or c.get('uri', '')
+        title = c.get('title', '').strip()
+        pub = c.get('publication', '').strip()
+        if uri:
+            if title:
+                pub_url_map[title.lower()] = uri
+            if pub:
+                pub_url_map[pub.lower()] = uri
+
+    for line in lines:
+        stripped = line.strip()
+        # Check if line is a list item citing a publication without a Markdown link
+        if stripped.startswith(('- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ')) and ('http' not in line and '[' not in line):
+            has_theocratic_pub = any(k in stripped.lower() for k in [
+                'sentinela', 'despertai', 'livro', 'brochura', 'estudo perspicaz', 
+                'mantenha-se', 'bíblia', 'beneficie-se', 'amor de deus', 'pastoreiem',
+                'organizados', 'ministério', 'boas novas', 'tradução do novo mundo',
+                'como escolher', 'recreação', 'artigo', 'capítulo'
+            ])
+            
+            if has_theocratic_pub:
+                clean_text = re.sub(r'^[-\*\d\.\s]+', '', stripped).strip()
+                clean_query = re.sub(r'[\*\"\_]', '', clean_text).strip()
+                
+                matched_url = None
+                clean_query_lower = clean_query.lower()
+                for t_low, url in pub_url_map.items():
+                    # match if multiple significant words overlap
+                    words = [w for w in clean_query_lower.split() if len(w) > 3]
+                    if words and sum(1 for w in words if w in t_low) >= 1:
+                        matched_url = url
+                        break
+                
+                if not matched_url:
+                    encoded_q = urllib.parse.quote_plus(clean_query[:120])
+                    matched_url = f"https://wol.jw.org/pt/wol/s/r5/lp-t?q={encoded_q}"
+                
+                # Format prefix + Markdown link
+                prefix = line[:line.find(clean_text[0])] if clean_text and clean_text[0] in line else "- "
+                line = f"{prefix}[{clean_text}]({matched_url})"
+        
+        new_lines.append(line)
+        
+    return '\n'.join(new_lines)
+
 
 class ApiKeyRequiredException(Exception):
     """Raised when no API key is provided on client or server."""
@@ -252,6 +311,7 @@ DIRETRIZES DE ESCOPO E FONTES:
 {source_directive}
 - OBJETIVIDADE: Seja claro, direto, fiel e profundo. Evite prolixidade.
 - CAPACIDADE DE FORMATAÇÃO: Você tem capacidade de gerar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 |), listas, roteiros de estudo, resumos e documentos detalhados sempre que solicitado.
+- REGRA OBRIGATÓRIA DE LINKS: TODA e qualquer publicação das Testemunhas de Jeová citada (A Sentinela, Despertai!, Livros, Brochuras, Artigos) e textos bíblicos DEVE OBRIGATORIAMENTE ser formatada como um link Markdown clicável: `[Nome da Publicação - Título](https://wol.jw.org/pt/wol/s/r5/lp-t?q=Nome+da+Publicacao)` ou com a URL oficial correspondente do WOL/JW.ORG. NUNCA deixe nomes de publicações ou artigos em texto puro sem link!
 
 ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas ou formatos específicos):
 
@@ -261,13 +321,13 @@ ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas
 ### 📖 Análise Teocrática Detalhada
 (Desenvolva os pontos fundamentais com clareza e fidelidade teocrática):
 - Explique o contexto e o raciocínio das publicações das Testemunhas de Jeová.
-- Mencione nominalmente as publicações relevantes e insira links Markdown clicáveis (ex: `[Título do Artigo](https://wol.jw.org/pt/...)`).
+- Mencione nominalmente as publicações relevantes SEMPRE com links Markdown clicáveis (ex: `[A Sentinela - Como Escolher Boas Formas de Recreação](https://wol.jw.org/pt/...)`).
 
 ### 📜 Textos Bíblicos Principais
-(Destaque os textos bíblicos principais e sua aplicação).
+(Destaque os textos bíblicos principais e sua aplicação, com links para a Bíblia no wol.jw.org).
 
 ### 📚 Publicações e Fontes Oficiais
-(Liste em tópicos os artigos do wol.jw.org e jw.org para aprofundamento com seus links Markdown).
+(Liste em tópicos TODOS os artigos e livros consultados, SEMPRE com links Markdown clicáveis para cada item).
 
 {"### 🌐 Fontes Externas (Internet)" if include_external else ""}
 
@@ -337,7 +397,7 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
 
         # Parse links from the generated markdown text
         extracted_chunks = []
-        md_links = re.findall(r'\[([^\]]+)\]\((https?://[a-zA-Z0-9\.\-\/\?&\=\#\%\+]+)\)', ai_response)
+        md_links = re.findall(r'\[([^\]]+)\]\((https?://[a-zA-Z0-9\.\-\/\?&\=\#\%\+\:\_]+)\)', ai_response)
         for title, uri in md_links:
             if uri not in [rc['uri'] for rc in raw_chunks] and uri not in [ec['uri'] for ec in extracted_chunks]:
                 extracted_chunks.append({
@@ -345,7 +405,7 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
                     "title": title
                 })
         
-        raw_uris = re.findall(r'(?<!\()(https?://[a-zA-Z0-9\.\-\/\?&\=\#\%\+]+)', ai_response)
+        raw_uris = re.findall(r'(?<!\()(https?://[a-zA-Z0-9\.\-\/\?&\=\#\%\+\:\_]+)', ai_response)
         for uri in raw_uris:
             while uri and uri[-1] in ['.', ',', ';', ')', ']']:
                 uri = uri[:-1]
@@ -356,7 +416,16 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
                     "title": title
                 })
                 
-        raw_chunks = raw_chunks[:12]
+        # Merge all grounding metadata and markdown links
+        combined_chunks = []
+        seen_uris_set = set()
+        for c in raw_chunks + extracted_chunks:
+            u = c.get('uri', '').split('?')[0].split('#')[0]
+            if u and u not in seen_uris_set:
+                seen_uris_set.add(u)
+                combined_chunks.append(c)
+                
+        raw_chunks = combined_chunks[:20]
         
         # Resolve redirect URLs in parallel to get direct jw.org or wol.jw.org links
         with ThreadPoolExecutor(max_workers=12) as executor:
@@ -388,6 +457,9 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
                 "is_external": is_external_link,
                 "source_site": urllib.parse.urlparse(final_uri).netloc
             })
+
+        # Post-processing: Auto-link any plain-text publication mentions into clickable Markdown links
+        ai_response = enrich_and_autolink_theocratic_response(ai_response, results)
             
         return {"ai_response": ai_response, "results": results}
     except Exception as e:
