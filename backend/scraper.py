@@ -578,6 +578,40 @@ def get_clean_document(url, requested_title=None):
         href = a.get("href", "")
         if href.startswith('/'):
             a['href'] = f"https://wol.jw.org{href}"
+        elif href.startswith('//'):
+            a['href'] = f"https:{href}"
+            
+    # Fix all images and responsive sources
+    for img in doc_copy.find_all("img"):
+        for attr in ["src", "data-src", "data-img-small-src", "data-img-large-src", "data-img-src"]:
+            val = img.get(attr, "")
+            if val:
+                if val.startswith('/'):
+                    img[attr] = f"https://wol.jw.org{val}"
+                elif val.startswith('//'):
+                    img[attr] = f"https:{val}"
+        
+        # Ensure src is always populated if data-src / data-img-small-src is present
+        if not img.get("src") or img.get("src") == "#":
+            fallback_src = img.get("data-src") or img.get("data-img-small-src") or img.get("data-img-large-src") or img.get("data-img-src")
+            if fallback_src:
+                img["src"] = fallback_src
+        
+        img_classes = img.get("class", [])
+        if isinstance(img_classes, str):
+            img_classes = img_classes.split()
+        img_classes.extend(["rounded-xl", "shadow-sm", "my-3", "max-w-full", "h-auto"])
+        img["class"] = list(set(img_classes))
+        img["loading"] = "lazy"
+
+    for source in doc_copy.find_all("source"):
+        for attr in ["srcset", "data-srcset", "src"]:
+            val = source.get(attr, "")
+            if val:
+                if val.startswith('/'):
+                    source[attr] = f"https://wol.jw.org{val}"
+                elif val.startswith('//'):
+                    source[attr] = f"https:{val}"
             
     return str(doc_copy)
 

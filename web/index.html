@@ -32,6 +32,25 @@
         .reader-content {
             font-family: 'Lora', serif;
         }
+        .reader-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.75rem;
+            margin: 1.25rem auto;
+            display: block;
+            box-shadow: 0 2px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .reader-content figure {
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+        .reader-content figcaption {
+            font-size: 0.8rem;
+            color: #64748B;
+            margin-top: 0.5rem;
+            font-family: 'Inter', sans-serif;
+            font-style: italic;
+        }
         /* Markdown Tables Styling */
         .markdown-body table {
             width: 100%;
@@ -631,7 +650,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/app.js?v=2.17.0"></script>
+    <script src="/app.js?v=2.18.0"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
