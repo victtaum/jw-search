@@ -486,12 +486,8 @@ function formatInlineMarkdown(text) {
     if (!text) return "";
     let s = escapeHtml(text);
     s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, (match, rawLabel, url) => {
-        const label = rawLabel.replace(/^[>\s\*\"\#\[\]]+|[>\s\*\"\#\[\]]+$/g, '').trim();
-        const isSearchLink = url.includes("/wol/s/") || url.includes("lp-t?q=");
-        if (isSearchLink) {
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline font-semibold transition-colors inline-flex items-center gap-0.5" title="Pesquisar tópico no wol.jw.org"><span>${label}</span><i class="fa-solid fa-arrow-up-right-from-square text-[9px] ml-0.5"></i></a>`;
-        }
-        return `<a href="${url}" class="text-blue-600 hover:text-blue-800 underline font-semibold transition-colors inline-flex items-center gap-0.5 wol-inline-link cursor-pointer" data-url="${url}" data-title="${label}"><span>${label}</span><i class="fa-solid fa-book-open text-[10px] ml-0.5 opacity-80"></i></a>`;
+        const label = rawLabel.replace(/^[>\s\*\"\#\[\]]+|[>\s\*\"\#\[\]]+$/g, '').trim() || "Publicação Oficial";
+        return `<span class="inline-flex items-center gap-1 my-0.5 align-baseline"><button type="button" class="wol-inline-link text-blue-600 hover:text-blue-800 underline font-semibold transition-colors cursor-pointer text-left inline-flex items-center gap-1" data-url="${url}" data-title="${label}" title="Ler no painel integrado"><i class="fa-solid fa-book-open text-[11px] text-blue-500 flex-shrink-0"></i><span>${label}</span></button><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-blue-600 transition-colors p-0.5 rounded hover:bg-slate-100 flex-shrink-0 inline-flex items-center" title="Abrir na fonte oficial (wol.jw.org)"><i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a></span>`;
     });
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
