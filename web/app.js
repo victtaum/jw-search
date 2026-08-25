@@ -244,9 +244,8 @@ document.querySelectorAll(".btn-prompt-pill").forEach(pill => {
 // ==========================================
 // Conversational Chat Search Logic
 // ==========================================
-async function executeTurnSearch(userQuery) {
-    const query = userQuery.trim();
-    if (!query) return;
+async function executeTurnSearch(query, replaceTurnIndex = null) {
+    if (!query || !query.trim()) return;
 
     if (activeConversation.turns.length === 0) {
         activeConversation.title = query.length > 50 ? query.substring(0, 47) + "..." : query;
@@ -266,14 +265,17 @@ async function executeTurnSearch(userQuery) {
     let progressTimer = null;
     let secondsElapsed = 0;
 
+    const isRegenerate = replaceTurnIndex !== null;
+
     const updateStatusMessage = () => {
         secondsElapsed = Math.floor((Date.now() - startTime) / 1000);
+        const prefix = isRegenerate ? "🔄 Regerando resposta: " : "";
         if (secondsElapsed < 3) {
-            if (statusText) statusText.innerText = `🔎 Consultando acervo oficial no wol.jw.org (${secondsElapsed}s)...`;
+            if (statusText) statusText.innerText = `${prefix}🔎 Consultando acervo oficial no wol.jw.org (${secondsElapsed}s)...`;
         } else if (secondsElapsed < 8) {
-            if (statusText) statusText.innerText = `📚 Extraindo artigos, notas de estudo e referências (${secondsElapsed}s)...`;
+            if (statusText) statusText.innerText = `${prefix}📚 Extraindo artigos, notas de estudo e referências (${secondsElapsed}s)...`;
         } else {
-            if (statusText) statusText.innerText = `✨ Sintetizando ponderações teocráticas e estruturando resposta (${secondsElapsed}s)...`;
+            if (statusText) statusText.innerText = `${prefix}✨ Sintetizando ponderações teocráticas e estruturando resposta (${secondsElapsed}s)...`;
         }
     };
 
@@ -282,7 +284,9 @@ async function executeTurnSearch(userQuery) {
     statusContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
     const historyPayload = [];
-    for (const turn of activeConversation.turns) {
+    const maxHistIdx = replaceTurnIndex !== null ? replaceTurnIndex : activeConversation.turns.length;
+    for (let i = 0; i < maxHistIdx; i++) {
+        const turn = activeConversation.turns[i];
         historyPayload.push({ role: "user", content: turn.query });
         historyPayload.push({ role: "assistant", content: turn.answer });
     }
@@ -341,7 +345,11 @@ async function executeTurnSearch(userQuery) {
             timestamp: new Date().toISOString()
         };
 
-        activeConversation.turns.push(newTurn);
+        if (replaceTurnIndex !== null && replaceTurnIndex < activeConversation.turns.length) {
+            activeConversation.turns[replaceTurnIndex] = newTurn;
+        } else {
+            activeConversation.turns.push(newTurn);
+        }
         activeConversation.updatedAt = new Date().toISOString();
 
         saveCurrentThreadToStorage();
@@ -528,7 +536,10 @@ function renderConversationThread() {
                     </div>
                 </div>
                 <div class="flex items-center space-x-1.5 flex-shrink-0">
-                    <button class="btn-copy-turn text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-slate-700 transition-colors" data-idx="${idx}" title="Copiar resposta em Markdown">
+                    <button class="btn-regenerate-turn text-slate-300 hover:text-emerald-400 p-1.5 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer" data-idx="${idx}" title="Regerar esta resposta com a IA">
+                        <i class="fa-solid fa-arrows-rotate text-sm"></i>
+                    </button>
+                    <button class="btn-copy-turn text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer" data-idx="${idx}" title="Copiar resposta em Markdown">
                         <i class="fa-regular fa-copy text-sm"></i>
                     </button>
                 </div>
@@ -579,7 +590,22 @@ function renderConversationThread() {
             sourcesHtml += `</div></div>`;
         }
         const bodyHtml = `<div class="p-6 md:p-8 markdown-body prose max-w-none">${parseMarkdownToHtml(turn.answer || 'Gerando análise teocrática...')}</div>`;
-        turnCard.innerHTML = headerHtml + bodyHtml + sourcesHtml;
+        const actionsBarHtml = `
+            <div class="px-5 py-2.5 sm:px-8 bg-gray-50/60 border-t border-gray-100 flex items-center justify-between gap-2 text-xs">
+                <span class="text-[11px] text-gray-400 flex items-center gap-1"><i class="fa-solid fa-shield-halved text-emerald-600 text-[10px]"></i> Ponderações teocráticas</span>
+                <div class="flex items-center gap-1.5">
+                    <button class="btn-regenerate-turn px-3 py-1.5 bg-white border border-gray-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 text-slate-700 rounded-lg transition-all font-medium flex items-center gap-1.5 shadow-xs cursor-pointer" data-idx="${idx}" title="Regerar esta resposta com a IA">
+                        <i class="fa-solid fa-arrows-rotate text-[11px] text-emerald-600"></i>
+                        <span>Regerar</span>
+                    </button>
+                    <button class="btn-copy-turn px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-100 text-slate-700 rounded-lg transition-all font-medium flex items-center gap-1.5 shadow-xs cursor-pointer" data-idx="${idx}" title="Copiar resposta">
+                        <i class="fa-regular fa-copy text-[11px]"></i>
+                        <span>Copiar</span>
+                    </button>
+                </div>
+            </div>
+        `;
+        turnCard.innerHTML = headerHtml + bodyHtml + actionsBarHtml + sourcesHtml;
         chatMessagesList.appendChild(turnCard);
     });
     markBibleVersesInHtml(chatMessagesList);
@@ -784,6 +810,17 @@ function attachThreadInteractiveListeners() {
             if (url) openReader(url, title, pub);
         });
     });
+    document.querySelectorAll(".btn-regenerate-turn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const idx = parseInt(btn.getAttribute("data-idx"), 10);
+            const turn = activeConversation.turns[idx];
+            if (turn && turn.query) {
+                btn.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-emerald-500"></i>`;
+                executeTurnSearch(turn.query, idx);
+            }
+        });
+    });
+
     document.querySelectorAll(".btn-copy-turn").forEach(btn => {
         btn.addEventListener("click", () => {
             const idx = parseInt(btn.getAttribute("data-idx"), 10);
