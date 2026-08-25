@@ -225,14 +225,24 @@ def enrich_and_autolink_theocratic_response(ai_response: str, resolved_chunks: l
 
     for line in lines:
         stripped = line.strip()
-        # Check if line is a list item citing a publication without a Markdown link
-        if stripped.startswith(('- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ')) and ('http' not in line and '[' not in line):
-            has_theocratic_pub = any(k in stripped.lower() for k in [
-                'sentinela', 'despertai', 'livro', 'brochura', 'estudo perspicaz', 
-                'mantenha-se', 'bíblia', 'beneficie-se', 'amor de deus', 'pastoreiem',
-                'organizados', 'ministério', 'boas novas', 'tradução do novo mundo',
-                'como escolher', 'recreação', 'artigo', 'capítulo'
-            ])
+        # Skip if already a markdown link or containing tutorial / instructions
+        if 'http' in line or '[' in line or ']' in line:
+            new_lines.append(line)
+            continue
+
+        skip_phrases = ['acesse', 'digite', 'barra de pesquisa', 'como pesquisar', 'ex.:', 'exemplo', 'pesquisa no wol']
+        if any(sp in stripped.lower() for sp in skip_phrases):
+            new_lines.append(line)
+            continue
+
+        # Check if line is a list item citing a specific recognized publication
+        if stripped.startswith(('- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ')):
+            theocratic_pub_prefixes = [
+                'a sentinela', 'despertai!', 'despertai', 'livro ', 'brochura ', 
+                'estudo perspicaz', 'mantenha-se no amor', 'beneficie-se', 
+                'pastoreiem o rebanho', 'organizados para fazer', 'tradução do novo mundo'
+            ]
+            has_theocratic_pub = any(k in stripped.lower() for k in theocratic_pub_prefixes)
             
             if has_theocratic_pub:
                 clean_text = re.sub(r'^[-\*\d\.\s]+', '', stripped).strip()
@@ -241,17 +251,15 @@ def enrich_and_autolink_theocratic_response(ai_response: str, resolved_chunks: l
                 matched_url = None
                 clean_query_lower = clean_query.lower()
                 for t_low, url in pub_url_map.items():
-                    # match if multiple significant words overlap
                     words = [w for w in clean_query_lower.split() if len(w) > 3]
                     if words and sum(1 for w in words if w in t_low) >= 1:
                         matched_url = url
                         break
                 
                 if not matched_url:
-                    encoded_q = urllib.parse.quote_plus(clean_query[:120])
+                    encoded_q = urllib.parse.quote_plus(clean_query[:100])
                     matched_url = f"https://wol.jw.org/pt/wol/s/r5/lp-t?q={encoded_q}"
                 
-                # Format prefix + Markdown link
                 prefix = line[:line.find(clean_text[0])] if clean_text and clean_text[0] in line else "- "
                 line = f"{prefix}[{clean_text}]({matched_url})"
         
@@ -320,8 +328,10 @@ IDIOMA DA RESPOSTA: Responda obrigatoriamente em {target_lang}.
 
 DIRETRIZES DE ESCOPO, VERACIDADE E ANTI-ALUCINAÇÃO (RIGOR MÁXIMO):
 {source_directive}
-- VERACIDADE TOTAL (PROIBIÇÃO DE INVENTAR DATAS/EDIÇÕES): NUNCA invente, deduza ou adivinhe datas de revistas (ex: "A Sentinela de 15 de abril de 2014", "15 de julho de 2011") ou anos fictícios.
-- SE NÃO SOUBER A DATA EXATA: Cite o princípio bíblico, os versículos ou livros gerais (ex: livro 'Mantenha-se no Amor de Deus, cap. 12', 'Estudo Perspicaz'), SEM forjar datas ou meses inexistentes para revistas.
+- VERACIDADE TOTAL (PROIBIÇÃO DE INVENTAR DATAS/EDIÇÕES): NUNCA invente, deduza ou adivinhe datas de revistas (ex: "A Sentinela de 15 de abril de 2014", "15 de julho de 2011", "outubro de 2008") ou números de página fictícios.
+- SE NÃO SOUBER A DATA EXATA: Cite o princípio bíblico, os versículos ou livros gerais da Torre de Vigia (ex: livro 'Mantenha-se no Amor de Deus, cap. 12', 'Estudo Perspicaz'), SEM forjar datas ou meses inexistentes para revistas.
+- PROIBIÇÃO DE TUTORIAIS DE BUSCA: NUNCA crie seções ensinando o usuário a pesquisar no WOL (como 'Como pesquisar no WOL', 'acesse wol.jw.org e digite...'). O JW Search já é o próprio motor de pesquisa! Entregue o conteúdo diretamente.
+- PROIBIÇÃO DE DESCULPAS OU METADIÁLOGOS: NUNCA inclua pedidos de desculpas (ex: 'Peço desculpas pelo engano anterior', 'Você está certo em buscar a fonte'). Mantenha o tom sempre profissional, focado no ensino bíblico e na análise teocrática.
 - OBJETIVIDADE: Seja claro, direto, fiel e profundo. Evite prolixidade.
 - CAPACIDADE DE FORMATAÇÃO: Você tem capacidade de gerar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 |), listas, roteiros de estudo, resumos e documentos detalhados sempre que solicitado.
 - REGRA OBRIGATÓRIA DE LINKS: TODA e qualquer publicação citada e textos bíblicos DEVEM ser formatados como links Markdown clicáveis: `[Nome da Publicação - Título](https://wol.jw.org/pt/wol/s/r5/lp-t?q=Nome+da+Publicacao)` ou com a URL oficial correspondente.
@@ -334,7 +344,7 @@ ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas
 ### 📖 Análise Teocrática Detalhada
 (Desenvolva os pontos fundamentais com clareza e fidelidade teocrática, fundamentando em princípios e fontes verificadas):
 - Explique o contexto e o raciocínio das publicações das Testemunhas de Jeová.
-- Mencione nominalmente as publicações relevantes SEMPRE com links Markdown clicáveis (ex: `[A Sentinela - Como Escolher Boas Formas de Recreação](https://wol.jw.org/pt/...)`).
+- Mencione nominalmente as publicações relevantes SEMPRE com links Markdown clicáveis (ex: `[Livro Mantenha-se no Amor de Deus - Cap. 12](https://wol.jw.org/pt/...)`).
 
 ### 📜 Textos Bíblicos Principais
 (Destaque os textos bíblicos principais e sua aplicação, com links para a Bíblia no wol.jw.org).

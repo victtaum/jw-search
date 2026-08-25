@@ -353,7 +353,7 @@ async function executeTurnSearch(query, replaceTurnIndex = null) {
         activeConversation.updatedAt = new Date().toISOString();
 
         saveCurrentThreadToStorage();
-        renderConversationThread();
+        renderConversationThread(replaceTurnIndex);
 
         if (searchInput) searchInput.value = "";
         if (followupInput) followupInput.value = "";
@@ -430,50 +430,53 @@ function parseMarkdownToHtml(markdown) {
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const trimmed = line.trim();
-        if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
-            if (trimmed.includes("---")) continue;
-            inTable = true;
-            tableRows.push(trimmed.split("|").slice(1, -1).map(c => c.trim()));
-            continue;
-        } else if (inTable) { html += flushTable(); }
 
-        if (!trimmed) { html += flushLists(); continue; }
+        if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+            const cells = trimmed.split("|").slice(1, -1).map(c => c.trim());
+            if (cells.every(c => /^:?-+:?$/.test(c))) continue;
+            tableRows.push(cells);
+            inTable = true;
+            continue;
+        } else if (inTable) {
+            html += flushTable();
+        }
 
         if (trimmed.startsWith("### ")) {
-            html += flushLists();
-            html += `<h3 class="text-base sm:text-lg font-bold text-slate-800 mt-5 mb-2 pb-1 border-b border-gray-100 flex items-center gap-1.5">${formatInlineMarkdown(trimmed.substring(4))}</h3>`;
+            html += flushLists() + `<h3 class="text-base sm:text-lg font-bold text-slate-800 mt-5 mb-2.5 flex items-center gap-2">${formatInlineMarkdown(trimmed.replace(/^###\s+/, ''))}</h3>`;
+            continue;
         } else if (trimmed.startsWith("## ")) {
-            html += flushLists();
-            html += `<h2 class="text-lg sm:text-xl font-bold text-slate-900 mt-6 mb-3 pb-1 border-b border-gray-200">${formatInlineMarkdown(trimmed.substring(3))}</h2>`;
+            html += flushLists() + `<h2 class="text-lg sm:text-xl font-extrabold text-slate-900 mt-6 mb-3 flex items-center gap-2 pb-1.5 border-b border-slate-200">${formatInlineMarkdown(trimmed.replace(/^##\s+/, ''))}</h2>`;
+            continue;
         } else if (trimmed.startsWith("# ")) {
+            html += flushLists() + `<h1 class="text-xl sm:text-2xl font-black text-slate-900 mt-6 mb-4">${formatInlineMarkdown(trimmed.replace(/^#\s+/, ''))}</h1>`;
+            continue;
+        }
+
+        if (trimmed.startsWith(">")) {
+            if (!inBlockquote) { html += flushLists() + '<blockquote class="border-l-4 border-blue-500 bg-blue-50/50 p-3 my-2.5 rounded-r-xl text-slate-700 italic text-xs sm:text-sm">'; inBlockquote = true; }
+            html += `<p class="my-0.5">${formatInlineMarkdown(trimmed.replace(/^>\s*/, ''))}</p>`;
+            continue;
+        } else if (inBlockquote) { html += "</blockquote>"; inBlockquote = false; }
+
+        if (/^[\*\-]\s+/.test(trimmed)) {
+            if (!inUl) { html += flushLists() + '<ul class="list-disc pl-5 my-2 space-y-1 text-slate-700 text-xs sm:text-sm leading-relaxed">'; inUl = true; }
+            html += `<li>${formatInlineMarkdown(trimmed.replace(/^[\*\-]\s+/, ''))}</li>`;
+            continue;
+        } else if (inUl) { html += "</ul>"; inUl = false; }
+
+        if (/^\d+\.\s+/.test(trimmed)) {
+            if (!inOl) { html += flushLists() + '<ol class="list-decimal pl-5 my-2 space-y-1 text-slate-700 text-xs sm:text-sm leading-relaxed">'; inOl = true; }
+            html += `<li>${formatInlineMarkdown(trimmed.replace(/^\d+\.\s+/, ''))}</li>`;
+            continue;
+        } else if (inOl) { html += "</ol>"; inOl = false; }
+
+        if (trimmed === "") {
             html += flushLists();
-            html += `<h1 class="text-xl sm:text-2xl font-bold text-slate-900 mt-6 mb-3">${formatInlineMarkdown(trimmed.substring(2))}</h1>`;
-        } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-            if (!inUl) {
-                html += flushLists();
-                html += '<ul class="list-disc list-inside space-y-1.5 my-2 text-gray-700 text-sm leading-relaxed pl-2">';
-                inUl = true;
-            }
-            html += `<li>${formatInlineMarkdown(trimmed.substring(2))}</li>`;
-        } else if (/^\d+\.\s/.test(trimmed)) {
-            if (!inOl) {
-                html += flushLists();
-                html += '<ol class="list-decimal list-inside space-y-1.5 my-2 text-gray-700 text-sm leading-relaxed pl-2">';
-                inOl = true;
-            }
-            html += `<li>${formatInlineMarkdown(trimmed.replace(/^\d+\.\s/, ''))}</li>`;
-        } else if (trimmed.startsWith(">")) {
-            if (!inBlockquote) {
-                html += flushLists();
-                html += '<blockquote class="border-l-4 border-blue-500 bg-blue-50/60 p-3 my-2.5 rounded-r-lg text-slate-700 text-sm italic">';
-                inBlockquote = true;
-            }
-            html += `<p class="mb-1">${formatInlineMarkdown(trimmed.replace(/^>\s*/, ''))}</p>`;
         } else {
-            html += flushLists();
-            html += `<p class="my-2.5 text-gray-700 text-sm md:text-base leading-relaxed">${formatInlineMarkdown(trimmed)}</p>`;
+            html += flushLists() + `<p class="my-2.5 text-slate-700 text-xs sm:text-sm leading-relaxed">${formatInlineMarkdown(trimmed)}</p>`;
         }
     }
+
     if (inTable) html += flushTable();
     html += flushLists();
     return html;
@@ -481,17 +484,14 @@ function parseMarkdownToHtml(markdown) {
 
 function formatInlineMarkdown(text) {
     if (!text) return "";
-    let str = escapeHtml(text);
-    str = str.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
-    str = str.replace(/\*([^*]+)\*/g, '<em class="italic">$1</em>');
-    str = str.replace(/`([^`]+)`/g, '<code class="bg-gray-100 text-blue-700 px-1.5 py-0.5 rounded text-xs font-mono">$1</code>');
-    str = str.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, (match, title, url) => {
-        if (url.includes("wol.jw.org")) {
-            return `<a href="${url}" class="wol-inline-link text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2 transition-colors cursor-pointer" data-url="${url}" data-title="${title}">${title} <i class="fa-solid fa-book-open text-[10px] ml-0.5 opacity-75"></i></a>`;
-        }
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2 transition-colors">${title} <i class="fa-solid fa-arrow-up-right-from-square text-[9px] ml-0.5 opacity-75"></i></a>`;
+    let s = escapeHtml(text);
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, (match, label, url) => {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline font-semibold transition-colors inline-flex items-center gap-0.5 wol-inline-link" data-url="${url}" data-title="${label}"><span>${label}</span><i class="fa-solid fa-arrow-up-right-from-square text-[9px] ml-0.5"></i></a>`;
     });
-    return str;
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    s = s.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1.5 py-0.5 rounded text-red-600 font-mono text-xs">$1</code>');
+    return s;
 }
 
 function escapeHtml(text) {
@@ -504,7 +504,7 @@ function escapeHtml(text) {
 // ==========================================
 // Thread UI Rendering
 // ==========================================
-function renderConversationThread() {
+function renderConversationThread(focusIndex = null) {
     if (!chatMessagesList) return;
     if (activeConversation.turns.length === 0) {
         chatThreadContainer.classList.add("hidden");
@@ -612,7 +612,10 @@ function renderConversationThread() {
     attachThreadInteractiveListeners();
     setTimeout(() => {
         const turns = document.querySelectorAll(".chat-turn");
-        if (turns.length > 0) turns[turns.length - 1].scrollIntoView({ behavior: "smooth", block: "start" });
+        if (turns.length > 0) {
+            const target = (focusIndex !== null && focusIndex < turns.length) ? turns[focusIndex] : turns[turns.length - 1];
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
     }, 100);
 }
 
