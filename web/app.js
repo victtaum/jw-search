@@ -101,6 +101,10 @@ const readerPub = document.getElementById("reader-pub");
 const readerTitle = document.getElementById("reader-title");
 const readerContent = document.getElementById("reader-content");
 const closeReaderBtn = document.getElementById("close-reader");
+const closeReaderXBtn = document.getElementById("close-reader-x");
+const closeReaderFooterBtn = document.getElementById("close-reader-footer");
+const readerWolLink = document.getElementById("reader-wol-link");
+const readerCopyBtn = document.getElementById("reader-copy-btn");
 const fontDecBtn = document.getElementById("font-dec");
 const fontIncBtn = document.getElementById("font-inc");
 
@@ -1029,33 +1033,63 @@ if (btnClearAllHistory) btnClearAllHistory.addEventListener("click", clearAllHis
 // Reader Panel Logic
 // ==========================================
 async function openReader(url, title, pub = "Publicação Oficial") {
+    if (!readerPanel || !readerContainer) return;
     readerPanel.classList.remove("pointer-events-none", "opacity-0");
     readerContainer.classList.remove("translate-x-full");
-    readerPub.innerText = pub;
-    readerTitle.innerText = title;
-    readerContent.innerHTML = `
-        <div class="flex items-center justify-center py-12 text-slate-400 space-x-2">
-            <i class="fa-solid fa-spinner fa-spin text-blue-600 text-lg"></i>
-            <span class="text-sm">Carregando publicação oficial no wol.jw.org...</span>
-        </div>
-    `;
+    if (readerPub) readerPub.innerText = pub || "Publicação Oficial";
+    if (readerTitle) readerTitle.innerText = title || "Artigo Teocrático";
+    if (readerWolLink) readerWolLink.href = url || "#";
+    if (readerContent) {
+        readerContent.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-16 text-slate-400 space-y-3">
+                <i class="fa-solid fa-spinner fa-spin text-blue-600 text-2xl"></i>
+                <span class="text-xs font-semibold text-slate-600">Acessando acervo oficial no wol.jw.org...</span>
+            </div>
+        `;
+    }
     try {
         const titleParam = title ? `&title=${encodeURIComponent(title)}` : '';
         const res = await fetch(`${API_BASE}/api/read?url=${encodeURIComponent(url)}${titleParam}`);
         const data = await res.json();
-        readerContent.innerHTML = data.content || "Conteúdo não disponível.";
-    } catch { readerContent.innerHTML = '<div class="p-4 bg-rose-50 text-rose-700 rounded-xl text-sm">Erro ao carregar conteúdo da publicação oficial.</div>'; }
+        if (readerContent) readerContent.innerHTML = data.content || "<p class='text-sm text-slate-500'>Conteúdo não disponível.</p>";
+    } catch { 
+        if (readerContent) readerContent.innerHTML = '<div class="p-4 bg-rose-50 text-rose-700 rounded-xl text-sm border border-rose-200">Não foi possível carregar o texto completo deste artigo no momento. Você pode abri-lo diretamente no WOL pelo link abaixo.</div>'; 
+    }
 }
 
 function closeReader() {
+    if (!readerPanel || !readerContainer) return;
     readerPanel.classList.add("opacity-0");
     readerContainer.classList.add("translate-x-full");
     setTimeout(() => readerPanel.classList.add("pointer-events-none"), 300);
 }
 
 if (closeReaderBtn) closeReaderBtn.addEventListener("click", closeReader);
-if (fontDecBtn) fontDecBtn.addEventListener("click", () => { currentFontSize -= 2; readerContent.style.fontSize = `${currentFontSize}px`; });
-if (fontIncBtn) fontIncBtn.addEventListener("click", () => { currentFontSize += 2; readerContent.style.fontSize = `${currentFontSize}px`; });
+if (closeReaderXBtn) closeReaderXBtn.addEventListener("click", closeReader);
+if (closeReaderFooterBtn) closeReaderFooterBtn.addEventListener("click", closeReader);
+if (readerPanel) {
+    readerPanel.addEventListener("click", (e) => {
+        if (e.target === readerPanel) closeReader();
+    });
+}
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && readerPanel && !readerPanel.classList.contains("opacity-0")) {
+        closeReader();
+    }
+});
+if (readerCopyBtn) {
+    readerCopyBtn.addEventListener("click", () => {
+        if (readerContent) {
+            navigator.clipboard.writeText(readerContent.innerText).then(() => {
+                const orig = readerCopyBtn.innerHTML;
+                readerCopyBtn.innerHTML = `<i class="fa-solid fa-check text-green-600 text-[11px]"></i> <span>Copiado!</span>`;
+                setTimeout(() => { readerCopyBtn.innerHTML = orig; }, 2000);
+            });
+        }
+    });
+}
+if (fontDecBtn) fontDecBtn.addEventListener("click", () => { currentFontSize -= 2; if (readerContent) readerContent.style.fontSize = `${currentFontSize}px`; });
+if (fontIncBtn) fontIncBtn.addEventListener("click", () => { currentFontSize += 2; if (readerContent) readerContent.style.fontSize = `${currentFontSize}px`; });
 
 
 // ==========================================
