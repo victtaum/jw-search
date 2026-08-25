@@ -296,6 +296,7 @@ SEPARAÇÃO OBRIGATÓRIA: Qualquer informação ou fonte externa que não venha 
 - Toda explicação doutrinária, moral ou histórica deve estar fundamentada nas publicações oficiais (A Sentinela, Despertai!, Estudo Perspicaz das Escrituras, Livros da Torre de Vigia, etc.).
 - Se um determinado aspecto não for abordado nas fontes oficiais, declare isso com humildade e fidelidade ao registro teocrático."""
 
+    # Fetch verified theocratic context from wol.jw.org
     conversation_context = ""
     if history:
         conversation_context = "\nHISTÓRICO ANTERIOR DA CONVERSA:\n"
@@ -303,15 +304,27 @@ SEPARAÇÃO OBRIGATÓRIA: Qualquer informação ou fonte externa que não venha 
             role_label = "Usuário" if msg.get("role") == "user" else "Assistente Teocrático"
             conversation_context += f"{role_label}: {msg.get('content')}\n\n"
 
+    # Fetch verified theocratic context from wol.jw.org in real time
+    theocratic_context = ""
+    wol_articles = []
+    try:
+        from rag_engine import search_wol_direct, fetch_rag_context
+        wol_articles = search_wol_direct(query, lang=lang, max_results=6)
+        theocratic_context = fetch_rag_context(wol_articles, max_articles=3)
+    except Exception as e:
+        print(f"WOL prefetch notice: {e}")
+
     prompt = f"""Você é um assistente de pesquisa teocrática avançado e objetivo (no estilo de um motor de busca analítico como Perplexity AI / RAG Especializado), focado no acervo da Biblioteca Online da Torre de Vigia (wol.jw.org) e do site oficial (jw.org).
 
 IDIOMA DA RESPOSTA: Responda obrigatoriamente em {target_lang}.
 
-DIRETRIZES DE ESCOPO E FONTES:
+DIRETRIZES DE ESCOPO, VERACIDADE E ANTI-ALUCINAÇÃO (RIGOR MÁXIMO):
 {source_directive}
+- VERACIDADE TOTAL (PROIBIÇÃO DE INVENTAR DATAS/EDIÇÕES): NUNCA invente, deduza ou adivinhe datas de revistas (ex: "A Sentinela de 15 de abril de 2014", "15 de julho de 2011") ou anos fictícios.
+- SE NÃO SOUBER A DATA EXATA: Cite o princípio bíblico, os versículos ou livros gerais (ex: livro 'Mantenha-se no Amor de Deus, cap. 12', 'Estudo Perspicaz'), SEM forjar datas ou meses inexistentes para revistas.
 - OBJETIVIDADE: Seja claro, direto, fiel e profundo. Evite prolixidade.
 - CAPACIDADE DE FORMATAÇÃO: Você tem capacidade de gerar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 |), listas, roteiros de estudo, resumos e documentos detalhados sempre que solicitado.
-- REGRA OBRIGATÓRIA DE LINKS: TODA e qualquer publicação das Testemunhas de Jeová citada (A Sentinela, Despertai!, Livros, Brochuras, Artigos) e textos bíblicos DEVE OBRIGATORIAMENTE ser formatada como um link Markdown clicável: `[Nome da Publicação - Título](https://wol.jw.org/pt/wol/s/r5/lp-t?q=Nome+da+Publicacao)` ou com a URL oficial correspondente do WOL/JW.ORG. NUNCA deixe nomes de publicações ou artigos em texto puro sem link!
+- REGRA OBRIGATÓRIA DE LINKS: TODA e qualquer publicação citada e textos bíblicos DEVEM ser formatados como links Markdown clicáveis: `[Nome da Publicação - Título](https://wol.jw.org/pt/wol/s/r5/lp-t?q=Nome+da+Publicacao)` ou com a URL oficial correspondente.
 
 ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas ou formatos específicos):
 
@@ -319,7 +332,7 @@ ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas
 (Apresente um resumo claro, objetivo e bíblico que responde diretamente à dúvida do usuário).
 
 ### 📖 Análise Teocrática Detalhada
-(Desenvolva os pontos fundamentais com clareza e fidelidade teocrática):
+(Desenvolva os pontos fundamentais com clareza e fidelidade teocrática, fundamentando em princípios e fontes verificadas):
 - Explique o contexto e o raciocínio das publicações das Testemunhas de Jeová.
 - Mencione nominalmente as publicações relevantes SEMPRE com links Markdown clicáveis (ex: `[A Sentinela - Como Escolher Boas Formas de Recreação](https://wol.jw.org/pt/...)`).
 
@@ -327,9 +340,11 @@ ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas
 (Destaque os textos bíblicos principais e sua aplicação, com links para a Bíblia no wol.jw.org).
 
 ### 📚 Publicações e Fontes Oficiais
-(Liste em tópicos TODOS os artigos e livros consultados, SEMPRE com links Markdown clicáveis para cada item).
+(Liste em tópicos as publicações e artigos autênticos consultados, SEMPRE com links Markdown clicáveis para cada item).
 
 {"### 🌐 Fontes Externas (Internet)" if include_external else ""}
+
+{f"--- DOCUMENTOS E ARTIGOS REAIS DO WOL EXTRAÍDOS: ---" + chr(10) + theocratic_context if theocratic_context else ""}
 
 {conversation_context}
 PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
@@ -457,6 +472,12 @@ PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
                 "is_external": is_external_link,
                 "source_site": urllib.parse.urlparse(final_uri).netloc
             })
+
+        # Prepend or merge verified WOL direct articles into results list
+        for wa in wol_articles:
+            clean_l = wa['link'].split('?')[0].split('#')[0]
+            if not any(r['link'].split('?')[0].split('#')[0] == clean_l for r in results):
+                results.append(wa)
 
         # Post-processing: Auto-link any plain-text publication mentions into clickable Markdown links
         ai_response = enrich_and_autolink_theocratic_response(ai_response, results)
