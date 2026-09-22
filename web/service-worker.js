@@ -1,8 +1,10 @@
-const CACHE_NAME = 'jw-search-cache-v18';
+const CACHE_NAME = 'jw-search-cache-v19';
 const ASSETS = [
   '/',
   '/index.html',
-  '/app.js',
+  '/app.js?v=2.19.0',
+  '/study-controls.js?v=2.19.0',
+  '/vendor/purify.min.js',
   '/manifest.json'
 ];
 
@@ -47,6 +49,7 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
+        if (!response.ok || new URL(event.request.url).origin !== self.location.origin) return response;
         // Cache the updated page/assets
         const resClone = response.clone();
         caches.open(CACHE_NAME).then(cache => {

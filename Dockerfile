@@ -3,8 +3,8 @@
 WORKDIR /app
 
 # Install dependencies
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements.lock .
+RUN pip install --no-cache-dir -r requirements.lock
 
 # Copy project files
 COPY backend/ ./backend/

@@ -24,7 +24,12 @@ object SearchApiClient {
         connection.readTimeout = 15000
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile)")
         connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/json")
-        if (apiKey.isNotBlank()) {
+        val backend = URL(baseUrl)
+        val isBackendSearch = useLocalBackend && url.protocol == backend.protocol &&
+            url.host == backend.host && url.port == backend.port &&
+            (url.path == "/api/search" || url.path == "/api/chat")
+        if (isBackendSearch && apiKey.isNotBlank()) {
+            connection.instanceFollowRedirects = false
             connection.setRequestProperty("X-Gemini-Api-Key", apiKey)
         }
 

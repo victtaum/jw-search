@@ -1,15 +1,11 @@
-﻿@echo off
-title Criando pacote ZIP para compartilhamento...
-echo ===================================================
-echo     Criando pacote leve e limpo para envio
-echo ===================================================
-echo.
-powershell -Command "Compress-Archive -Path 'backend', 'web', 'android', 'ios', 'JW-Search.apk', 'start.bat', 'README.md' -DestinationPath 'JW-Search-Completo.zip' -Force"
-if %ERRORLEVEL% equ 0 (
-    echo [SUCESSO] O arquivo 'JW-Search-Completo.zip' foi gerado na raiz!
-    echo Esse arquivo contem tudo o que e necessario (Backend, Web, Android e iOS) e esta pronto para ser enviado.
-) else (
-    echo [ERRO] Ocorreu uma falha ao compactar os arquivos.
+@echo off
+setlocal
+cd /d "%~dp0"
+git archive --format=zip --output=JW-Search-Completo.zip HEAD
+if errorlevel 1 (
+  echo [ERRO] Nao foi possivel exportar o commit atual.
+  exit /b 1
 )
-echo.
+echo Pacote criado somente com os arquivos versionados do commit HEAD.
+echo Mudancas nao commitadas e arquivos .env ignorados nao sao incluidos.
 pause
