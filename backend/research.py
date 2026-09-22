@@ -259,8 +259,7 @@ def render_citations(text, sources):
     text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
     text = re.sub(r"https?://\S+", "", text)
 
-    def replace(match):
-        key = match[1]
+    def replace_key(key):
         if key not in by_id:
             warnings.append(f"Referência {key} ausente nas fontes coletadas.")
             return "[referência não confirmada]"
@@ -269,7 +268,12 @@ def render_citations(text, sources):
         label = re.sub(r"[\[\]<>\n]", "", source["title"])
         return f"[{label}]({source['link']})"
 
-    text = re.sub(r"\[(S\d+)\]", replace, text)
+    def replace_group(match):
+        return "; ".join(
+            replace_key(key.strip()) for key in match.group(1).split(",")
+        )
+
+    text = re.sub(r"\[((?:S\d+)(?:\s*,\s*S\d+)*)\]", replace_group, text)
     if not cited:
         warnings.append(
             "A resposta não vinculou afirmações às fontes coletadas; confira antes de reutilizar."
@@ -361,7 +365,7 @@ def run_research(
     profile = (
         "Responda de forma sintetizada: resposta direta, 3 a 5 pontos centrais e limites."
         if mode == "quick"
-        else """Produza uma pesquisa ampla e substancial, normalmente entre 800 e 1.200 palavras quando as evidências permitirem. Comece respondendo diretamente à pergunta, inclusive quando ela for coloquial. Organize depois: visão geral e contexto; qualidades ou princípios; episódios ou exemplos concretos; falhas, limites ou contrapontos; lições e aplicações; textos bíblicos centrais; e o que não foi possível confirmar. Use títulos descritivos, não um molde vazio. Cruze várias fontes e não deixe uma seção ou frase inacabada. Não invente conteúdo para atingir tamanho."""
+        else """Produza uma pesquisa ampla e substancial entre 700 e 1.000 palavras quando as evidências permitirem e nunca ultrapasse 1.100 palavras. Comece respondendo diretamente à pergunta, inclusive quando ela for coloquial. Organize depois: visão geral e contexto; qualidades ou princípios; episódios ou exemplos concretos; falhas, limites ou contrapontos; lições e aplicações; textos bíblicos centrais; e o que não foi possível confirmar. Selecione os 4 a 6 textos bíblicos mais úteis, em vez de tentar usar todas as evidências. Use títulos descritivos, não um molde vazio. Cruze várias fontes, conclua todas as frases e reserve espaço para a conclusão. Não invente conteúdo para atingir tamanho."""
     )
     system = f"""Você auxilia pesquisa bíblica em {lang}. {profile}
 Fundamente as afirmações documentais EXCLUSIVAMENTE nas evidências abaixo. Cite IDs [S1], [S2] etc junto das afirmações.
@@ -380,7 +384,7 @@ O histórico serve para entender o assunto; respostas antigas não são evidênc
         + recent
         + [{"role": "user", "content": query}]
     )
-    max_tokens = 3200 if mode == "deep" or tool else 2500
+    max_tokens = 4000 if mode == "deep" or tool else 2500
     if provider == "gemini":
         used_model = model or "gemini-2.5-flash"
         with genai.Client(
@@ -407,7 +411,7 @@ O histórico serve para entender o assunto; respostas antigas não são evidênc
                         disable=True
                     ),
                     thinking_config=types.ThinkingConfig(
-                        thinking_budget=0 if mode == "quick" else 512
+                        thinking_budget=0 if mode == "quick" else 256
                     )
                     if used_model.startswith("gemini-2.5")
                     else None,

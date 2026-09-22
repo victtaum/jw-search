@@ -280,6 +280,16 @@ def test_uncollected_links_are_not_published_as_sources():
     assert cited == ["S1"] and warnings
 
 
+def test_grouped_citations_are_resolved_individually():
+    sources = [
+        {"id": "S1", "title": "Fonte A", "link": "https://wol.jw.org/a"},
+        {"id": "S2", "title": "Fonte B", "link": "https://wol.jw.org/b"},
+    ]
+    answer, cited, warnings = research.render_citations("Afirmação [S1, S2].", sources)
+    assert "[Fonte A](https://wol.jw.org/a); [Fonte B](https://wol.jw.org/b)" in answer
+    assert cited == ["S1", "S2"] and not warnings
+
+
 def test_empty_retrieval_does_not_call_model(monkeypatch):
     monkeypatch.setattr(research, "collect_evidence", lambda *a: [])
     llm = Mock()
