@@ -118,10 +118,10 @@ def collect_evidence(query, lang, mode):
                 hit = {**hit, "matched_query": search_query}
                 hits.append(hit)
                 seen_urls.add(hit["link"])
-    hits = _select_diverse_hits(hits, 12 if mode == "deep" else 3, query)
+    hits = _select_diverse_hits(hits, 10 if mode == "deep" else 3, query)
     sources = []
     terms = set(extract_theocratic_keywords(query).lower().split())
-    total_budget = 36000 if mode == "deep" else 15000
+    total_budget = 28000 if mode == "deep" else 15000
     for hit in hits:
         if remaining(75) < 15:
             break
@@ -151,7 +151,7 @@ def collect_evidence(query, lang, mode):
         # Read ordinary articles in full. For long documents diversify selection
         # across the article so repeated query words in the opening do not hide
         # later practical recommendations.
-        budget = min(6500 if mode == "deep" else 5000, total_budget)
+        budget = min(5200 if mode == "deep" else 5000, total_budget)
         if budget < 1200:
             break
         if sum(map(len, paragraphs)) <= budget:
@@ -185,7 +185,7 @@ def collect_evidence(query, lang, mode):
     return sources
 
 
-def collect_referenced_verses(sources, lang, query="", limit=7):
+def collect_referenced_verses(sources, lang, query="", limit=6):
     """Follow Bible references found in evidence and retrieve their exact text."""
     from bible import fetch_verse_content
     from scraper import BIBLE_BOOKS_MAP
@@ -361,7 +361,7 @@ def run_research(
     profile = (
         "Responda de forma sintetizada: resposta direta, 3 a 5 pontos centrais e limites."
         if mode == "quick"
-        else """Produza uma pesquisa ampla e substancial, normalmente entre 900 e 1.600 palavras quando as evidências permitirem. Comece respondendo diretamente à pergunta, inclusive quando ela for coloquial. Organize depois: visão geral e contexto; qualidades ou princípios; episódios ou exemplos concretos; falhas, limites ou contrapontos; lições e aplicações; textos bíblicos centrais; e o que não foi possível confirmar. Use títulos descritivos, não um molde vazio. Cruze várias fontes e não deixe uma seção ou frase inacabada. Não invente conteúdo para atingir tamanho."""
+        else """Produza uma pesquisa ampla e substancial, normalmente entre 800 e 1.200 palavras quando as evidências permitirem. Comece respondendo diretamente à pergunta, inclusive quando ela for coloquial. Organize depois: visão geral e contexto; qualidades ou princípios; episódios ou exemplos concretos; falhas, limites ou contrapontos; lições e aplicações; textos bíblicos centrais; e o que não foi possível confirmar. Use títulos descritivos, não um molde vazio. Cruze várias fontes e não deixe uma seção ou frase inacabada. Não invente conteúdo para atingir tamanho."""
     )
     system = f"""Você auxilia pesquisa bíblica em {lang}. {profile}
 Fundamente as afirmações documentais EXCLUSIVAMENTE nas evidências abaixo. Cite IDs [S1], [S2] etc junto das afirmações.
@@ -380,13 +380,13 @@ O histórico serve para entender o assunto; respostas antigas não são evidênc
         + recent
         + [{"role": "user", "content": query}]
     )
-    max_tokens = 4600 if mode == "deep" or tool else 2500
+    max_tokens = 3200 if mode == "deep" or tool else 2500
     if provider == "gemini":
         used_model = model or "gemini-2.5-flash"
         with genai.Client(
             api_key=key,
             http_options=types.HttpOptions(
-                timeout=int(remaining(75 if mode == "deep" else 55) * 1000),
+                timeout=int(remaining(60 if mode == "deep" else 55) * 1000),
                 retry_options=types.HttpRetryOptions(attempts=1),
             ),
         ) as client:
@@ -407,7 +407,7 @@ O histórico serve para entender o assunto; respostas antigas não são evidênc
                         disable=True
                     ),
                     thinking_config=types.ThinkingConfig(
-                        thinking_budget=0 if mode == "quick" else 1024
+                        thinking_budget=0 if mode == "quick" else 512
                     )
                     if used_model.startswith("gemini-2.5")
                     else None,
@@ -421,7 +421,7 @@ O histórico serve para entender o assunto; respostas antigas não são evidênc
         with OpenAI(
             api_key=key,
             base_url=endpoint,
-            timeout=remaining(75 if mode == "deep" else 55),
+            timeout=remaining(60 if mode == "deep" else 55),
             max_retries=0,
         ) as client:
             response = client.chat.completions.create(

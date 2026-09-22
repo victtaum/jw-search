@@ -4,7 +4,7 @@ Pesquisa bíblica com leitura de fontes e preparação de materiais de estudo. P
 
 **Acompanhe:** [backlog](BACKLOG.md), [progresso](docs/planejamento/PROGRESSO.md), [requisitos](docs/planejamento/01-VISAO-E-REQUISITOS.md) e [arquitetura proposta](docs/planejamento/02-ARQUITETURA-E-DECISOES.md).
 
-## Esta entrega — 2.20.0
+## Esta entrega — 2.20.1
 
 - Modos **sintetizado** e **amplo**. O modo amplo decompõe o tema em consultas correlatas, identifica os tipos de publicação do WOL, diversifica os documentos e recupera por extenso passagens bíblicas encontradas nas fontes.
 - Pesquisa compartilhada entre Gemini, DeepSeek e Hy3/OpenRouter: busca no WOL, leitura de documentos, seleção de trechos e geração com IDs de fontes. Links são resolvidos pelo código a partir dos documentos coletados.
@@ -49,7 +49,7 @@ Configure `JW_ACCESS_TOKEN` e HTTPS antes de expor uma chave do servidor em uma 
 
 ## Tempo e recuperação
 
-Orçamento cooperativo: 75 segundos no sintetizado e 150 no amplo. A chamada ao modelo recebe até 55 segundos no sintetizado e 75 segundos no amplo, sempre limitada pelo tempo restante; novas coletas verificam o orçamento. O navegador mantém margem de transporte (85/165 segundos). Respostas amplas curtas ou interrompidas pelo limite de geração são marcadas como incompletas. DNS e operações em andamento não têm cancelamento rígido do processo. Reconexão, fila durável e cancelamento completo seguem no backlog.
+Orçamento cooperativo: 75 segundos no sintetizado e 150 no amplo. A chamada ao modelo recebe até 55 segundos no sintetizado e 60 segundos no amplo, sempre limitada pelo tempo restante; novas coletas verificam o orçamento. O navegador mantém margem de transporte (85/165 segundos). Respostas amplas curtas ou interrompidas pelo limite de geração são marcadas como incompletas. DNS e operações em andamento não têm cancelamento rígido do processo. Reconexão, fila durável e cancelamento completo seguem no backlog.
 
 ## Testes e CI
 
