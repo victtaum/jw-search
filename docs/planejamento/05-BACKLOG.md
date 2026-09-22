@@ -1,6 +1,8 @@
+> Estado atualizado na entrega 2.19.0. Consulte [PROGRESSO.md](PROGRESSO.md) para evidências e limites. Parcial não significa que todos os critérios de aceitação foram atendidos.
+
 # Backlog completo do JW Search
 
-68 itens propostos. Nenhum representa implementação concluída. Pontos são relativos; não são horas. CSV em UTF-8 com BOM e separador ponto e vírgula; JSON mantém a estrutura completa.
+68 itens propostos, agora acompanhados como Planejado, Parcial ou Concluído. Pontos são relativos; não são horas. CSV em UTF-8 com BOM e separador ponto e vírgula; JSON mantém a estrutura completa.
 
 Prioridades: P0 bloqueia segurança/confiabilidade central; P1 é necessário para a entrega planejada; P2 é melhoria/paridade; P3 depende de evidência de valor. As dependências formam um grafo sem ciclos.
 
@@ -18,6 +20,8 @@ Prioridades: P0 bloqueia segurança/confiabilidade central; P1 é necessário pa
 
 ### JW-001 — Fixar baseline e contrato de preservação
 
+**Estado atual: Parcial**
+
 **P0 · 3 pontos relativos · Engenharia/QA · Planejado**
 
 Inventário do commit, fixtures e lista de funcionalidades que não podem desaparecer.
@@ -31,6 +35,8 @@ Inventário do commit, fixtures e lista de funcionalidades que não podem desapa
 **Origem/evidência:** 94c4c2e; análises anteriores e evidencias-adicionais.json.
 
 ### JW-002 — Build reproduzível e CI mínimo
+
+**Estado atual: Parcial**
 
 **P0 · 3 pontos relativos · Engenharia/DevOps · Planejado**
 
@@ -46,6 +52,8 @@ Runtime definido, dependências travadas e pipeline de lint/testes isolados.
 
 ### JW-003 — Vincular credencial ao destino autorizado
 
+**Estado atual: Concluído**
+
 **P0 · 3 pontos relativos · Backend · Planejado**
 
 Registro de provedores no servidor; URL do cliente nunca recebe chave do servidor.
@@ -59,6 +67,8 @@ Registro de provedores no servidor; URL do cliente nunca recebe chave do servido
 **Origem/evidência:** main.py:270,310; rag_engine.py:263-288; reprodução anterior.
 
 ### JW-004 — Proteger leitor e downloads contra SSRF
+
+**Estado atual: Parcial**
 
 **P0 · 5 pontos relativos · Backend · Planejado**
 
@@ -74,6 +84,8 @@ Política única de rede com hosts, protocolo, portas, redirecionamentos, tamanh
 
 ### JW-005 — Sanitizar HTML, Markdown e importações
 
+**Estado atual: Parcial**
+
 **P0 · 5 pontos relativos · Frontend/Backend · Planejado**
 
 Renderização segura por contexto, esquema de importação e política de conteúdo.
@@ -87,6 +99,8 @@ Renderização segura por contexto, esquema de importação e política de conte
 **Origem/evidência:** scraper.py:571-616; app.js:485-501,534,581,935,1096.
 
 ### JW-006 — Retirar configuração global da API pública
+
+**Estado atual: Concluído**
 
 **P0 · 2 pontos relativos · Backend · Planejado**
 
@@ -102,6 +116,8 @@ Configuração administrativa separada; nenhuma escrita pública em .env.
 
 ### JW-007 — Definir acesso, cotas e limites de entrada
 
+**Estado atual: Parcial**
+
 **P0 · 5 pontos relativos · Backend/Produto · Planejado**
 
 Política explícita para uso local, beta restrito e hospedagem pública.
@@ -115,6 +131,8 @@ Política explícita para uso local, beta restrito e hospedagem pública.
 **Origem/evidência:** ChatRequest e rotas sem limites de aplicação.
 
 ### JW-008 — Isolar, remover e não exportar segredos
+
+**Estado atual: Parcial**
 
 **P0 · 3 pontos relativos · Frontend/Mobile · Planejado**
 
@@ -130,6 +148,8 @@ Credenciais por provedor; remoção completa; Android não anexa chave ao leitor
 
 ### JW-009 — Corrigir configuração e diagnóstico
 
+**Estado atual: Concluído**
+
 **P0 · 2 pontos relativos · Backend/Frontend · Planejado**
 
 Health check leve e diagnóstico que diferencia configurado, testado e indisponível.
@@ -143,6 +163,8 @@ Health check leve e diagnóstico que diferencia configurado, testado e indispon�
 **Origem/evidência:** main.py:434,448; app.js:1433.
 
 ### JW-010 — Padronizar erros e preservar status HTTP
+
+**Estado atual: Concluído**
 
 **P0 · 3 pontos relativos · Backend · Planejado**
 
@@ -161,6 +183,8 @@ Erros tipados para timeout, autenticação, cota, modelo inexistente e fonte aus
 
 ### JW-011 — Criar contrato versionado de pesquisa e evidências
 
+**Estado atual: Parcial**
+
 **P0 · 5 pontos relativos · Backend/IA · Planejado**
 
 ResearchRun, Source, Passage, Claim e Citation com IDs e proveniência.
@@ -174,6 +198,8 @@ ResearchRun, Source, Passage, Claim e Citation com IDs e proveniência.
 **Origem/evidência:** Ausência atual de IDs de trechos e metadados de suporte.
 
 ### JW-012 — Reformular perguntas preservando o assunto
+
+**Estado atual: Parcial**
 
 **P0 · 3 pontos relativos · IA/Backend · Planejado**
 
@@ -189,6 +215,8 @@ Consultas temáticas para perguntas longas e continuações, sem corte cego das 
 
 ### JW-013 — Resolver documentos e metadados canônicos
 
+**Estado atual: Parcial**
+
 **P0 · 5 pontos relativos · Backend · Planejado**
 
 Remissões, índices e redirects viram documentos identificados sem troca silenciosa.
@@ -202,6 +230,8 @@ Remissões, índices e redirects viram documentos identificados sem troca silenc
 **Origem/evidência:** scraper.py:448,463,551-567; títulos Feliz/Felipe alterados.
 
 ### JW-014 — Extrair parágrafos e selecionar por relevância
+
+**Estado atual: Parcial**
 
 **P1 · 5 pontos relativos · Backend/IA · Planejado**
 
@@ -217,6 +247,8 @@ Contexto com passagens relevantes e vizinhas, inclusive no final dos artigos.
 
 ### JW-015 — Resolver referências e versículos estruturalmente
 
+**Estado atual: Parcial**
+
 **P0 · 5 pontos relativos · Backend/QA · Planejado**
 
 Referências normalizadas, edição/idioma e trechos fiéis aos marcadores do documento.
@@ -230,6 +262,8 @@ Referências normalizadas, edição/idioma e trechos fiéis aos marcadores do do
 **Origem/evidência:** scraper.py:694-758; evidencias-adicionais.json.
 
 ### JW-016 — Gerar respostas vinculadas às evidências
+
+**Estado atual: Parcial**
 
 **P0 · 5 pontos relativos · IA/Backend · Planejado**
 
@@ -245,6 +279,8 @@ Síntese com IDs de citações; links e bibliografia resolvidos pelo código.
 
 ### JW-017 — Validar citações antes de publicar resposta
 
+**Estado atual: Parcial**
+
 **P0 · 5 pontos relativos · Backend/QA · Planejado**
 
 Validação estrutural, literal e de correspondência de fonte, com revisão semântica amostral.
@@ -258,6 +294,8 @@ Validação estrutural, literal e de correspondência de fonte, com revisão sem
 **Origem/evidência:** verificacao-links-1.json.
 
 ### JW-018 — Aplicar escopo de fontes por execução
+
+**Estado atual: Parcial**
 
 **P1 · 3 pontos relativos · Backend/IA · Planejado**
 
@@ -273,6 +311,8 @@ Escopo oficial/external explícito e imutável na pesquisa e seus materiais.
 
 ### JW-019 — Separar instruções de dados e papéis do cliente
 
+**Estado atual: Parcial**
+
 **P1 · 3 pontos relativos · Backend/IA · Planejado**
 
 Histórico aceita papéis apropriados; documentos e importações não redefinem política.
@@ -287,6 +327,8 @@ Histórico aceita papéis apropriados; documentos e importações não redefinem
 
 ### JW-020 — Cache limitado e atualização das fontes
 
+**Estado atual: Planejado**
+
 **P1 · 3 pontos relativos · Backend · Planejado**
 
 TTL, tamanho, idioma/edição e hash de conteúdo, com separação entre cache público e dados privados.
@@ -300,6 +342,8 @@ TTL, tamanho, idioma/edição e hash de conteúdo, com separação entre cache p
 **Origem/evidência:** _article_cache e _verse_cache sem limites.
 
 ### JW-021 — Perfis sintetizado e aprofundado com mesma precisão
+
+**Estado atual: Parcial**
 
 **P1 · 5 pontos relativos · IA/Produto · Planejado**
 
@@ -318,6 +362,8 @@ Configurações versionadas de cobertura e saída, não de tolerância a referê
 
 ### JW-022 — Orquestrar orçamento global e modelos válidos
 
+**Estado atual: Parcial**
+
 **P0 · 5 pontos relativos · Backend · Planejado**
 
 Deadline monotônico, limite de tokens/custo/tentativas e registro de capacidades de provedores.
@@ -331,6 +377,8 @@ Deadline monotônico, limite de tokens/custo/tentativas e registro de capacidade
 **Origem/evidência:** 15s × retries × modelos; Gemini seis chamadas possíveis.
 
 ### JW-023 — Persistir tarefas e resultados recuperáveis
+
+**Estado atual: Planejado**
 
 **P1 · 8 pontos relativos · Backend/DevOps · Planejado**
 
@@ -346,6 +394,8 @@ Fila/worker com estado durável, lease e checkpoint; API retorna identificador.
 
 ### JW-024 — Autorizar acesso a cada pesquisa e material
 
+**Estado atual: Planejado**
+
 **P0 · 3 pontos relativos · Backend · Planejado**
 
 Sessão/conta ou capacidade opaca vinculada ao dono, verificada em todas as rotas.
@@ -359,6 +409,8 @@ Sessão/conta ou capacidade opaca vinculada ao dono, verificada em todas as rota
 **Origem/evidência:** Novo estado persistente requer isolamento antes de exposição pública.
 
 ### JW-025 — Cancelamento e concorrência limitados
+
+**Estado atual: Parcial**
 
 **P1 · 5 pontos relativos · Backend · Planejado**
 
@@ -374,6 +426,8 @@ Cancelamento cooperativo nos transportes e limites globais/por usuário/provedor
 
 ### JW-026 — Progresso real e reconexão
 
+**Estado atual: Planejado**
+
 **P1 · 3 pontos relativos · Frontend/Backend · Planejado**
 
 Eventos ou polling autenticado com sequência e estados explícitos.
@@ -387,6 +441,8 @@ Eventos ou polling autenticado com sequência e estados explícitos.
 **Origem/evidência:** app.js:270-279 simula estágios por relógio.
 
 ### JW-027 — Snapshots de pesquisa e revisões imutáveis
+
+**Estado atual: Planejado**
 
 **P1 · 5 pontos relativos · Backend · Planejado**
 
@@ -402,6 +458,8 @@ Versões de evidências e respostas como base estável dos derivados.
 
 ### JW-028 — Gerir histórico e aprofundar lacunas
 
+**Estado atual: Parcial**
+
 **P1 · 3 pontos relativos · IA/Backend · Planejado**
 
 Janela/resumo com orçamento e recuperação de referências por ID.
@@ -415,6 +473,8 @@ Janela/resumo com orçamento e recuperação de referências por ID.
 **Origem/evidência:** app.js:286-291; rag_engine.py:203-208.
 
 ### JW-029 — Isolar conversas, concorrência e regenerações
+
+**Estado atual: Parcial**
 
 **P1 · 5 pontos relativos · Frontend · Planejado**
 
@@ -430,6 +490,8 @@ Estado de requisição por conversa e revisão; ramificar quando alterar histór
 
 ### JW-030 — Configuração por provedor e modo
 
+**Estado atual: Parcial**
+
 **P1 · 3 pontos relativos · Frontend/Backend · Planejado**
 
 Seleções coerentes de modelo, credencial, modo e capacidades.
@@ -443,6 +505,8 @@ Seleções coerentes de modelo, credencial, modo e capacidades.
 **Origem/evidência:** app.js:304-310,1040,1238.
 
 ### JW-031 — Instrumentar tempo, qualidade e consumo
+
+**Estado atual: Planejado**
 
 **P1 · 3 pontos relativos · Backend/DevOps · Planejado**
 
@@ -461,6 +525,8 @@ Request/research IDs, tempos por fase e contadores por tentativa, sem conteúdo 
 
 ### JW-032 — Contrato comum das quatro ferramentas
 
+**Estado atual: Parcial**
+
 **P1 · 5 pontos relativos · Backend/Frontend · Planejado**
 
 Ações tipadas sobre uma pesquisa/revisão e itens selecionados, mantendo os quatro acessos.
@@ -474,6 +540,8 @@ Ações tipadas sobre uma pesquisa/revisão e itens selecionados, mantendo os qu
 **Origem/evidência:** index.html:273-283; app.js:232-239.
 
 ### JW-033 — Comparar os textos selecionados da consulta
+
+**Estado atual: Parcial**
 
 **P1 · 5 pontos relativos · IA/Frontend · Planejado**
 
@@ -489,6 +557,8 @@ Tabela com referência, contexto, ponto central, relações, aplicação e fonte
 
 ### JW-034 — Personalizar e exportar tabela
 
+**Estado atual: Planejado**
+
 **P2 · 3 pontos relativos · Frontend · Planejado**
 
 Seleção de colunas, ordenação, visualização móvel em cards e exportação tabular.
@@ -502,6 +572,8 @@ Seleção de colunas, ordenação, visualização móvel em cards e exportação
 **Origem/evidência:** Parsers split("|") atuais; tabelas sem estrutura de dados.
 
 ### JW-035 — Configurar participantes e objetivo do estudo
+
+**Estado atual: Parcial**
 
 **P1 · 3 pontos relativos · Produto/Frontend · Planejado**
 
@@ -517,6 +589,8 @@ Perfis opcionais por faixas etárias/necessidades, duração e objetivo; sem nom
 
 ### JW-036 — Gerar roteiro familiar adaptável
 
+**Estado atual: Parcial**
+
 **P1 · 5 pontos relativos · IA/Frontend · Planejado**
 
 Abertura, leituras, perguntas, atividade, aplicação e recapitulação com opções por participante.
@@ -530,6 +604,8 @@ Abertura, leituras, perguntas, atividade, aplicação e recapitulação com opç
 **Origem/evidência:** Atalho atual só pede resumo em tópicos.
 
 ### JW-037 — Organizar e ampliar textos com contexto
+
+**Estado atual: Parcial**
 
 **P1 · 5 pontos relativos · IA/Frontend · Planejado**
 
@@ -545,6 +621,8 @@ Separar textos já usados de complementares, com motivo da relação e consulta 
 
 ### JW-038 — Criar esboços nas sete durações
 
+**Estado atual: Parcial**
+
 **P1 · 5 pontos relativos · IA/Frontend · Planejado**
 
 Tema, objetivo, introdução, desenvolvimento, aplicação, conclusão, leituras e transições.
@@ -558,6 +636,8 @@ Tema, objetivo, introdução, desenvolvimento, aplicação, conclusão, leituras
 **Origem/evidência:** Requisito explícito do usuário.
 
 ### JW-039 — Estimar apresentação e ajustar duração
+
+**Estado atual: Parcial**
 
 **P1 · 3 pontos relativos · Backend/Frontend · Planejado**
 
@@ -573,6 +653,8 @@ Tempo planejado separado de estimativa oral, com ritmo editável, leituras e pau
 
 ### JW-040 — Modo de apresentação e ensaio
 
+**Estado atual: Planejado**
+
 **P2 · 3 pontos relativos · Frontend · Planejado**
 
 Fonte ampliada, tempo por bloco, cronômetro opcional e notas do orador.
@@ -586,6 +668,8 @@ Fonte ampliada, tempo por bloco, cronômetro opcional e notas do orador.
 **Origem/evidência:** Melhoria proposta para uso prático em discursos.
 
 ### JW-041 — Editar, salvar e regenerar derivados
+
+**Estado atual: Planejado**
 
 **P1 · 5 pontos relativos · Frontend/Backend · Planejado**
 
@@ -604,6 +688,8 @@ Materiais independentes com configurações, revisão, notas e versões.
 
 ### JW-042 — Leitor contextual e navegação entre fontes
 
+**Estado atual: Parcial**
+
 **P1 · 5 pontos relativos · Frontend/Backend · Planejado**
 
 Abrir passagem destacada, voltar ao ponto anterior e mostrar metadados reais.
@@ -617,6 +703,8 @@ Abrir passagem destacada, voltar ao ponto anterior e mostrar metadados reais.
 **Origem/evidência:** scraper.py:577-614; app.js:1076-1096.
 
 ### JW-043 — Exportações fiéis por pesquisa e material
+
+**Estado atual: Parcial**
 
 **P1 · 5 pontos relativos · Frontend/Backend · Planejado**
 
@@ -632,6 +720,8 @@ Markdown/JSON/DOCX/PDF preservam textos, fontes, tabelas e tempos.
 
 ### JW-044 — Migrar estudos e formatos legados
 
+**Estado atual: Parcial**
+
 **P1 · 5 pontos relativos · Backend/Frontend · Planejado**
 
 Importação versionada, recuperação e exportação de backup antes da migração.
@@ -645,6 +735,8 @@ Importação versionada, recuperação e exportação de backup antes da migraç
 **Origem/evidência:** Importer verifica apenas array turns.
 
 ### JW-045 — Armazenamento e exclusão previsíveis
+
+**Estado atual: Planejado**
 
 **P1 · 3 pontos relativos · Frontend/Backend · Planejado**
 
@@ -660,6 +752,8 @@ Histórico robusto com tratamento de quota, retenção e controles de exclusão.
 
 ### JW-046 — Teclado, foco e leitura confortável
 
+**Estado atual: Planejado**
+
 **P1 · 5 pontos relativos · Frontend/QA · Planejado**
 
 Diálogos semânticos, foco gerido, contraste, zoom e referências operáveis.
@@ -673,6 +767,8 @@ Diálogos semânticos, foco gerido, contraste, zoom e referências operáveis.
 **Origem/evidência:** HTML sem role=dialog/aria-modal; span bíblico não focalizável.
 
 ### JW-047 — Cache e atualização PWA seguros
+
+**Estado atual: Parcial**
 
 **P1 · 3 pontos relativos · Frontend · Planejado**
 
@@ -688,6 +784,8 @@ Assets versionados, atualização coerente e limites claros de offline.
 
 ### JW-048 — Testar pesquisa, fontes e falhas deterministicamente
 
+**Estado atual: Parcial**
+
 **P1 · 5 pontos relativos · QA/Backend · Planejado**
 
 Fixtures de conteúdo e provedores simulados cobrindo os defeitos reais.
@@ -701,6 +799,8 @@ Fixtures de conteúdo e provedores simulados cobrindo os defeitos reais.
 **Origem/evidência:** Nove testes atuais passam com diagnóstico quebrado.
 
 ### JW-049 — Testar as quatro ferramentas e as sete durações
+
+**Estado atual: Parcial**
 
 **P1 · 5 pontos relativos · QA/IA · Planejado**
 
@@ -716,6 +816,8 @@ Casos estruturais, de seleção e conteúdo para todos os artefatos.
 
 ### JW-050 — Construir benchmark editorial e de fontes
 
+**Estado atual: Planejado**
+
 **P1 · 5 pontos relativos · Pesquisa/QA · Planejado**
 
 Conjunto inicial de 20–30 casos com evidências conferidas e rubrica explícita.
@@ -729,6 +831,8 @@ Conjunto inicial de 20–30 casos com evidências conferidas e rubrica explícit
 **Origem/evidência:** Comparação anterior é amostra de 2 respostas, não benchmark completo.
 
 ### JW-051 — Jornadas completas e regressão de recursos
+
+**Estado atual: Parcial**
 
 **P1 · 5 pontos relativos · QA/Frontend · Planejado**
 
@@ -744,6 +848,8 @@ Teste ponta a ponta da pesquisa aos quatro materiais e exportações.
 
 ### JW-052 — Medir latência e custo por modo e ferramenta
 
+**Estado atual: Planejado**
+
 **P1 · 3 pontos relativos · Engenharia/Produto · Planejado**
 
 Metas revisadas com medição, limites e resultado parcial claro.
@@ -757,6 +863,8 @@ Metas revisadas com medição, limites e resultado parcial claro.
 **Origem/evidência:** Não há base para prometer 4–8 s ou custo zero.
 
 ### JW-053 — Revisar linguagem, atribuição e incerteza
+
+**Estado atual: Planejado**
 
 **P1 · 3 pontos relativos · Produto/Editorial · Planejado**
 
@@ -772,6 +880,8 @@ Tom claro e respeitoso, aplicação identificada e metadados de origem precisos.
 
 ### JW-054 — Testar carga moderada e falhas de infraestrutura
 
+**Estado atual: Planejado**
+
 **P1 · 5 pontos relativos · QA/DevOps · Planejado**
 
 Plano de carga em homologação e testes de isolamento/recuperação.
@@ -785,6 +895,8 @@ Plano de carga em homologação e testes de isolamento/recuperação.
 **Origem/evidência:** Ausência de testes de carga e recuperação.
 
 ### JW-055 — Documentar e empacotar release sem segredos
+
+**Estado atual: Parcial**
 
 **P1 · 3 pontos relativos · Engenharia/Produto · Planejado**
 
@@ -803,6 +915,8 @@ README fiel, instruções de instalação, changelog e pacote com arquivos permi
 
 ### JW-056 — Homologação e deploy observável
 
+**Estado atual: Planejado**
+
 **P1 · 5 pontos relativos · DevOps · Planejado**
 
 Ambiente separado, secrets, banco/fila persistentes e health probes.
@@ -816,6 +930,8 @@ Ambiente separado, secrets, banco/fila persistentes e health probes.
 **Origem/evidência:** render.yaml atual sem job/store e sem runtime fixo.
 
 ### JW-057 — Rollback e restauração testados
+
+**Estado atual: Planejado**
 
 **P1 · 3 pontos relativos · DevOps/Backend · Planejado**
 
@@ -831,6 +947,8 @@ Feature flags, backup e compatibilidade de schema entre versões.
 
 ### JW-058 — Runbook de incidentes e manutenção de modelos
 
+**Estado atual: Planejado**
+
 **P1 · 3 pontos relativos · DevOps/Produto · Planejado**
 
 Procedimentos para quotas, credenciais, modelos retirados, fontes alteradas e bugs de citação.
@@ -845,6 +963,8 @@ Procedimentos para quotas, credenciais, modelos retirados, fontes alteradas e bu
 
 ### JW-059 — Beta orientado a tarefas reais
 
+**Estado atual: Planejado**
+
 **P1 · 3 pontos relativos · Produto/QA · Planejado**
 
 Grupo restrito testa pesquisas, famílias variadas e discursos de várias durações.
@@ -858,6 +978,8 @@ Grupo restrito testa pesquisas, famílias variadas e discursos de várias duraç
 **Origem/evidência:** Validar relevância do produto além da geração de texto.
 
 ### JW-060 — Gate de lançamento e monitoramento inicial
+
+**Estado atual: Planejado**
 
 **P1 · 2 pontos relativos · Produto/Engenharia · Planejado**
 
@@ -876,6 +998,8 @@ Checklist de liberação com evidências e responsáveis funcionais.
 
 ### JW-061 — Alinhar Android ao serviço e aos materiais
 
+**Estado atual: Planejado**
+
 **P2 · 8 pontos relativos · Android · Planejado**
 
 Contrato compartilhado, navegação e segurança equivalentes à PWA.
@@ -889,6 +1013,8 @@ Contrato compartilhado, navegação e segurança equivalentes à PWA.
 **Origem/evidência:** Client direto; renderer sem tabelas; APK não auditado como binário.
 
 ### JW-062 — Restaurar projeto iOS compilável e seguro
+
+**Estado atual: Planejado**
 
 **P2 · 8 pontos relativos · iOS · Planejado**
 
@@ -904,6 +1030,8 @@ Projeto Xcode, bindings corretos, leitor real e contrato comum.
 
 ### JW-063 — Matriz de paridade e publicação mobile
 
+**Estado atual: Planejado**
+
 **P2 · 5 pontos relativos · QA/Mobile · Planejado**
 
 Versões compatíveis e testes reais de armazenamento, rede e acessibilidade.
@@ -917,6 +1045,8 @@ Versões compatíveis e testes reais de armazenamento, rede e acessibilidade.
 **Origem/evidência:** Não foi realizada compilação mobile nesta análise.
 
 ### JW-064 — Avaliar índice semântico após benchmark
+
+**Estado atual: Planejado**
 
 **P3 · 8 pontos relativos · IA/Backend · Planejado**
 
@@ -932,6 +1062,8 @@ Experimento condicionado a lacunas de recuperação comprovadas.
 
 ### JW-065 — Sincronização opcional entre dispositivos
 
+**Estado atual: Planejado**
+
 **P3 · 8 pontos relativos · Produto/Backend · Planejado**
 
 Contas, resolução de conflitos e compartilhamento privado revogável.
@@ -945,6 +1077,8 @@ Contas, resolução de conflitos e compartilhamento privado revogável.
 **Origem/evidência:** Recurso adicional, não necessário para o primeiro lançamento.
 
 ### JW-066 — Coleções, favoritos e anotações
+
+**Estado atual: Planejado**
 
 **P2 · 3 pontos relativos · Frontend · Planejado**
 
@@ -960,6 +1094,8 @@ Reencontrar estudos e fontes por tema com notas pessoais separadas da publicaç�
 
 ### JW-067 — Consolidar inglês e espanhol com paridade
 
+**Estado atual: Planejado**
+
 **P2 · 5 pontos relativos · Backend/QA · Planejado**
 
 Edição bíblica, URLs, metadados e interface coerentes por idioma.
@@ -973,6 +1109,8 @@ Edição bíblica, URLs, metadados e interface coerentes por idioma.
 **Origem/evidência:** URLs r5/lp-t hardcoded fora de pt.
 
 ### JW-068 — Indicadores de cobertura calibrados
+
+**Estado atual: Planejado**
 
 **P3 · 5 pontos relativos · Pesquisa/Produto · Planejado**
 

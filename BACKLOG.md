@@ -14,3 +14,7 @@ O planejamento tem 68 itens. Os estados no documento original representam a prop
 ## Como acompanhar
 
 Cada entrega deve indicar IDs JW, mudanças, testes, limitações e próximos passos em `docs/planejamento/PROGRESSO.md`. As caixas acima só devem ser marcadas quando todo o marco satisfizer os critérios do roadmap.
+
+## Primeira entrega implementada
+
+Concluídos: JW-003, JW-006, JW-009 e JW-010. Outros itens têm implementação parcial documentada no [registro de progresso](docs/planejamento/PROGRESSO.md). Nenhum marco completo foi encerrado.

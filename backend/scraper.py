@@ -1,23 +1,19 @@
-from typing import Optional, List, Dict, Any
-from google import genai
-from google.genai import types
 import os
 import urllib.request
 import urllib.parse
 import re
-import requests
+from safety import fetch_public_html, sanitize_article, SearchDeadline, UnsafeURL
 from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor
 
 
 # Initialize Google GenAI client
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
+if not GEMINI_API_KEY and os.environ.get("JW_DISABLE_DOTENV") != "1":
     # Try reading from .env in root or backend folder
     env_paths = [
         os.path.join(os.path.dirname(__file__), "..", ".env"),
         os.path.join(os.path.dirname(__file__), ".env"),
-        ".env"
+        ".env",
     ]
     for p in env_paths:
         if os.path.exists(p):
@@ -26,7 +22,9 @@ if not GEMINI_API_KEY:
                     for line in f:
                         line_s = line.strip()
                         if line_s.startswith("GEMINI_API_KEY="):
-                            GEMINI_API_KEY = line_s.split("=", 1)[1].strip().strip('"').strip("'")
+                            GEMINI_API_KEY = (
+                                line_s.split("=", 1)[1].strip().strip('"').strip("'")
+                            )
                             os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
                             break
             except Exception:
@@ -34,116 +32,130 @@ if not GEMINI_API_KEY:
         if GEMINI_API_KEY:
             break
 
-if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
-    print("New Google GenAI client initialized successfully.")
-else:
-    client = None
-    print("WARNING: GEMINI_API_KEY not found in environment or .env file. AI search grounding is disabled.")
-
-def set_api_key(new_key: str):
-    global client, GEMINI_API_KEY
-    if not new_key or not new_key.strip():
-        return False, "Chave vazia ou inválida"
-    key = new_key.strip()
-    try:
-        new_client = genai.Client(api_key=key)
-        client = new_client
-        GEMINI_API_KEY = key
-        os.environ["GEMINI_API_KEY"] = key
-        
-        # Save to .env files
-        for p in [os.path.join(os.path.dirname(__file__), "..", ".env"), os.path.join(os.path.dirname(__file__), ".env"), ".env"]:
-            try:
-                with open(p, "w", encoding="utf-8") as f:
-                    f.write(f"GEMINI_API_KEY={key}\n")
-            except Exception:
-                pass
-        return True, "Chave configurada com sucesso!"
-    except Exception as e:
-        return False, f"Erro ao configurar chave: {e}"
 
 def get_api_status():
-    has_gemini = bool(client and GEMINI_API_KEY)
+    has_gemini = bool(os.environ.get("GEMINI_API_KEY"))
     has_deepseek = bool(os.environ.get("DEEPSEEK_API_KEY"))
-    has_hy3 = bool(os.environ.get("HY3_API_KEY") or os.environ.get("OPENAI_API_KEY"))
-    
+    has_hy3 = bool(os.environ.get("HY3_API_KEY"))
+
     default_prov = "gemini"
     if has_hy3 and not has_gemini:
         default_prov = "hy3"
     elif has_deepseek and not has_gemini:
         default_prov = "deepseek"
-        
+
     return {
         "has_key": has_gemini or has_deepseek or has_hy3,
         "has_gemini": has_gemini,
         "has_deepseek": has_deepseek,
         "has_hy3": has_hy3,
         "default_provider": default_prov,
-        "key_preview": f"{GEMINI_API_KEY[:4]}...{GEMINI_API_KEY[-4:]}" if GEMINI_API_KEY and len(GEMINI_API_KEY) > 8 else None
+        "key_preview": None,
     }
 
-
-
-_session = requests.Session()
-_session.headers.update({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-})
 
 def clean_text(text):
     if not text:
         return ""
-    return re.sub(r'\s+', ' ', text).strip()
+    return re.sub(r"\s+", " ", text).strip()
+
 
 def get_headers():
     return {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     }
+
 
 def fetch_url(url):
     try:
-        r = _session.get(url, timeout=4.0)
-        if r.status_code == 200:
-            return r.text
-    except Exception as e:
-        pass
-    return None
-
-def resolve_redirect_url(url):
-    if not url or "grounding-api-redirect" not in url:
-        return url
-    try:
-        r = _session.head(url, allow_redirects=True, timeout=2.0)
-        return r.url
+        return fetch_public_html(url)
+    except (UnsafeURL, SearchDeadline):
+        raise
     except Exception:
-        try:
-            r = _session.get(url, allow_redirects=True, timeout=2.0)
-            return r.url
-        except Exception:
-            return url
+        return None
+
 
 def infer_publication_info(title, url):
     url_lower = (url or "").lower()
     title_lower = (title or "").lower()
-    
-    if "wp" in url_lower or "/sentinela-fevereiro" in url_lower or "/sentinela-janeiro" in url_lower or "/sentinela-março" in url_lower:
+
+    if (
+        "wp" in url_lower
+        or "/sentinela-fevereiro" in url_lower
+        or "/sentinela-janeiro" in url_lower
+        or "/sentinela-março" in url_lower
+    ):
         return "A Sentinela (Público)"
     elif "ws" in url_lower or "sentinela-estudo" in url_lower:
         return "A Sentinela (Edição de Estudo)"
-    elif any(k in url_lower for k in ["/w20", "/w19", "/w18", "/w17", "/w16", "/w15", "/w14", "/w13", "/w12", "/w11", "/w10", "/w0", "/w9", "/w8", "/w7", "/w6"]) or "sentinela" in url_lower or "watchtower" in url_lower:
+    elif (
+        any(
+            k in url_lower
+            for k in [
+                "/w20",
+                "/w19",
+                "/w18",
+                "/w17",
+                "/w16",
+                "/w15",
+                "/w14",
+                "/w13",
+                "/w12",
+                "/w11",
+                "/w10",
+                "/w0",
+                "/w9",
+                "/w8",
+                "/w7",
+                "/w6",
+            ]
+        )
+        or "sentinela" in url_lower
+        or "watchtower" in url_lower
+    ):
         return "A Sentinela"
-    elif any(k in url_lower or k in title_lower for k in ["/g20", "/g19", "/g18", "/g17", "/g16", "/g15", "/g14", "/g13", "/g12", "/g0", "/g9", "/g8", "/g7", "despertai", "awake"]):
+    elif any(
+        k in url_lower or k in title_lower
+        for k in [
+            "/g20",
+            "/g19",
+            "/g18",
+            "/g17",
+            "/g16",
+            "/g15",
+            "/g14",
+            "/g13",
+            "/g12",
+            "/g0",
+            "/g9",
+            "/g8",
+            "/g7",
+            "despertai",
+            "awake",
+        ]
+    ):
         return "Despertai!"
-    elif any(k in url_lower or k in title_lower for k in ["it-1", "it-2", "perspicaz", "insight", "estudo-perspicaz", "/1200"]):
+    elif any(
+        k in url_lower or k in title_lower
+        for k in ["it-1", "it-2", "perspicaz", "insight", "estudo-perspicaz", "/1200"]
+    ):
         return "Estudo Perspicaz das Escrituras"
-    elif any(k in url_lower or k in title_lower for k in ["nwt", "bi12", "biblia", "bible", "/bc/", "/b/"]):
+    elif any(
+        k in url_lower or k in title_lower
+        for k in ["nwt", "bi12", "biblia", "bible", "/bc/", "/b/"]
+    ):
         return "Bíblia Sagrada (Tradução do Novo Mundo)"
-    elif any(k in url_lower or k in title_lower for k in ["ijwbq", "perguntas-biblicas", "perguntas"]):
+    elif any(
+        k in url_lower or k in title_lower
+        for k in ["ijwbq", "perguntas-biblicas", "perguntas"]
+    ):
         return "Perguntas Bíblicas Respondidas"
     elif any(k in url_lower or k in title_lower for k in ["ijwyp", "jovens-perguntam"]):
         return "Os Jovens Perguntam"
-    elif any(k in url_lower for k in ["/lfb/", "/my/", "historias-biblia", "aprenda-historias", "/110"]):
+    elif any(
+        k in url_lower
+        for k in ["/lfb/", "/my/", "historias-biblia", "aprenda-historias", "/110"]
+    ):
         return "Histórias da Bíblia / Livros"
     elif any(k in url_lower for k in ["/mwb", "vida-e-ministerio"]):
         return "Apostila Vida e Ministério"
@@ -156,607 +168,306 @@ def infer_publication_info(title, url):
     else:
         return urllib.parse.urlparse(url).netloc or "Fonte da Internet"
 
+
 def clean_result_title(title, url):
     raw_title = urllib.parse.unquote((title or "").strip())
     url_lower = (url or "").lower()
 
     # If title is generic or just a code
-    if not raw_title or raw_title.lower() in ["jw.org", "wol", "wol - biblioteca", "link de referência", "artigo de referência", "início", "pesquisar"]:
+    if not raw_title or raw_title.lower() in [
+        "jw.org",
+        "wol",
+        "wol - biblioteca",
+        "link de referência",
+        "artigo de referência",
+        "início",
+        "pesquisar",
+    ]:
         path = urllib.parse.urlparse(url).path.strip("/")
-        parts = [p for p in path.split("/") if p and p not in ["pt", "en", "es", "wol", "d", "r5", "lp-t", "biblioteca", "revistas", "livros"]]
+        parts = [
+            p
+            for p in path.split("/")
+            if p
+            and p
+            not in [
+                "pt",
+                "en",
+                "es",
+                "wol",
+                "d",
+                "r5",
+                "lp-t",
+                "biblioteca",
+                "revistas",
+                "livros",
+            ]
+        ]
         if parts:
             slug = urllib.parse.unquote(parts[-1]).replace("-", " ").replace("_", " ")
             raw_title = slug
 
     # If title looks like wp20130201 or g20040408
-    if re.match(r'^(wp|ws|w|g)\d{6,8}$', raw_title, re.I):
+    if re.match(r"^(wp|ws|w|g)\d{6,8}$", raw_title, re.I):
         pub_type = "A Sentinela" if raw_title.lower().startswith("w") else "Despertai!"
-        year = raw_title[2:6] if raw_title.lower().startswith("wp") or raw_title.lower().startswith("ws") else raw_title[1:5]
+        year = (
+            raw_title[2:6]
+            if raw_title.lower().startswith("wp") or raw_title.lower().startswith("ws")
+            else raw_title[1:5]
+        )
         return f"{pub_type} ({year})"
 
-    # Capitalize and clean slug formatting
-    clean = re.sub(r'\s+', ' ', raw_title.replace("-", " ").replace("_", " ")).strip()
-    words = clean.split()
-    capitalized = []
-    lower_words = {"de", "do", "da", "dos", "das", "em", "no", "na", "nos", "nas", "por", "para", "com", "e", "o", "a", "os", "as", "um", "uma"}
-    for i, w in enumerate(words):
-        if i == 0 or w.lower() not in lower_words:
-            capitalized.append(w.capitalize())
-        else:
-            capitalized.append(w.lower())
-    
-    formatted = " ".join(capitalized)
-    
-    # Specific known biblical themes polish
-    if "moises" in formatted.lower():
-        formatted = formatted.replace("Moises", "Moisés").replace("moises", "Moisés")
-    if "fe" in formatted.lower():
-        formatted = formatted.replace("Fe", "Fé").replace(" fe ", " fé ")
-    if "biblia" in formatted.lower():
-        formatted = formatted.replace("Biblia", "Bíblia")
-    if "jeova" in formatted.lower():
-        formatted = formatted.replace("Jeova", "Jeová")
+    return re.sub(r"\s+", " ", raw_title).strip() or "Publicação"
 
-    return formatted or "Publicação Oficial"
-
-
-def enrich_and_autolink_theocratic_response(ai_response: str, resolved_chunks: list) -> str:
-    """
-    Scans the AI response for cited theocratic publications (e.g. A Sentinela, Despertai!, Livros)
-    that are in plain text, and wraps them in valid clickable Markdown links to wol.jw.org!
-    """
-    if not ai_response:
-        return ai_response
-
-    lines = ai_response.split('\n')
-    new_lines = []
-    
-    # Map publication keywords from resolved chunks
-    pub_url_map = {}
-    for c in resolved_chunks:
-        uri = c.get('link') or c.get('uri', '')
-        title = c.get('title', '').strip()
-        pub = c.get('publication', '').strip()
-        if uri:
-            if title:
-                pub_url_map[title.lower()] = uri
-            if pub:
-                pub_url_map[pub.lower()] = uri
-
-    for line in lines:
-        stripped = line.strip()
-        # Skip if already a markdown link or containing tutorial / instructions
-        if 'http' in line or '[' in line or ']' in line:
-            new_lines.append(line)
-            continue
-
-        skip_phrases = ['acesse', 'digite', 'barra de pesquisa', 'como pesquisar', 'ex.:', 'exemplo', 'pesquisa no wol']
-        if any(sp in stripped.lower() for sp in skip_phrases):
-            new_lines.append(line)
-            continue
-
-        # Check if line is a list item citing a specific recognized publication
-        if stripped.startswith(('- ', '* ', '1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ')):
-            theocratic_pub_prefixes = [
-                'a sentinela', 'despertai!', 'despertai', 'livro ', 'brochura ', 
-                'estudo perspicaz', 'mantenha-se no amor', 'beneficie-se', 
-                'pastoreiem o rebanho', 'organizados para fazer', 'tradução do novo mundo'
-            ]
-            has_theocratic_pub = any(k in stripped.lower() for k in theocratic_pub_prefixes)
-            
-            if has_theocratic_pub:
-                clean_text = re.sub(r'^[-\*\d\.\s]+', '', stripped).strip()
-                clean_query = re.sub(r'[\*\"\_]', '', clean_text).strip()
-                
-                matched_url = None
-                clean_query_lower = clean_query.lower()
-                for t_low, url in pub_url_map.items():
-                    words = [w for w in clean_query_lower.split() if len(w) > 3]
-                    if words and sum(1 for w in words if w in t_low) >= 1:
-                        matched_url = url
-                        break
-                
-                if not matched_url:
-                    encoded_q = urllib.parse.quote_plus(clean_query[:100])
-                    matched_url = f"https://wol.jw.org/pt/wol/s/r5/lp-t?q={encoded_q}"
-                
-                prefix = line[:line.find(clean_text[0])] if clean_text and clean_text[0] in line else "- "
-                line = f"{prefix}[{clean_text}]({matched_url})"
-        
-        new_lines.append(line)
-        
-    return '\n'.join(new_lines)
-
-
-class ApiKeyRequiredException(Exception):
-    """Raised when no API key is provided on client or server."""
-    pass
-
-def perform_ai_grounded_search(query, include_external=False, lang='pt', custom_api_key=None, history=None):
-    active_client = None
-    if custom_api_key and str(custom_api_key).strip():
-        try:
-            active_client = genai.Client(api_key=str(custom_api_key).strip())
-        except Exception as e:
-            raise Exception(f"Chave de API do Gemini inválida: {e}")
-    elif client:
-        active_client = client
-        
-    if not active_client:
-        raise ApiKeyRequiredException("Chave da API do Gemini não configurada. Por favor, insira sua chave gratuita para realizar a pesquisa.")
-        
-    # Language instruction
-    lang_map = {
-        'pt': 'Português (Brasil)',
-        'en': 'English',
-        'es': 'Español'
-    }
-    target_lang = lang_map.get(lang, 'Português (Brasil)')
-
-
-    if include_external:
-        source_directive = """Você tem permissão para pesquisar na Internet em geral para contextualizar fatos históricos, arqueológicos ou científicos.
-No entanto, PRIORIZE E DESTAQUE SEMPRE o entendimento oficial publicado em wol.jw.org e jw.org.
-SEPARAÇÃO OBRIGATÓRIA: Qualquer informação ou fonte externa que não venha de jw.org/wol.jw.org DEVE ser categorizada exclusivamente no final sob a seção '### 🌐 Fontes Externas (Internet)'."""
-    else:
-        source_directive = """ATENÇÃO: Sua pesquisa DEVE SER RESTRITA EXCLUSIVAMENTE aos sites oficiais das Testemunhas de Jeová: wol.jw.org e jw.org (incluindo todos os subdomínios).
-- NÃO utilize nenhuma fonte de terceiros, blogs, enciclopédias seculares ou opiniões não-oficiais.
-- Toda explicação doutrinária, moral ou histórica deve estar fundamentada nas publicações oficiais (A Sentinela, Despertai!, Estudo Perspicaz das Escrituras, Livros da Torre de Vigia, etc.).
-- Se um determinado aspecto não for abordado nas fontes oficiais, declare isso com humildade e fidelidade ao registro teocrático."""
-
-    # Fetch verified theocratic context from wol.jw.org
-    conversation_context = ""
-    if history:
-        conversation_context = "\nHISTÓRICO ANTERIOR DA CONVERSA:\n"
-        for msg in history:
-            role_label = "Usuário" if msg.get("role") == "user" else "Assistente Teocrático"
-            conversation_context += f"{role_label}: {msg.get('content')}\n\n"
-
-    # Fetch verified theocratic context from wol.jw.org in real time
-    theocratic_context = ""
-    wol_articles = []
-    try:
-        from rag_engine import search_wol_direct, fetch_rag_context
-        wol_articles = search_wol_direct(query, lang=lang, max_results=6)
-        theocratic_context = fetch_rag_context(wol_articles, max_articles=3)
-    except Exception as e:
-        print(f"WOL prefetch notice: {e}")
-
-    prompt = f"""Você é um assistente de pesquisa teocrática avançado e objetivo (no estilo de um motor de busca analítico como Perplexity AI / RAG Especializado), focado no acervo da Biblioteca Online da Torre de Vigia (wol.jw.org) e do site oficial (jw.org).
-
-IDIOMA DA RESPOSTA: Responda obrigatoriamente em {target_lang}.
-
-DIRETRIZES DE ESCOPO, VERACIDADE E ANTI-ALUCINAÇÃO (RIGOR MÁXIMO):
-{source_directive}
-- VERACIDADE TOTAL (PROIBIÇÃO DE INVENTAR DATAS/EDIÇÕES): NUNCA invente, deduza ou adivinhe datas de revistas (ex: "A Sentinela de 15 de abril de 2014", "15 de julho de 2011", "outubro de 2008") ou números de página fictícios.
-- SE NÃO SOUBER A DATA EXATA: Cite o princípio bíblico, os versículos ou livros gerais da Torre de Vigia (ex: livro 'Mantenha-se no Amor de Deus, cap. 12', 'Estudo Perspicaz'), SEM forjar datas ou meses inexistentes para revistas.
-- PROIBIÇÃO DE TUTORIAIS DE BUSCA: NUNCA crie seções ensinando o usuário a pesquisar no WOL (como 'Como pesquisar no WOL', 'acesse wol.jw.org e digite...'). O JW Search já é o próprio motor de pesquisa! Entregue o conteúdo diretamente.
-- PROIBIÇÃO DE DESCULPAS OU METADIÁLOGOS: NUNCA inclua pedidos de desculpas (ex: 'Peço desculpas pelo engano anterior', 'Você está certo em buscar a fonte'). Mantenha o tom sempre profissional, focado no ensino bíblico e na análise teocrática.
-- OBJETIVIDADE: Seja claro, direto, fiel e profundo. Evite prolixidade.
-- CAPACIDADE DE FORMATAÇÃO: Você tem capacidade de gerar TABELAS COMPARATIVAS COMPLETAS em Markdown (| Coluna 1 | Coluna 2 |), listas, roteiros de estudo, resumos e documentos detalhados sempre que solicitado.
-- REGRA OBRIGATÓRIA DE LINKS: TODA e qualquer publicação citada e textos bíblicos DEVEM ser formatados como links Markdown clicáveis: `[Nome da Publicação - Título](https://wol.jw.org/pt/wol/s/r5/lp-t?q=Nome+da+Publicacao)` ou com a URL oficial correspondente.
-
-ESTRUTURA DA RESPOSTA (Adapte livremente se o usuário solicitar tabelas, listas ou formatos específicos):
-
-### 📌 Resposta Direta & Síntese
-(Apresente um resumo claro, objetivo e bíblico que responde diretamente à dúvida do usuário).
-
-### 📖 Análise Teocrática Detalhada
-(Desenvolva os pontos fundamentais com clareza e fidelidade teocrática, fundamentando em princípios e fontes verificadas):
-- Explique o contexto e o raciocínio das publicações das Testemunhas de Jeová.
-- Mencione nominalmente as publicações relevantes SEMPRE com links Markdown clicáveis (ex: `[Livro Mantenha-se no Amor de Deus - Cap. 12](https://wol.jw.org/pt/...)`).
-
-### 📜 Textos Bíblicos Principais
-(Destaque os textos bíblicos principais e sua aplicação, com links para a Bíblia no wol.jw.org).
-
-### 📚 Publicações e Fontes Oficiais
-(Liste em tópicos as publicações e artigos autênticos consultados, SEMPRE com links Markdown clicáveis para cada item).
-
-{"### 🌐 Fontes Externas (Internet)" if include_external else ""}
-
-{f"--- DOCUMENTOS E ARTIGOS REAIS DO WOL EXTRAÍDOS: ---" + chr(10) + theocratic_context if theocratic_context else ""}
-
-{conversation_context}
-PERGUNTA OU SOLICITAÇÃO DO USUÁRIO: "{query}"
-"""
-
-    # Run search grounding with multi-model resilience and retry
-    models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
-    response = None
-    last_err = None
-
-    for m in models_to_try:
-        try:
-            response = active_client.models.generate_content(
-                model=m,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    tools=[{"google_search": {}}],
-                    temperature=0.3,
-                    max_output_tokens=2500
-                )
-            )
-            if response and response.text and len(response.text.strip()) > 20:
-                break
-        except Exception as err:
-            last_err = err
-            import time
-            time.sleep(0.4)
-
-    # Fallback without search tool if grounding had a temporary 503 spike
-    if not response or not response.text or len(response.text.strip()) < 20:
-        for m in ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']:
-            try:
-                response = active_client.models.generate_content(
-                    model=m,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.3,
-                        max_output_tokens=2500
-                    )
-                )
-                if response and response.text and len(response.text.strip()) > 20:
-                    break
-            except Exception as err:
-                last_err = err
-
-    if not response or not response.text or len(response.text.strip()) < 10:
-        raise Exception(f"Erro ao gerar ponderações da IA: {last_err or 'Modelo indisponível no momento'}")
-
-    try:
-        ai_response = response.text or ""
-        results = []
-        raw_chunks = []
-        
-        candidate = response.candidates[0] if response.candidates else None
-        metadata = candidate.grounding_metadata if candidate else None
-        
-        if metadata and metadata.grounding_chunks:
-            for chunk in metadata.grounding_chunks:
-                web = chunk.web
-                if web and web.uri and web.uri not in [rc['uri'] for rc in raw_chunks]:
-                    raw_chunks.append({
-                        "uri": web.uri,
-                        "title": web.title
-                    })
-
-        # Parse links from the generated markdown text
-        extracted_chunks = []
-        md_links = re.findall(r'\[([^\]]+)\]\((https?://[a-zA-Z0-9\.\-\/\?&\=\#\%\+\:\_]+)\)', ai_response)
-        for title, uri in md_links:
-            if uri not in [rc['uri'] for rc in raw_chunks] and uri not in [ec['uri'] for ec in extracted_chunks]:
-                extracted_chunks.append({
-                    "uri": uri,
-                    "title": title
-                })
-        
-        raw_uris = re.findall(r'(?<!\()(https?://[a-zA-Z0-9\.\-\/\?&\=\#\%\+\:\_]+)', ai_response)
-        for uri in raw_uris:
-            while uri and uri[-1] in ['.', ',', ';', ')', ']']:
-                uri = uri[:-1]
-            if uri not in [rc['uri'] for rc in raw_chunks] and uri not in [ec['uri'] for ec in extracted_chunks]:
-                title = "WOL - Biblioteca" if "wol.jw.org" in uri else ("JW.ORG" if "jw.org" in uri else "Link de Referência")
-                extracted_chunks.append({
-                    "uri": uri,
-                    "title": title
-                })
-                
-        # Merge all grounding metadata and markdown links
-        combined_chunks = []
-        seen_uris_set = set()
-        for c in raw_chunks + extracted_chunks:
-            u = c.get('uri', '').split('?')[0].split('#')[0]
-            if u and u not in seen_uris_set:
-                seen_uris_set.add(u)
-                combined_chunks.append(c)
-                
-        raw_chunks = combined_chunks[:20]
-        
-        # Resolve redirect URLs in parallel to get direct jw.org or wol.jw.org links
-        with ThreadPoolExecutor(max_workers=12) as executor:
-            resolved_uris = list(executor.map(lambda c: resolve_redirect_url(c['uri']), raw_chunks))
-            
-        seen_uris = set()
-        for idx, chunk in enumerate(raw_chunks):
-            final_uri = resolved_uris[idx]
-            
-            clean_uri = final_uri.split('?')[0].split('#')[0]
-            if clean_uri in seen_uris:
-                continue
-            seen_uris.add(clean_uri)
-            
-            is_external_link = not ("jw.org" in final_uri or "wol.jw.org" in final_uri)
-            
-            # Skip external if not include_external was checked (fail-safe filtering)
-            if not include_external and is_external_link:
-                continue
-                
-            pub = infer_publication_info(chunk.get('title', ''), final_uri)
-            title = clean_result_title(chunk.get('title', ''), final_uri)
-                
-            results.append({
-                "title": title,
-                "snippet": f"Publicação oficial citada nas ponderações da pesquisa teocrática. Clique para ler no leitor integrado ou acessar a fonte original.",
-                "link": final_uri,
-                "publication": pub,
-                "is_external": is_external_link,
-                "source_site": urllib.parse.urlparse(final_uri).netloc
-            })
-
-        # Prepend or merge verified WOL direct articles into results list
-        for wa in wol_articles:
-            clean_l = wa['link'].split('?')[0].split('#')[0]
-            if not any(r['link'].split('?')[0].split('#')[0] == clean_l for r in results):
-                results.append(wa)
-
-        # Post-processing: Auto-link any plain-text publication mentions into clickable Markdown links
-        ai_response = enrich_and_autolink_theocratic_response(ai_response, results)
-            
-        return {"ai_response": ai_response, "results": results}
-    except Exception as e:
-        print(f"Error performing grounded search: {e}")
-        return {
-            "ai_response": f"Erro ao gerar ponderações da IA: {e}",
-            "results": []
-        }
 
 def get_clean_document(url, requested_title=None):
-    clean_title = re.sub(r'[\>\*\_\"\#\[\]]', '', requested_title or '').strip()
-    
-    # If URL is a WOL search URL (/wol/s/ or ?q=), resolve real target document
-    if '/wol/s/' in url or '?q=' in url:
-        parsed_url = urllib.parse.urlparse(url)
-        q_params = urllib.parse.parse_qs(parsed_url.query)
-        extracted_q = q_params.get('q', [''])[0]
-        search_term = clean_title if (clean_title and len(clean_title) > 3) else extracted_q
-        if search_term:
-            try:
-                from rag_engine import search_wol_direct
-                results = search_wol_direct(search_term, max_results=1)
-                if results and results[0].get('link') and results[0]['link'] != url:
-                    url = results[0]['link']
-            except Exception as e:
-                print(f"Resolve search URL error: {e}")
-
+    # A click always opens that URL; never silently substitute a different article.
     html = fetch_url(url)
     if not html:
         return None
-        
-    soup = BeautifulSoup(html, 'html.parser')
-    
-    doc_div = soup.find("div", class_="document") or soup.find("div", id="docContent") or soup.find("article")
-    if not doc_div:
-        # If it's still a search page with no direct article
-        if '/wol/s/' in url:
-            return f"""
-            <div class="p-8 text-center space-y-4">
-                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto text-xl">
-                    <i class="fa-solid fa-book-open"></i>
-                </div>
-                <h3 class="text-base font-bold text-slate-800">Busca na Biblioteca Online</h3>
-                <p class="text-xs text-slate-600 max-w-md mx-auto">Este item corresponde a um tópico de pesquisa no acervo teocrático. Você pode visualizar os artigos diretamente no site oficial:</p>
-                <a href="{url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow transition-all">
-                    <span>Acessar pesquisa no wol.jw.org</span>
-                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                </a>
-            </div>
-            """
-        doc_div = soup.find("body")
-        
-    if not doc_div:
+    soup = BeautifulSoup(html, "html.parser")
+    document = soup.select_one("div.document, #docContent, article")
+    if document is None:
         return None
-        
-    doc_copy = BeautifulSoup(str(doc_div), 'html.parser')
-
-    # Smart Mismatch Guard: If URL was mismatched
-    if clean_title and len(clean_title) > 5:
-        first_h = doc_copy.find(["h1", "h2", "h3", "header", "strong"])
-        if first_h:
-            h_text = first_h.get_text(strip=True).lower()
-            req_words = [w for w in clean_title.lower().split() if len(w) > 3 and w not in ["quem", "como", "onde", "quando", "sobre", "para", "artigo", "livro"]]
-            if req_words and not any(rw in h_text for rw in req_words):
-                try:
-                    from rag_engine import search_wol_direct
-                    fallback_results = search_wol_direct(clean_title, max_results=1)
-                    if fallback_results and fallback_results[0]['link'] != url:
-                        fallback_html = fetch_url(fallback_results[0]['link'])
-                        if fallback_html:
-                            fb_soup = BeautifulSoup(fallback_html, 'html.parser')
-                            fb_doc = fb_soup.find("div", class_="document") or fb_soup.find("div", id="docContent") or fb_soup.find("article")
-                            if fb_doc:
-                                doc_copy = BeautifulSoup(str(fb_doc), 'html.parser')
-                except Exception as ex:
-                    print(f"Fallback resolver error for '{clean_title}': {ex}")
-    
-    for tag in doc_copy.find_all(["script", "style", "nav", "footer", "button"]):
+    for tag in document.find_all(
+        ["script", "style", "nav", "footer", "button", "iframe", "form"]
+    ):
         tag.decompose()
-        
-    for tag in doc_copy.find_all(class_=lambda x: x and ("pageNum" in x or "lnk" in x or "audioButton" in x)):
-        tag.decompose()
-        
-    for a in doc_copy.find_all("a"):
-        href = a.get("href", "")
-        if href.startswith('/'):
-            a['href'] = f"https://wol.jw.org{href}"
-        elif href.startswith('//'):
-            a['href'] = f"https:{href}"
-            
-    # Fix all images and responsive sources
-    for img in doc_copy.find_all("img"):
-        for attr in ["src", "data-src", "data-img-small-src", "data-img-large-src", "data-img-src"]:
-            val = img.get(attr, "")
-            if val:
-                if val.startswith('/'):
-                    img[attr] = f"https://wol.jw.org{val}"
-                elif val.startswith('//'):
-                    img[attr] = f"https:{val}"
-        
-        # Ensure src is always populated if data-src / data-img-small-src is present
-        if not img.get("src") or img.get("src") == "#":
-            fallback_src = img.get("data-src") or img.get("data-img-small-src") or img.get("data-img-large-src") or img.get("data-img-src")
-            if fallback_src:
-                img["src"] = fallback_src
-        
-        img_classes = img.get("class", [])
-        if isinstance(img_classes, str):
-            img_classes = img_classes.split()
-        img_classes.extend(["rounded-xl", "shadow-sm", "my-3", "max-w-full", "h-auto"])
-        img["class"] = list(set(img_classes))
-        img["loading"] = "lazy"
+    return sanitize_article(str(document), url)
 
-    for source in doc_copy.find_all("source"):
-        for attr in ["srcset", "data-srcset", "src"]:
-            val = source.get(attr, "")
-            if val:
-                if val.startswith('/'):
-                    source[attr] = f"https://wol.jw.org{val}"
-                elif val.startswith('//'):
-                    source[attr] = f"https:{val}"
-            
-    return str(doc_copy)
 
 # =====================================================================
 # Bible Verse Extraction & Floating Tooltip Parser (TNM / wol.jw.org)
 # =====================================================================
 BIBLE_BOOKS_MAP = {
-    "gênesis": 1, "genesis": 1, "gên": 1, "gen": 1, "gn": 1,
-    "êxodo": 2, "exodo": 2, "êx": 2, "ex": 2,
-    "levítico": 3, "levitico": 3, "lev": 3, "lv": 3,
-    "números": 4, "numeros": 4, "núm": 4, "num": 4, "nm": 4,
-    "deuteronômio": 5, "deuteronomio": 5, "deut": 5, "dt": 5,
-    "josué": 6, "josue": 6, "jos": 6, "js": 6,
-    "juízes": 7, "juizes": 7, "juí": 7, "jui": 7, "jz": 7,
-    "rute": 8, "rut": 8, "rt": 8,
-    "1 samuel": 9, "1samuel": 9, "1 sam": 9, "1sam": 9, "1 sm": 9, "1sm": 9,
-    "2 samuel": 10, "2samuel": 10, "2 sam": 10, "2sam": 10, "2 sm": 10, "2sm": 10,
-    "1 reis": 11, "1reis": 11, "1 rs": 11, "1rs": 11,
-    "2 reis": 12, "2reis": 12, "2 rs": 12, "2rs": 12,
-    "1 crônicas": 13, "1 cronicas": 13, "1 crô": 13, "1 cro": 13, "1 cr": 13,
-    "2 crônicas": 14, "2 cronicas": 14, "2 crô": 14, "2 cro": 14, "2 cr": 14,
-    "esdras": 15, "esd": 15,
-    "neemias": 16, "ne": 16, "nee": 16,
-    "ester": 17, "est": 17,
-    "jó": 18, "jo": 18,
-    "salmos": 19, "salmo": 19, "sal": 19, "sl": 19,
-    "provérbios": 20, "proverbios": 20, "prov": 20, "pr": 20,
-    "eclesiastes": 21, "ecl": 21, "ec": 21,
-    "cântico de salomão": 22, "cantico de salomao": 22, "cânticos": 22, "canticos": 22, "cânt": 22, "cant": 22, "ct": 22,
-    "isaías": 23, "isaias": 23, "isa": 23, "is": 23,
-    "jeremias": 24, "jer": 24, "jr": 24,
-    "lamentações": 25, "lamentacoes": 25, "lam": 25, "lm": 25,
-    "ezequiel": 26, "eze": 26, "ez": 26,
-    "daniel": 27, "dan": 27, "dn": 27,
-    "oseias": 28, "os": 28,
-    "joel": 29, "joe": 29, "jl": 29,
-    "amós": 30, "amos": 30, "am": 30,
-    "obadias": 31, "ob": 31,
-    "jonas": 32, "jon": 32, "jn": 32,
-    "miqueias": 33, "miq": 33, "mq": 33,
-    "naum": 34, "na": 34,
-    "habacuque": 35, "hab": 35, "hc": 35,
-    "sofonias": 36, "sof": 36, "sf": 36,
-    "ageu": 37, "ag": 37,
-    "zacarias": 38, "zac": 38, "zc": 38,
-    "malaquias": 39, "mal": 39, "ml": 39,
-
+    "gênesis": 1,
+    "genesis": 1,
+    "gên": 1,
+    "gen": 1,
+    "gn": 1,
+    "êxodo": 2,
+    "exodo": 2,
+    "êx": 2,
+    "ex": 2,
+    "levítico": 3,
+    "levitico": 3,
+    "lev": 3,
+    "lv": 3,
+    "números": 4,
+    "numeros": 4,
+    "núm": 4,
+    "num": 4,
+    "nm": 4,
+    "deuteronômio": 5,
+    "deuteronomio": 5,
+    "deut": 5,
+    "dt": 5,
+    "josué": 6,
+    "josue": 6,
+    "jos": 6,
+    "js": 6,
+    "juízes": 7,
+    "juizes": 7,
+    "juí": 7,
+    "jui": 7,
+    "jz": 7,
+    "rute": 8,
+    "rut": 8,
+    "rt": 8,
+    "1 samuel": 9,
+    "1samuel": 9,
+    "1 sam": 9,
+    "1sam": 9,
+    "1 sm": 9,
+    "1sm": 9,
+    "2 samuel": 10,
+    "2samuel": 10,
+    "2 sam": 10,
+    "2sam": 10,
+    "2 sm": 10,
+    "2sm": 10,
+    "1 reis": 11,
+    "1reis": 11,
+    "1 rs": 11,
+    "1rs": 11,
+    "2 reis": 12,
+    "2reis": 12,
+    "2 rs": 12,
+    "2rs": 12,
+    "1 crônicas": 13,
+    "1 cronicas": 13,
+    "1 crô": 13,
+    "1 cro": 13,
+    "1 cr": 13,
+    "2 crônicas": 14,
+    "2 cronicas": 14,
+    "2 crô": 14,
+    "2 cro": 14,
+    "2 cr": 14,
+    "esdras": 15,
+    "esd": 15,
+    "neemias": 16,
+    "ne": 16,
+    "nee": 16,
+    "ester": 17,
+    "est": 17,
+    "jó": 18,
+    "jo": 18,
+    "salmos": 19,
+    "salmo": 19,
+    "sal": 19,
+    "sl": 19,
+    "provérbios": 20,
+    "proverbios": 20,
+    "prov": 20,
+    "pr": 20,
+    "eclesiastes": 21,
+    "ecl": 21,
+    "ec": 21,
+    "cântico de salomão": 22,
+    "cantico de salomao": 22,
+    "cânticos": 22,
+    "canticos": 22,
+    "cânt": 22,
+    "cant": 22,
+    "ct": 22,
+    "isaías": 23,
+    "isaias": 23,
+    "isa": 23,
+    "is": 23,
+    "jeremias": 24,
+    "jer": 24,
+    "jr": 24,
+    "lamentações": 25,
+    "lamentacoes": 25,
+    "lam": 25,
+    "lm": 25,
+    "ezequiel": 26,
+    "eze": 26,
+    "ez": 26,
+    "daniel": 27,
+    "dan": 27,
+    "dn": 27,
+    "oseias": 28,
+    "os": 28,
+    "joel": 29,
+    "joe": 29,
+    "jl": 29,
+    "amós": 30,
+    "amos": 30,
+    "am": 30,
+    "obadias": 31,
+    "ob": 31,
+    "jonas": 32,
+    "jon": 32,
+    "jn": 32,
+    "miqueias": 33,
+    "miq": 33,
+    "mq": 33,
+    "naum": 34,
+    "na": 34,
+    "habacuque": 35,
+    "hab": 35,
+    "hc": 35,
+    "sofonias": 36,
+    "sof": 36,
+    "sf": 36,
+    "ageu": 37,
+    "ag": 37,
+    "zacarias": 38,
+    "zac": 38,
+    "zc": 38,
+    "malaquias": 39,
+    "mal": 39,
+    "ml": 39,
     # Novo Testamento
-    "mateus": 40, "mat": 40, "mt": 40,
-    "marcos": 41, "mar": 41, "mc": 41,
-    "lucas": 42, "luc": 42, "lc": 42,
-    "joão": 43, "joao": 43, "jo": 43,
-    "atos": 44, "at": 44,
-    "romanos": 45, "rom": 45, "rm": 45,
-    "1 coríntios": 46, "1 corintios": 46, "1 cor": 46, "1cor": 46, "1 co": 46,
-    "2 coríntios": 47, "2 corintios": 47, "2 cor": 47, "2cor": 47, "2 co": 47,
-    "gálatas": 48, "galatas": 48, "gál": 48, "gal": 48, "gl": 48,
-    "efésios": 49, "efesios": 49, "ef": 49,
-    "filipenses": 50, "fil": 50, "fp": 50,
-    "colossenses": 51, "col": 51, "cl": 51,
-    "1 tessalonicenses": 52, "1 tes": 52, "1ts": 52,
-    "2 tessalonicenses": 53, "2 tes": 53, "2ts": 53,
-    "1 timóteo": 54, "1 timoteo": 54, "1 tim": 54, "1tm": 54,
-    "2 timóteo": 55, "2 timoteo": 55, "2 tim": 55, "2tm": 55,
-    "tito": 56, "tit": 56, "tt": 56,
-    "filemom": 57, "flm": 57,
-    "hebreus": 58, "heb": 58, "hb": 58,
-    "tiago": 59, "tia": 59, "tg": 59,
-    "1 pedro": 60, "1 ped": 60, "1 pe": 60,
-    "2 pedro": 61, "2 ped": 61, "2 pe": 61,
-    "1 joão": 62, "1 joao": 62, "1 jo": 62,
-    "2 joão": 63, "2 joao": 63, "2 jo": 63,
-    "3 joão": 64, "3 joao": 64, "3 jo": 64,
-    "judas": 65, "jud": 65, "jd": 65,
-    "apocalipse": 66, "apoc": 66, "ap": 66, "revelação": 66, "revelacao": 66, "rev": 66
+    "mateus": 40,
+    "mat": 40,
+    "mt": 40,
+    "marcos": 41,
+    "mar": 41,
+    "mc": 41,
+    "lucas": 42,
+    "luc": 42,
+    "lc": 42,
+    "joão": 43,
+    "joao": 43,
+    "jo": 43,
+    "atos": 44,
+    "at": 44,
+    "romanos": 45,
+    "rom": 45,
+    "rm": 45,
+    "1 coríntios": 46,
+    "1 corintios": 46,
+    "1 cor": 46,
+    "1cor": 46,
+    "1 co": 46,
+    "2 coríntios": 47,
+    "2 corintios": 47,
+    "2 cor": 47,
+    "2cor": 47,
+    "2 co": 47,
+    "gálatas": 48,
+    "galatas": 48,
+    "gál": 48,
+    "gal": 48,
+    "gl": 48,
+    "efésios": 49,
+    "efesios": 49,
+    "ef": 49,
+    "filipenses": 50,
+    "fil": 50,
+    "fp": 50,
+    "colossenses": 51,
+    "col": 51,
+    "cl": 51,
+    "1 tessalonicenses": 52,
+    "1 tes": 52,
+    "1ts": 52,
+    "2 tessalonicenses": 53,
+    "2 tes": 53,
+    "2ts": 53,
+    "1 timóteo": 54,
+    "1 timoteo": 54,
+    "1 tim": 54,
+    "1tm": 54,
+    "2 timóteo": 55,
+    "2 timoteo": 55,
+    "2 tim": 55,
+    "2tm": 55,
+    "tito": 56,
+    "tit": 56,
+    "tt": 56,
+    "filemom": 57,
+    "flm": 57,
+    "hebreus": 58,
+    "heb": 58,
+    "hb": 58,
+    "tiago": 59,
+    "tia": 59,
+    "tg": 59,
+    "1 pedro": 60,
+    "1 ped": 60,
+    "1 pe": 60,
+    "2 pedro": 61,
+    "2 ped": 61,
+    "2 pe": 61,
+    "1 joão": 62,
+    "1 joao": 62,
+    "1 jo": 62,
+    "2 joão": 63,
+    "2 joao": 63,
+    "2 jo": 63,
+    "3 joão": 64,
+    "3 joao": 64,
+    "3 jo": 64,
+    "judas": 65,
+    "jud": 65,
+    "jd": 65,
+    "apocalipse": 66,
+    "apoc": 66,
+    "ap": 66,
+    "revelação": 66,
+    "revelacao": 66,
+    "rev": 66,
 }
-
-_verse_cache = {}
-
-def parse_bible_ref(ref_str: str):
-    m = re.match(r'^(1\s*|2\s*|3\s*)?([a-zA-ZáéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ\s]+?)\.?\s+(\d+)[\:\.]\s*(\d+)(?:-(\d+))?', ref_str.strip())
-    if not m:
-        return None
-    prefix = (m.group(1) or "").strip()
-    book_raw = (prefix + " " + m.group(2)).strip().lower()
-    chapter = int(m.group(3))
-    v_start = int(m.group(4))
-    v_end = int(m.group(5)) if m.group(5) else v_start
-    book_num = BIBLE_BOOKS_MAP.get(book_raw)
-    if not book_num:
-        clean_name = re.sub(r'[^\w\s]', '', book_raw)
-        book_num = BIBLE_BOOKS_MAP.get(clean_name)
-    if not book_num:
-        return None
-    name_fmt = m.group(2).capitalize() if not prefix else f"{prefix} {m.group(2).capitalize()}"
-    return {
-        "book_num": book_num,
-        "book_name": name_fmt,
-        "chapter": chapter,
-        "v_start": v_start,
-        "v_end": v_end,
-        "reference": f"{name_fmt} {chapter}:{v_start}" + (f"-{v_end}" if v_end != v_start else "")
-    }
-
-def fetch_verse_content(ref_str: str, lang: str = "pt"):
-    cache_key = f"{lang}:{ref_str.strip()}"
-    if cache_key in _verse_cache:
-        return _verse_cache[cache_key]
-    parsed = parse_bible_ref(ref_str)
-    if not parsed:
-        return None
-    chapter_url = f"https://wol.jw.org/{lang}/wol/b/r5/lp-t/nwt/{parsed['book_num']}/{parsed['chapter']}"
-    try:
-        req = urllib.request.Request(chapter_url, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        })
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            html = resp.read().decode('utf-8', errors='ignore')
-        soup = BeautifulSoup(html, 'html.parser')
-        doc = soup.select_one('#doc, .document, article')
-        if not doc:
-            return None
-        text = doc.get_text(separator=" ", strip=True)
-        text = re.sub(r'[\+\*]', '', text)
-        
-        v_start = parsed['v_start']
-        v_end = parsed['v_end']
-        
-        pat = rf'{v_start}\s+(.*?)(?={v_end + 1}\s+|$)'
-        m = re.search(pat, text, re.DOTALL)
-        if m:
-            clean_verse = re.sub(r'\s+', ' ', m.group(1)).strip()
-        else:
-            clean_verse = text[:450]
-            
-        result = {
-            "reference": parsed["reference"],
-            "verse_text": clean_verse,
-            "chapter_url": chapter_url,
-            "book_num": parsed["book_num"],
-            "chapter": parsed["chapter"],
-            "publication": "Bíblia Sagrada (Tradução do Novo Mundo)"
-        }
-        _verse_cache[cache_key] = result
-        return result
-    except Exception as e:
-        print(f"Error fetching verse for '{ref_str}': {e}")
-        return None

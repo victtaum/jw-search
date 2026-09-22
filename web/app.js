@@ -131,7 +131,7 @@ function updateProviderUI() {
         } else if (currentProvider === "hy3") {
             activeEngineBadge.innerHTML = `Motor: <b class="text-amber-600">Hy3 / OpenAI (RAG WOL)</b>`;
         } else {
-            activeEngineBadge.innerHTML = `Motor: <b class="text-blue-600">Gemini 2.5 + Grounding</b>`;
+            activeEngineBadge.innerHTML = `Motor: <b class="text-blue-600">Gemini · Fontes WOL</b>`;
         }
     }
 }
@@ -229,22 +229,23 @@ renderToggleUI();
 // ==========================================
 // Quick Suggestion Pills
 // ==========================================
-document.querySelectorAll(".btn-prompt-pill").forEach(pill => {
-    pill.addEventListener("click", () => {
-        const prompt = pill.getAttribute("data-prompt");
-        if (followupInput) {
-            followupInput.value = prompt;
-            followupInput.focus();
-            executeTurnSearch(prompt);
-        }
+document.querySelectorAll(".btn-prompt-pill").forEach((pill, index) => {
+    pill.addEventListener("click", async () => {
+        if (pendingSearch || !activeConversation.turns.length) return;
+        const tool = await JWStudy.configure(['comparison', 'family', 'scriptures', 'outline'][index]);
+        if (tool) executeTurnSearch('Ferramenta: ' + JWStudy.labels[tool.kind], null, tool);
     });
 });
-
 
 // ==========================================
 // Conversational Chat Search Logic
 // ==========================================
-async function executeTurnSearch(query, replaceTurnIndex = null) {
+let pendingSearch = null;
+async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
+    if (pendingSearch) return;
+    const conversation = activeConversation;
+    const mode = JWStudy.getMode();
+    const requestProvider = currentProvider;
     if (!query || !query.trim()) return;
 
     if (activeConversation.turns.length === 0) {
@@ -260,6 +261,7 @@ async function executeTurnSearch(query, replaceTurnIndex = null) {
     const hy3BaseUrl = localStorage.getItem("jw_search_hy3_base_url") || "";
     const hy3Model = localStorage.getItem("jw_search_hy3_model") || "";
 
+    pendingSearch = true;
     statusContainer.classList.remove("hidden");
     let startTime = Date.now();
     let progressTimer = null;
@@ -270,13 +272,8 @@ async function executeTurnSearch(query, replaceTurnIndex = null) {
     const updateStatusMessage = () => {
         secondsElapsed = Math.floor((Date.now() - startTime) / 1000);
         const prefix = isRegenerate ? "🔄 Regerando resposta: " : "";
-        if (secondsElapsed < 3) {
-            if (statusText) statusText.innerText = `${prefix}🔎 Consultando acervo oficial no wol.jw.org (${secondsElapsed}s)...`;
-        } else if (secondsElapsed < 8) {
-            if (statusText) statusText.innerText = `${prefix}📚 Extraindo artigos, notas de estudo e referências (${secondsElapsed}s)...`;
-        } else {
-            if (statusText) statusText.innerText = `${prefix}✨ Sintetizando ponderações teocráticas e estruturando resposta (${secondsElapsed}s)...`;
-        }
+        if (statusText) statusText.innerText = `${prefix}Pesquisa em andamento (${secondsElapsed}s). Modo ${mode === 'deep' ? 'amplo' : 'sintetizado'}.`;
+
     };
 
     updateStatusMessage();
@@ -285,18 +282,19 @@ async function executeTurnSearch(query, replaceTurnIndex = null) {
 
     const historyPayload = [];
     const maxHistIdx = replaceTurnIndex !== null ? replaceTurnIndex : activeConversation.turns.length;
-    for (let i = 0; i < maxHistIdx; i++) {
+    for (let i = Math.max(0, maxHistIdx - 6); i < maxHistIdx; i++) {
         const turn = activeConversation.turns[i];
-        historyPayload.push({ role: "user", content: turn.query });
-        historyPayload.push({ role: "assistant", content: turn.answer });
+        historyPayload.push({ role: "user", content: turn.query.slice(0, 4000) });
+        historyPayload.push({ role: "assistant", content: turn.answer.slice(0, 10000) });
     }
 
-    // Safety AbortController (90s)
+    // Transport margin above the server budget; elapsed time does not imply a stage.
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    const timeoutId = setTimeout(() => controller.abort(), mode === "deep" ? 165000 : 85000);
+    pendingSearch = controller;
 
     try {
-        const headers = { "Content-Type": "application/json" };
+        const headers = { "Content-Type": "application/json", "X-JW-Access-Token": sessionStorage.getItem("jw_access_token") || "" };
         if (geminiKey) headers["X-Gemini-Api-Key"] = geminiKey;
         if (deepseekKey) headers["X-Deepseek-Api-Key"] = deepseekKey;
         if (hy3Key) headers["X-Hy3-Api-Key"] = hy3Key;
@@ -304,9 +302,10 @@ async function executeTurnSearch(query, replaceTurnIndex = null) {
         const bodyData = {
             query: query,
             history: historyPayload,
-            provider: currentProvider,
-            model: hy3Model || null,
-            base_url: hy3BaseUrl || null,
+            provider: requestProvider,
+            model: requestProvider === "hy3" ? (hy3Model || null) : null,
+            base_url: requestProvider === "hy3" ? (hy3BaseUrl || null) : null,
+            mode, tool,
             include_external: includeExternal,
             lang: lang
         };
@@ -336,16 +335,21 @@ async function executeTurnSearch(query, replaceTurnIndex = null) {
         const newTurn = {
             query: query,
             answer: data.ai_response || "Nenhuma resposta gerada.",
-            results: (data.results && data.results.length > 0) 
-                ? data.results 
-                : (activeConversation.turns.length > 0 ? (activeConversation.turns[activeConversation.turns.length - 1].results || []) : []),
+            results: data.results || [],
+            mode, tool, evidence: data.evidence, warnings: data.warnings || [],
             provider: data.provider || currentProvider,
             model: data.model || "",
             latency: durationSec,
             timestamp: new Date().toISOString()
         };
 
+        // A late response belongs to the original conversation only.
+        if (activeConversation !== conversation) return;
         if (replaceTurnIndex !== null && replaceTurnIndex < activeConversation.turns.length) {
+            const archived = {...conversation, id: 'conv_' + crypto.randomUUID(), turns: [...conversation.turns], title: conversation.title + ' (antes de regerar)'};
+            const stored = getStoredThreads(); stored.unshift(archived);
+            try { localStorage.setItem('jw_search_saved_threads', JSON.stringify(stored.slice(0,40))); } catch {}
+            activeConversation.turns = activeConversation.turns.slice(0, replaceTurnIndex + 1);
             activeConversation.turns[replaceTurnIndex] = newTurn;
         } else {
             activeConversation.turns.push(newTurn);
@@ -360,11 +364,13 @@ async function executeTurnSearch(query, replaceTurnIndex = null) {
 
     } catch (err) {
         if (err.name === 'AbortError') {
-            alert("A consulta excedeu o tempo limite. O servidor pode estar reiniciando. Por favor, tente novamente.");
+            alert("A consulta foi interrompida ou atingiu o tempo limite. Você pode reduzir o assunto ou tentar o modo amplo.");
         } else {
             alert(`Erro de conexão: ${err.message}`);
         }
     } finally {
+        clearTimeout(timeoutId);
+        pendingSearch = null;
         if (progressTimer) clearInterval(progressTimer);
         statusContainer.classList.add("hidden");
     }
@@ -479,7 +485,7 @@ function parseMarkdownToHtml(markdown) {
 
     if (inTable) html += flushTable();
     html += flushLists();
-    return html;
+    return DOMPurify.sanitize(html);
 }
 
 function formatInlineMarkdown(text) {
@@ -496,10 +502,12 @@ function formatInlineMarkdown(text) {
 }
 
 function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.innerText = text;
-    return div.innerHTML;
+    return String(text ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function safeLink(value) {
+    try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? escapeHtml(url.href) : '#'; } catch { return '#'; }
+}
+
 
 
 // ==========================================
@@ -578,10 +586,10 @@ function renderConversationThread(focusIndex = null) {
                             ${res.snippet ? `<p class="text-[11px] text-gray-500 line-clamp-2 mt-1 leading-relaxed">${escapeHtml(res.snippet)}</p>` : ''}
                         </div>
                         <div class="flex items-center justify-between pt-2.5 mt-2.5 border-t border-gray-100 text-[11px]">
-                            <button class="btn-open-wol-reader text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" data-url="${res.link}" data-title="${escapeHtml(res.title)}" data-pub="${escapeHtml(pub)}">
+                            <button class="btn-open-wol-reader text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" data-url="${safeLink(res.link)}" data-title="${escapeHtml(res.title)}" data-pub="${escapeHtml(pub)}">
                                 <i class="fa-solid fa-book-open text-[11px]"></i> Ler no app
                             </button>
-                            <a href="${res.link}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-gray-600 flex items-center gap-1 text-[10px] transition-colors" title="Abrir link original">
+                            <a href="${safeLink(res.link)}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-gray-600 flex items-center gap-1 text-[10px] transition-colors" title="Abrir link original">
                                 <span>Site Oficial</span>
                                 <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                             </a>
@@ -606,7 +614,7 @@ function renderConversationThread(focusIndex = null) {
                 </div>
             </div>
         `;
-        turnCard.innerHTML = headerHtml + bodyHtml + actionsBarHtml + sourcesHtml;
+        turnCard.innerHTML = DOMPurify.sanitize(headerHtml + bodyHtml + actionsBarHtml + sourcesHtml);
         chatMessagesList.appendChild(turnCard);
     });
     markBibleVersesInHtml(chatMessagesList);
@@ -928,6 +936,7 @@ if (btnImportStudy && fileImportStudy) {
     fileImportStudy.addEventListener("change", (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        if (file.size > 2000000) { alert("O arquivo deve ter no máximo 2 MB."); return; }
         const reader = new FileReader();
         reader.onload = (ev) => {
             const content = ev.target.result;
@@ -935,7 +944,8 @@ if (btnImportStudy && fileImportStudy) {
                 if (file.name.endsWith(".json")) {
                     const parsed = JSON.parse(content);
                     if (!parsed.turns || !Array.isArray(parsed.turns)) throw new Error("Formato inválido.");
-                    activeConversation = parsed;
+                    if (parsed.turns.length > 100 || parsed.turns.some(t => typeof t.query !== 'string' || typeof t.answer !== 'string' || t.answer.length > 100000)) throw new Error("Conteúdo do estudo inválido ou grande demais.");
+                    activeConversation = {id:'conv_' + crypto.randomUUID(), title:String(parsed.title || 'Estudo importado').slice(0,200), createdAt:new Date().toISOString(), turns:parsed.turns.map(t=>({query:t.query, answer:t.answer, results:Array.isArray(t.results) ? t.results.filter(r=>r && typeof r.title==='string' && typeof r.link==='string').slice(0,30) : [], provider:String(t.provider || ''), timestamp:t.timestamp})), provider:currentProvider};
                 } else {
                     activeConversation = {
                         id: "conv_" + Date.now(),
@@ -965,7 +975,7 @@ function saveCurrentThreadToStorage() {
     const threads = getStoredThreads().filter(t => t.id !== activeConversation.id);
     threads.unshift(activeConversation);
     if (threads.length > 40) threads.pop();
-    localStorage.setItem("jw_search_saved_threads", JSON.stringify(threads));
+    try { localStorage.setItem("jw_search_saved_threads", JSON.stringify(threads)); } catch { alert("O armazenamento local está cheio. Exporte este estudo antes de fechar a página."); }
     updateHistoryBadge();
 }
 function updateHistoryBadge() {
@@ -1020,11 +1030,11 @@ function renderHistoryModal() {
                 </div>
             </div>
             <div class="flex items-center space-x-1.5 text-xs flex-shrink-0">
-                <button class="btn-load-history px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer" data-id="${t.id}" title="Continuar este estudo">
+                <button class="btn-load-history px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer" data-id="${escapeHtml(t.id)}" title="Continuar este estudo">
                     <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
                     <span>Abrir</span>
                 </button>
-                <button class="btn-delete-history-item p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" data-id="${t.id}" title="Excluir este estudo do histórico">
+                <button class="btn-delete-history-item p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" data-id="${escapeHtml(t.id)}" title="Excluir este estudo do histórico">
                     <i class="fa-solid fa-trash-can text-xs"></i>
                 </button>
             </div>`;
@@ -1073,7 +1083,10 @@ if (btnClearAllHistory) btnClearAllHistory.addEventListener("click", clearAllHis
 // ==========================================
 // Reader Panel Logic
 // ==========================================
+let readerSequence = 0;
 async function openReader(url, rawTitle, pub = "Publicação Oficial") {
+    const sequence = ++readerSequence;
+    if (safeLink(url) === "#") return;
     if (!readerPanel || !readerContainer) return;
     const title = (rawTitle || "").replace(/^[>\s\*\"\#\[\]]+|[>\s\*\"\#\[\]]+$/g, '').trim() || "Artigo Teocrático";
     readerPanel.classList.remove("pointer-events-none", "opacity-0");
@@ -1092,14 +1105,18 @@ async function openReader(url, rawTitle, pub = "Publicação Oficial") {
     try {
         const titleParam = title ? `&title=${encodeURIComponent(title)}` : '';
         const res = await fetch(`${API_BASE}/api/read?url=${encodeURIComponent(url)}${titleParam}`);
+        if (!res.ok) throw new Error("Fonte indisponível");
         const data = await res.json();
-        if (readerContent) readerContent.innerHTML = data.content || "<p class='text-sm text-slate-500'>Conteúdo não disponível.</p>";
+        if (sequence !== readerSequence) return;
+        if (readerContent) readerContent.innerHTML = DOMPurify.sanitize(data.content || "<p class='text-sm text-slate-500'>Conteúdo não disponível.</p>");
     } catch { 
+        if (sequence !== readerSequence) return;
         if (readerContent) readerContent.innerHTML = '<div class="p-4 bg-rose-50 text-rose-700 rounded-xl text-sm border border-rose-200">Não foi possível carregar o texto completo deste artigo no momento. Você pode abri-lo diretamente no WOL pelo link abaixo.</div>'; 
     }
 }
 
 function closeReader() {
+    readerSequence++;
     if (!readerPanel || !readerContainer) return;
     readerPanel.classList.add("opacity-0");
     readerContainer.classList.add("translate-x-full");
@@ -1343,6 +1360,7 @@ if (btnSaveKey) {
             localStorage.setItem("jw_search_user_api_key", gKey);
         } else {
             localStorage.removeItem("jw_search_gemini_key");
+            localStorage.removeItem("jw_search_user_api_key");
         }
 
         if (dKey) localStorage.setItem("jw_search_deepseek_key", dKey);
@@ -1403,7 +1421,7 @@ async function runDiagnostics() {
 
     const t0 = Date.now();
     try {
-        const res = await fetch(`${API_BASE}/api/diagnostics`);
+        const res = await fetch(`${API_BASE}/api/diagnostics`, {headers:{"X-JW-Access-Token":sessionStorage.getItem("jw_access_token") || ""}});
         const pingTime = Date.now() - t0;
         if (!res.ok) throw new Error("Servidor retornou erro HTTP " + res.status);
         const data = await res.json();
@@ -1430,7 +1448,7 @@ async function runDiagnostics() {
                         <span class="font-bold text-gray-800 block">📚 Biblioteca WOL</span>
                         <span class="text-[10px] text-gray-500">Busca em tempo real</span>
                     </div>
-                    <span class="font-bold text-green-600">${wolStatus.latency_ms || '120'} ms</span>
+                    <span class="font-bold text-green-600">${wolStatus.status === 'ok' && Number.isFinite(wolStatus.latency_ms) ? wolStatus.latency_ms + ' ms' : 'Indisponível / sem resultados'}</span>
                 </div>
 
                 <!-- Google Gemini -->
@@ -1440,7 +1458,7 @@ async function runDiagnostics() {
                         <span class="text-[10px] text-gray-500">${geminiStatus.configured ? 'Chave pronta no servidor' : 'Sem chave'}</span>
                     </div>
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${geminiStatus.configured ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}">
-                        ${geminiStatus.configured ? 'Ativo (Ultra Rápido)' : 'Inativo'}
+                        ${geminiStatus.configured ? 'Configurado (não testado)' : 'Inativo'}
                     </span>
                 </div>
 
@@ -1451,14 +1469,14 @@ async function runDiagnostics() {
                         <span class="text-[10px] text-gray-500">${hy3Status.configured ? 'Chave pronta' : 'Sem chave'}</span>
                     </div>
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${hy3Status.configured ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600'}">
-                        ${hy3Status.configured ? 'Ativo (Fila Grátis)' : 'Inativo'}
+                        ${hy3Status.configured ? 'Configurado (não testado)' : 'Inativo'}
                     </span>
                 </div>
             </div>
 
             <div class="mt-3 p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-[11px] text-blue-900 leading-relaxed">
                 <i class="fa-solid fa-circle-info text-blue-600 mr-1"></i>
-                <b>Dica de Performance:</b> O motor <b>Gemini 2.5 Flash</b> responde em <b>4 a 8 segundos</b> com pesquisa completa em todo o acervo do WOL e JW.ORG. O motor <b>Hy3</b> depende das filas do OpenRouter gratuito e pode levar 25-30s.
+                A configuração de uma chave não comprova disponibilidade. A duração depende do provedor, da biblioteca e da abrangência da consulta.
             </div>
         `;
     } catch (e) {

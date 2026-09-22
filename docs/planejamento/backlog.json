@@ -14,7 +14,7 @@
     ],
     "dependencies": [],
     "evidence": "94c4c2e; análises anteriores e evidencias-adicionais.json",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-002",
@@ -33,7 +33,7 @@
       "JW-001"
     ],
     "evidence": "requirements.txt; 3 F821; test_ddg_only.py importa função ausente",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-003",
@@ -52,7 +52,7 @@
       "JW-001"
     ],
     "evidence": "main.py:270,310; rag_engine.py:263-288; reprodução anterior",
-    "status": "Planejado"
+    "status": "Concluído"
   },
   {
     "id": "JW-004",
@@ -71,7 +71,7 @@
       "JW-003"
     ],
     "evidence": "main.py:417-425; scraper.py:104-111",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-005",
@@ -90,7 +90,7 @@
       "JW-001"
     ],
     "evidence": "scraper.py:571-616; app.js:485-501,534,581,935,1096",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-006",
@@ -109,7 +109,7 @@
       "JW-003"
     ],
     "evidence": "main.py:481; scraper.py:44-60",
-    "status": "Planejado"
+    "status": "Concluído"
   },
   {
     "id": "JW-007",
@@ -129,7 +129,7 @@
       "JW-003"
     ],
     "evidence": "ChatRequest e rotas sem limites de aplicação",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-008",
@@ -149,7 +149,7 @@
       "JW-006"
     ],
     "evidence": "app.js:1341-1345; SearchApiClient.kt:19-29; UserDefaults/SharedPreferences",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-009",
@@ -169,7 +169,7 @@
       "JW-006"
     ],
     "evidence": "main.py:434,448; app.js:1433",
-    "status": "Planejado"
+    "status": "Concluído"
   },
   {
     "id": "JW-010",
@@ -189,7 +189,7 @@
       "JW-009"
     ],
     "evidence": "main.py:368,427-430; scraper.py:496-501; app.js:363",
-    "status": "Planejado"
+    "status": "Concluído"
   },
   {
     "id": "JW-011",
@@ -210,7 +210,7 @@
       "JW-007"
     ],
     "evidence": "Ausência atual de IDs de trechos e metadados de suporte",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-012",
@@ -229,7 +229,7 @@
       "JW-011"
     ],
     "evidence": "rag_engine.py:9-23,203-208; consultas-dirigidas.json",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-013",
@@ -249,7 +249,7 @@
       "JW-011"
     ],
     "evidence": "scraper.py:448,463,551-567; títulos Feliz/Felipe alterados",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-014",
@@ -269,7 +269,7 @@
       "JW-013"
     ],
     "evidence": "rag_engine.py:146-179; scraper.py get_clean_document",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-015",
@@ -289,7 +289,7 @@
       "JW-013"
     ],
     "evidence": "scraper.py:694-758; evidencias-adicionais.json",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-016",
@@ -310,7 +310,7 @@
       "JW-015"
     ],
     "evidence": "RAG sem contexto usa memória; autolinker escolhe por uma palavra",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-017",
@@ -331,7 +331,7 @@
       "JW-016"
     ],
     "evidence": "verificacao-links-1.json",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-018",
@@ -352,7 +352,7 @@
       "JW-016"
     ],
     "evidence": "scraper.py:468; include_external ignorado no RAG",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-019",
@@ -373,7 +373,7 @@
       "JW-016"
     ],
     "evidence": "ChatMessage.role str; rag_engine.py:301; system_messages=2 em teste",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-020",
@@ -416,7 +416,7 @@
       "JW-018"
     ],
     "evidence": "COMPARACAO-E-PROPOSTA-DE-PESQUISA.md",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-022",
@@ -438,7 +438,7 @@
       "JW-021"
     ],
     "evidence": "15s × retries × modelos; Gemini seis chamadas possíveis",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-023",
@@ -501,7 +501,7 @@
       "JW-024"
     ],
     "evidence": "Rotas def e pools por requisição; abort do navegador não encerra tudo",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-026",
@@ -565,7 +565,7 @@
       "JW-027"
     ],
     "evidence": "app.js:286-291; rag_engine.py:203-208",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-029",
@@ -586,7 +586,7 @@
       "JW-028"
     ],
     "evidence": "app.js:247-370,348,1040,1140",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-030",
@@ -608,7 +608,7 @@
       "JW-022"
     ],
     "evidence": "app.js:304-310,1040,1238",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-031",
@@ -651,7 +651,7 @@
       "JW-029"
     ],
     "evidence": "index.html:273-283; app.js:232-239",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-033",
@@ -672,7 +672,7 @@
       "JW-032"
     ],
     "evidence": "Requisito explícito do usuário",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-034",
@@ -710,7 +710,7 @@
       "JW-032"
     ],
     "evidence": "Requisito explícito do usuário",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-036",
@@ -731,7 +731,7 @@
       "JW-035"
     ],
     "evidence": "Atalho atual só pede resumo em tópicos",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-037",
@@ -752,7 +752,7 @@
       "JW-032"
     ],
     "evidence": "Requisito explícito; parser atual perde versículos",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-038",
@@ -773,7 +773,7 @@
       "JW-032"
     ],
     "evidence": "Requisito explícito do usuário",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-039",
@@ -792,7 +792,7 @@
       "JW-038"
     ],
     "evidence": "Sem orçamento temporal no código atual",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-040",
@@ -860,7 +860,7 @@
       "JW-041"
     ],
     "evidence": "scraper.py:577-614; app.js:1076-1096",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-043",
@@ -885,7 +885,7 @@
       "JW-041"
     ],
     "evidence": "main.py:232; CSS print oculta button; evidência do emoji",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-044",
@@ -908,7 +908,7 @@
       "JW-043"
     ],
     "evidence": "Importer verifica apenas array turns",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-045",
@@ -975,7 +975,7 @@
       "JW-045"
     ],
     "evidence": "SW v18; /app.js versus /app.js?v=2.18.0",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-048",
@@ -999,7 +999,7 @@
       "JW-025"
     ],
     "evidence": "Nove testes atuais passam com diagnóstico quebrado",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-049",
@@ -1022,7 +1022,7 @@
       "JW-041"
     ],
     "evidence": "Requisitos novos de artefatos",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-050",
@@ -1069,7 +1069,7 @@
       "JW-049"
     ],
     "evidence": "Contrato de preservação JW-001",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-052",
@@ -1161,7 +1161,7 @@
       "JW-053"
     ],
     "evidence": "criar_pacote_zip.bat inclui diretórios inteiros; documentação divergente",
-    "status": "Planejado"
+    "status": "Parcial"
   },
   {
     "id": "JW-056",

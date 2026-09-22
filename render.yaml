@@ -2,7 +2,7 @@
   - type: web
     name: jw-search
     env: python
-    buildCommand: pip install -r backend/requirements.txt
+    buildCommand: pip install -r backend/requirements.lock
     startCommand: python backend/main.py
     envVars:
       - key: GEMINI_API_KEY

@@ -30,5 +30,5 @@
     60
   ],
   "dependency_graph": "acyclic",
-  "application_changes": "none"
+  "application_changes": "see PROGRESSO.md; this inventory describes the original audit baseline"
 }

@@ -24,10 +24,10 @@ Comece pela visão interativa e pelo documento de requisitos. Use a auditoria pa
 
 ## Estado e limites
 
-Todos os itens estão planejados. A análise anterior executou testes e duas pesquisas reais; esta rodada acrescentou sondas locais de exportação, referências, títulos, papéis e atalhos. Não houve nova geração em provedores, alteração da aplicação, criação de issues, PR ou deploy. Mobile não foi compilado; binários foram inventariados, não auditados.
+O planejamento inicial foi seguido por uma primeira implementação. Consulte [PROGRESSO.md](PROGRESSO.md) e os campos de estado do backlog para distinguir itens planejados, parciais e concluídos. Mobile não foi compilado; binários foram inventariados, não auditados.
 
 Inventário: 76 arquivos rastreados, 59 textuais e 7977 linhas textuais. A cobertura por bloco está explicitada na auditoria; inventário não é certificação de cada linha.
 
-## Primeiro lote recomendado
+## Próximo lote recomendado
 
-JW-001 a JW-010: baseline, build/testes, proteção de destinos/segredos/HTML, configuração segura, limites e diagnóstico. Depois entregar uma fatia de pesquisa com evidências verificáveis antes de ampliar as ferramentas.
+Concluir os critérios ainda parciais de M0/M1, sobretudo contas/cotas, validação semântica amostral e decomposição do modo amplo. Em seguida, persistir tarefas e snapshots para que pesquisas longas e materiais possam ser retomados e versionados.
