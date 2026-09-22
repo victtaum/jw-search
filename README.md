@@ -4,15 +4,15 @@ Pesquisa bíblica com leitura de fontes e preparação de materiais de estudo. P
 
 **Acompanhe:** [backlog](BACKLOG.md), [progresso](docs/planejamento/PROGRESSO.md), [requisitos](docs/planejamento/01-VISAO-E-REQUISITOS.md) e [arquitetura proposta](docs/planejamento/02-ARQUITETURA-E-DECISOES.md).
 
-## Esta entrega — 2.19.1
+## Esta entrega — 2.20.0
 
-- Modos **sintetizado** e **amplo**, com diferentes limites de coleta e desenvolvimento.
+- Modos **sintetizado** e **amplo**. O modo amplo decompõe o tema em consultas correlatas, identifica os tipos de publicação do WOL, diversifica os documentos e recupera por extenso passagens bíblicas encontradas nas fontes.
 - Pesquisa compartilhada entre Gemini, DeepSeek e Hy3/OpenRouter: busca no WOL, leitura de documentos, seleção de trechos e geração com IDs de fontes. Links são resolvidos pelo código a partir dos documentos coletados.
 - Tabela comparativa, estudo em família, textos bíblicos e esboço estruturado com configuração própria. É possível informar referências; família permite selecionar perfis; discursos aceitam 3, 5, 10, 15, 30, 45 e 60 minutos.
 - Leitor, histórico, importação e exportações Markdown, JSON, DOCX e impressão/PDF continuam disponíveis.
 - Limites de tempo e entrada, sanitização de HTML, destinos de credenciais controlados e diagnóstico sem latências inventadas.
 
-**Limites atuais:** identidade documental não equivale à validação semântica de cada afirmação. Os materiais exigem revisão antes do uso. O modo amplo ainda não implementa decomposição completa em subconsultas. Materiais consultam fontes novamente; snapshots imutáveis e tarefas persistentes estão no backlog. O fluxo novo coleta apenas fontes oficiais; `include_external` retorna aviso explícito. A cobertura externa anterior por grounding foi retirada junto com o caminho que aceitava URLs geradas sem verificação.
+**Limites atuais:** identidade documental não equivale à validação semântica de cada afirmação. Os materiais exigem revisão antes do uso. A decomposição ampla é lexical e percorre uma camada de referências bíblicas; navegação recursiva entre publicações e planejamento semântico continuam no backlog. Materiais consultam fontes novamente; snapshots imutáveis e tarefas persistentes estão no backlog. O fluxo novo coleta apenas fontes oficiais; `include_external` retorna aviso explícito.
 
 ## Executar localmente
 
@@ -43,13 +43,13 @@ Selecione um provedor e informe a chave nas configurações do navegador. As cha
 
 O `base_url` do cliente precisa corresponder ao registro do servidor. Uma chave OpenAI não é inferida como chave OpenRouter. Não há troca automática de provedor/modelo nem retries do SDK nesta entrega. O usuário recebe erros de cota, credencial ou timeout para decidir a próxima ação.
 
-Configure `JW_ACCESS_TOKEN` e HTTPS antes de expor uma chave do servidor em um beta acessível pela rede. O código é informado na tela inicial e fica em `sessionStorage`. Ele **não substitui contas, cotas por usuário ou isolamento de estudos**. A concorrência atual é limitada a quatro pesquisas por processo.
+Configure `JW_ACCESS_TOKEN` e HTTPS antes de expor uma chave do servidor em uma instalação privada. O campo não aparece na interface pública; quando a variável está ativa, clientes autorizados devem enviar o cabeçalho correspondente. Ele **não substitui contas, cotas por usuário ou isolamento de estudos**. A concorrência atual é limitada a quatro pesquisas por processo.
 
 `POST /api/config` não modifica credenciais globais nem escreve `.env`. `GET /api/config` informa configuração sem mostrar trechos de chaves. `GET /healthz` não chama provedores.
 
 ## Tempo e recuperação
 
-Orçamento cooperativo: 75 segundos no sintetizado e 150 no amplo. A chamada ao modelo recebe no máximo 55 segundos ou o tempo restante; novas coletas verificam o orçamento. O navegador mantém margem de transporte (85/165 segundos). DNS e operações em andamento não têm cancelamento rígido do processo. Reconexão, fila durável e cancelamento completo seguem no backlog. Confira os limites do proxy/hospedagem antes de liberar consultas amplas.
+Orçamento cooperativo: 75 segundos no sintetizado e 150 no amplo. A chamada ao modelo recebe até 55 segundos no sintetizado e 75 segundos no amplo, sempre limitada pelo tempo restante; novas coletas verificam o orçamento. O navegador mantém margem de transporte (85/165 segundos). Respostas amplas curtas ou interrompidas pelo limite de geração são marcadas como incompletas. DNS e operações em andamento não têm cancelamento rígido do processo. Reconexão, fila durável e cancelamento completo seguem no backlog.
 
 ## Testes e CI
 

@@ -213,6 +213,64 @@ def test_evidence_selects_late_paragraph_and_real_title(monkeypatch):
     assert any("planejamento" in p["text"] for p in sources[0]["passages"])
 
 
+def test_deep_research_expands_topic_and_prioritizes_diverse_sources(monkeypatch):
+    assert research.research_queries("Moisés", "deep") == [
+        "Moisés",
+        "Moisés qualidades",
+        "Moisés exemplo",
+        "Moisés lições",
+        "Moisés erros",
+        "Moisés humildade",
+        "Moisés fé",
+    ]
+    hits = [
+        {"title": "Êxodo", "content_type": "bible", "publication": "Bíblia"},
+        {
+            "title": "MOISÉS",
+            "snippet": "Moisés",
+            "reference_label": "it-2 ‘Moisés’ - Perspicaz",
+            "content_type": "reference",
+            "publication": "Estudo Perspicaz das Escrituras",
+        },
+        {
+            "title": "Imite a fé de Moisés",
+            "snippet": "Moisés",
+            "content_type": "article",
+            "publication": "A Sentinela",
+        },
+    ]
+    selected = research._select_diverse_hits(hits, 3, "Moisés")
+    assert [hit["content_type"] for hit in selected][:2] == ["reference", "article"]
+
+
+def test_referenced_verses_are_exact_and_not_repeated_by_chapter(monkeypatch):
+    monkeypatch.setattr(
+        "bible.fetch_verse_content",
+        lambda reference, lang: {
+            "reference": reference,
+            "verse_text": "texto integral",
+            "chapter_url": "https://wol.jw.org/pt/wol/b/r5/lp-t/nwt/4/12",
+            "publication": "Bíblia Sagrada (Tradução do Novo Mundo)",
+        },
+    )
+    sources = [
+        {
+            "content_type": "article",
+            "passages": [
+                {
+                    "text": "Moisés foi manso (Números 12:3). Depois intercedeu (Números 12:13). Também errou (Números 20:10-12)."
+                }
+            ],
+        }
+    ]
+    verses = research.collect_referenced_verses(sources, "pt", "Moisés")
+    assert [source["title"] for source in verses] == [
+        "Números 12:3",
+        "Números 20:10-12",
+    ]
+    assert all(source["passages"][0]["text"] == "texto integral" for source in verses)
+
+
 def test_uncollected_links_are_not_published_as_sources():
     sources = [{"id": "S1", "title": "Título real", "link": "https://wol.jw.org/real"}]
     answer, cited, warnings = research.render_citations(
@@ -298,6 +356,20 @@ def test_wol_result_uses_document_metadata_not_embedded_verse(monkeypatch):
     result = search_wol_direct("dívidas")[0]
     assert result["link"] == "https://wol.jw.org/pt/wol/d/r5/lp-t/2012808"
     assert result["title"] == "Lidar com dívidas"
+
+
+def test_wol_metadata_identifies_bible_and_perspicaz(monkeypatch):
+    import rag_engine
+
+    html = """
+    <ul class="resultItems"><li class="searchResult docId-100 bible bibleBook pub-nwtsty"><p>Moisés</p></li><li class="ref">nwtsty Êxodo</li></ul>
+    <ul class="resultItems"><li class="searchResult docId-120 pub-it-2"><p>MOISÉS</p></li><li class="ref">it-2 ‘Moisés’ - Perspicaz, Volume 2</li></ul>
+    """
+    monkeypatch.setattr(rag_engine, "fetch_url", lambda url: html)
+    results = search_wol_direct("Moisés")
+    assert results[0]["content_type"] == "bible"
+    assert results[1]["content_type"] == "reference"
+    assert results[1]["publication"] == "Estudo Perspicaz das Escrituras"
 
 
 def test_request_body_limit_and_beta_access(monkeypatch):

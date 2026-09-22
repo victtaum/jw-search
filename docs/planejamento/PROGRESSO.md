@@ -47,3 +47,28 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - Os estados agora são “Pesquisa sintetizada · Direta” e “Pesquisa ampla · Aprofundada”.
 - A preferência permanece sincronizada com os controles da barra de acompanhamento.
 - O campo “Código de acesso ao servidor” saiu da interface pública. `JW_ACCESS_TOKEN` continua disponível apenas como configuração administrativa opcional para instalações privadas.
+
+## Entrega 2.20.0 — qualidade da pesquisa ampla
+
+- Regressão reproduzida em produção com “moisés foi um cara legal?”: 118 segundos, cinco fontes duplicadas de Êxodo/Números e apenas 1.243 caracteres. Esse resultado não atende ao modo amplo.
+- O parser agora usa os metadados do WOL para distinguir Bíblia, Estudo Perspicaz, revistas, livros e artigos antes de selecionar documentos.
+- A coleta ampla pesquisa o tema e eixos correlatos, elimina duplicatas, limita concentração por publicação e reserva até 36 mil caracteres totais de evidência.
+- Referências bíblicas encontradas nas publicações são seguidas por uma camada; o texto exato é recuperado da Tradução do Novo Mundo e entregue ao modelo como evidência própria.
+- O prompt amplo exige resposta direta, contexto, qualidades ou princípios, episódios, contrapontos, aplicações, textos centrais completos e lacunas. Publicações devem aparecer com nome e identificação editorial.
+- O provedor recebe até 75 segundos no modo amplo. Saída curta ou encerrada por limite de tokens recebe aviso de resposta incompleta, em vez de parecer uma pesquisa concluída.
+- A reprodução local da coleta retornou o verbete “Moisés” do Estudo Perspicaz, artigos de A Sentinela e Despertai!, além de passagens bíblicas específicas. A validação integral com o Hy3 ocorrerá após o deploy, pois a chave do servidor não está disponível no ambiente local.
+
+### Verificações desta entrega
+
+| Verificação | Resultado |
+|---|---|
+| Testes de backend, sem rede/credenciais | 49 aprovados |
+| Consulta real ao WOL para “Moisés” | Perspicaz + A Sentinela + Despertai! + livros; sem capítulos bíblicos duplicados |
+| Extração recursiva de textos | referências distintas recuperadas por marcadores oficiais de versículo |
+
+### Próximos passos do backlog
+
+- JW-021: substituir os eixos lexicais por um plano semântico de subtemas e reutilizar a mesma coleta nas ferramentas.
+- JW-017/JW-018: validar semanticamente cada afirmação e medir cobertura por fonte, sem percentuais de confiança inventados.
+- JW-022/JW-025: execução assíncrona, progresso por etapa, cancelamento e retomada para eliminar a dependência de uma única conexão longa.
+- JW-050: transformar a conversa de referência e outros 20–30 casos em benchmark editorial humano.

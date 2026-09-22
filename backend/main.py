@@ -27,7 +27,7 @@ class KeyConfigRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.19.1",
+    version="2.20.0",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -442,7 +442,7 @@ def api_read(
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.19.1"}
+    return {"status": "ok", "version": "2.20.0"}
 
 
 @app.get("/api/config")
