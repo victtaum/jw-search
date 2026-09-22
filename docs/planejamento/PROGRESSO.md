@@ -72,3 +72,9 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - JW-017/JW-018: validar semanticamente cada afirmação e medir cobertura por fonte, sem percentuais de confiança inventados.
 - JW-022/JW-025: execução assíncrona, progresso por etapa, cancelamento e retomada para eliminar a dependência de uma única conexão longa.
 - JW-050: transformar a conversa de referência e outros 20–30 casos em benchmark editorial humano.
+
+### Ajuste 2.20.1 — orçamento após validação pública
+
+- A primeira validação da 2.20.0 confirmou a nova coleta, mas Gemini e Hy3 encerraram a síntese com erro do provedor após cerca de 60–90 segundos.
+- O contexto amplo foi reduzido de 36 mil para 28 mil caracteres, a saída de 4.600 para 3.200 tokens e o alvo editorial para 800–1.200 palavras. A cobertura continua exigindo fontes variadas e textos bíblicos por extenso.
+- O tempo máximo da chamada ao modelo passou a 60 segundos; o ganho de latência será medido novamente no ambiente público.
