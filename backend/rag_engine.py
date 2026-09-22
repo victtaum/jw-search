@@ -141,8 +141,9 @@ def _query_wol_html(
         # WOL result cards expose the document ID as server-provided metadata.
         # Their first anchors are often verse cross-references, not the article.
         for card in soup.select(".searchResult"):
+            classes = card.get("class", [])
             doc_id = next(
-                (c[6:] for c in card.get("class", []) if re.fullmatch(r"docId-\d+", c)),
+                (c[6:] for c in classes if re.fullmatch(r"docId-\d+", c)),
                 None,
             )
             if not doc_id or doc_id in seen:
@@ -152,13 +153,43 @@ def _query_wol_html(
                 continue
             url = f"{lang_prefix}/wol/d/{region}/{doc_id}"
             title = title_el.get_text(" ", strip=True)
+            publication_code = next(
+                (
+                    c[4:]
+                    for c in classes
+                    if c.startswith("pub-") and len(c) > 4
+                ),
+                "",
+            )
+            reference = card.find_next_sibling("li", class_="ref")
+            reference_label = reference.get_text(" ", strip=True) if reference else ""
+            if "bibleBook" in classes or "bible" in classes:
+                content_type = "bible"
+                publication = "Bíblia Sagrada (Tradução do Novo Mundo)"
+            elif publication_code in {"it-1", "it-2"}:
+                content_type = "reference"
+                publication = "Estudo Perspicaz das Escrituras"
+            elif publication_code.lower().startswith(("ws", "w")):
+                content_type = "article"
+                publication = "A Sentinela"
+            elif publication_code.lower().startswith("g"):
+                content_type = "article"
+                publication = "Despertai!"
+            else:
+                content_type = "article"
+                publication = infer_publication_info(
+                    f"{title} {reference_label} {publication_code}", url
+                )
             seen.add(doc_id)
             results.append(
                 {
                     "title": title,
                     "link": url,
                     "snippet": card.get_text(" ", strip=True)[:500],
-                    "publication": infer_publication_info(title, url),
+                    "publication": publication,
+                    "publication_code": publication_code,
+                    "reference_label": reference_label,
+                    "content_type": content_type,
                     "is_external": False,
                     "source_site": "wol.jw.org",
                 }
