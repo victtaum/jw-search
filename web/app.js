@@ -294,7 +294,7 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
     pendingSearch = controller;
 
     try {
-        const headers = { "Content-Type": "application/json", "X-JW-Access-Token": sessionStorage.getItem("jw_access_token") || "" };
+        const headers = { "Content-Type": "application/json" };
         if (geminiKey) headers["X-Gemini-Api-Key"] = geminiKey;
         if (deepseekKey) headers["X-Deepseek-Api-Key"] = deepseekKey;
         if (hy3Key) headers["X-Hy3-Api-Key"] = hy3Key;
@@ -1421,7 +1421,7 @@ async function runDiagnostics() {
 
     const t0 = Date.now();
     try {
-        const res = await fetch(`${API_BASE}/api/diagnostics`, {headers:{"X-JW-Access-Token":sessionStorage.getItem("jw_access_token") || ""}});
+        const res = await fetch(`${API_BASE}/api/diagnostics`);
         const pingTime = Date.now() - t0;
         if (!res.ok) throw new Error("Servidor retornou erro HTTP " + res.status);
         const data = await res.json();

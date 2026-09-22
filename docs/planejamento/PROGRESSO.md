@@ -40,3 +40,10 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - Android recebeu somente a correção de vazamento de chave e não foi compilado; iOS continua incompleto.
 - Fontes externas estão desativadas no novo pipeline até terem coleta e rotulagem verificáveis.
 - Tailwind e fontes ainda vêm de CDN; a CSP atual é uma primeira proteção, não a política final.
+
+## Ajuste de interface — profundidade da pesquisa
+
+- O seletor suspenso foi substituído por um botão deslizante ao lado do seletor de fontes.
+- Os estados agora são “Pesquisa sintetizada · Direta” e “Pesquisa ampla · Aprofundada”.
+- A preferência permanece sincronizada com os controles da barra de acompanhamento.
+- O campo “Código de acesso ao servidor” saiu da interface pública. `JW_ACCESS_TOKEN` continua disponível apenas como configuração administrativa opcional para instalações privadas.

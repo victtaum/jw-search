@@ -229,8 +229,8 @@
                     </button>
                 </div>
                 
-                <!-- Scope Mode Toggle Row (Modern Theocratic Switch) -->
-                <div class="flex items-center justify-start pt-1">
+                <!-- Search controls -->
+                <div class="flex items-center justify-start gap-2 pt-1 flex-wrap" aria-label="Opções da pesquisa">
                     <button type="button" id="btn-theocratic-toggle" class="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 transition-all cursor-pointer select-none group shadow-xs focus:outline-none active:scale-98" title="Toque para alternar entre acervo 100% oficial JW e fontes da internet">
                         <!-- Switch Track -->
                         <div id="toggle-track" class="w-11 h-6 bg-emerald-600 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center shadow-inner relative flex-shrink-0">
@@ -243,6 +243,18 @@
                         <div class="flex items-center gap-1.5 text-xs font-semibold select-none leading-none">
                             <span id="toggle-label" class="text-slate-800 transition-colors">100% Acervo Oficial JW</span>
                             <span id="toggle-badge" class="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors">Protegido</span>
+                        </div>
+                    </button>
+
+                    <button type="button" id="btn-depth-toggle" class="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 transition-all cursor-pointer select-none group shadow-xs focus:outline-none active:scale-98" title="Alternar entre resposta sintetizada e pesquisa ampla" aria-pressed="false">
+                        <div id="depth-toggle-track" class="w-11 h-6 bg-slate-300 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center shadow-inner relative flex-shrink-0">
+                            <div id="depth-toggle-thumb" class="w-5 h-5 bg-white rounded-full shadow-md transform translate-x-0 transition-transform duration-200 ease-in-out flex items-center justify-center text-[10px] text-slate-500">
+                                <i class="fa-solid fa-bolt" id="depth-toggle-thumb-icon"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs font-semibold select-none leading-none">
+                            <span id="depth-toggle-label" class="text-slate-700 transition-colors">Pesquisa sintetizada</span>
+                            <span id="depth-toggle-badge" class="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-slate-100 text-slate-700 border border-slate-300 transition-colors">Direta</span>
                         </div>
                     </button>
                 </div>
@@ -292,6 +304,14 @@
                             </div>
                         </div>
                         <span id="followup-toggle-label" class="text-[11px] font-semibold text-slate-800">100% JW</span>
+                    </button>
+                    <button type="button" id="btn-followup-depth-toggle" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer select-none shadow-xs flex-shrink-0" title="Alternar profundidade da pesquisa" aria-pressed="false">
+                        <div id="followup-depth-track" class="w-9 h-5 bg-slate-300 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center shadow-inner relative flex-shrink-0">
+                            <div id="followup-depth-thumb" class="w-4 h-4 bg-white rounded-full shadow-md transform translate-x-0 transition-transform duration-200 ease-in-out flex items-center justify-center text-[8px] text-slate-500">
+                                <i class="fa-solid fa-bolt" id="followup-depth-icon"></i>
+                            </div>
+                        </div>
+                        <span id="followup-depth-label" class="text-[11px] font-medium text-slate-600">Sintetizada</span>
                     </button>
                 </div>
 
@@ -650,8 +670,8 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/study-controls.js?v=2.19.0"></script>
-    <script src="/app.js?v=2.19.0"></script>
+    <script src="/study-controls.js?v=2.19.1"></script>
+    <script src="/app.js?v=2.19.1"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
