@@ -1,0 +1,98 @@
+[
+  {
+    "case": "docx_titulo_emoji",
+    "status": 500,
+    "detail": {
+      "detail": "Erro ao gerar DOCX: 'latin-1' codec can't encode character '\\U0001f4d6' in position 47: ordinal not in range(256)"
+    }
+  },
+  {
+    "case": "referencia_biblica",
+    "input": "João 3:16, 18",
+    "parsed": {
+      "book_num": 43,
+      "book_name": "João",
+      "chapter": 3,
+      "v_start": 16,
+      "v_end": 16,
+      "reference": "João 3:16"
+    }
+  },
+  {
+    "case": "referencia_biblica",
+    "input": "João 3:16-4:2",
+    "parsed": {
+      "book_num": 43,
+      "book_name": "João",
+      "chapter": 3,
+      "v_start": 16,
+      "v_end": 4,
+      "reference": "João 3:16-4"
+    }
+  },
+  {
+    "case": "referencia_biblica",
+    "input": "João 3:99",
+    "parsed": {
+      "book_num": 43,
+      "book_name": "João",
+      "chapter": 3,
+      "v_start": 99,
+      "v_end": 99,
+      "reference": "João 3:99"
+    }
+  },
+  {
+    "case": "referencia_biblica",
+    "input": "João 3:18-16",
+    "parsed": {
+      "book_num": 43,
+      "book_name": "João",
+      "chapter": 3,
+      "v_start": 18,
+      "v_end": 16,
+      "reference": "João 3:18-16"
+    }
+  },
+  {
+    "case": "normalizacao_titulo",
+    "input": "Feliz",
+    "output": "Féliz"
+  },
+  {
+    "case": "normalizacao_titulo",
+    "input": "Felipe",
+    "output": "Félipe"
+  },
+  {
+    "case": "papel_system_do_cliente",
+    "http_status": 200,
+    "system_messages": 2
+  },
+  {
+    "case": "atalhos",
+    "tools": [
+      {
+        "label": "📊 Tabela Comparativa",
+        "prompt": "Crie uma tabela comparativa com os pontos principais"
+      },
+      {
+        "label": "👨‍👩‍👧‍👦 Estudo em Família",
+        "prompt": "Faça um resumo em tópicos práticos para estudo em família"
+      },
+      {
+        "label": "📜 Textos Bíblicos",
+        "prompt": "Quais outros textos bíblicos complementam esse entendimento?"
+      },
+      {
+        "label": "📝 Esboço Estruturado",
+        "prompt": "Organize um esboço estruturado com títulos e subtítulos"
+      }
+    ]
+  },
+  {
+    "case": "dialogos_html",
+    "aria_modal": 0,
+    "role_dialog": 0
+  }
+]
