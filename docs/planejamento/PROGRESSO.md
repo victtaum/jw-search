@@ -95,3 +95,19 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 
 - Em produção, Hy3 sintetizado com `none` concluiu em 15,5 segundos; Hy3 amplo com `low` continuou excedendo a janela.
 - Como o servidor já decompõe consultas, seleciona fontes e recupera textos, ambos os modos do Hy3 passam a usar `none`. A amplitude continua definida pela coleta e pelo perfil editorial.
+
+## Entrega 2.21.0 — pipelines sintetizado e amplo independentes
+
+- Os dois anexos fornecidos para comparação eram idênticos (mesmo SHA-256, 9.059 bytes e 1.069 palavras); a análise do sintetizado foi complementada pelo histórico Git anterior à fundação verificável.
+- O sintetizado recupera o perfil editorial clássico: resposta direta, análise bíblica essencial, textos principais e publicações, adaptando os títulos à pergunta. A implementação antiga não foi copiada literalmente porque aceitava links gerados pelo modelo, misturava fallback de provedores e podia usar conhecimento sem evidência recuperada.
+- O amplo deixa de ter o teto artificial de 1.100 palavras. A extensão passa a ser determinada pelo assunto e pela evidência, com até 7.000 tokens de saída e 100 segundos para o provedor dentro do orçamento global.
+- A coleta ampla comporta oito publicações e 48 mil caracteres de evidência, além de até oito passagens bíblicas exatas. A sintetizada usa até cinco publicações e 22 mil caracteres.
+- Perguntas sobre personagens detectadas por verbete do Estudo Perspicaz recebem consultas específicas sobre humildade, fé, coragem, erros e exemplos. Outros assuntos recebem princípios, conselhos, riscos e aplicações.
+- Livros bíblicos inteiros e páginas mensais deixam de ocupar vagas de fontes temáticas. Documentos antigos sem `h1` continuam utilizáveis por meio do título e ID fornecidos pelo próprio resultado do WOL.
+- O prompt amplo proíbe abreviar textos bíblicos com reticências e pede raciocínio integrado, em vez do molde fixo que produziu o anexo atual.
+
+### Próximas validações
+
+- Comparar publicamente sintetizado, amplo e conversa de referência com a mesma pergunta e a mesma rubrica.
+- Medir se todos os versículos citados foram transcritos integralmente e se a publicação aparece com identificação editorial suficiente.
+- Implementar navegação recursiva entre publicações; a entrega atual aprofunda consultas e segue referências bíblicas por uma camada.
