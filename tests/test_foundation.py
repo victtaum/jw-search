@@ -215,14 +215,13 @@ def test_evidence_selects_late_paragraph_and_real_title(monkeypatch):
 
 
 def test_deep_research_expands_topic_and_prioritizes_diverse_sources(monkeypatch):
-    assert research.research_queries("Moisés", "deep") == [
+    assert research.research_queries("Moisés", "deep", entity=True) == [
         "Moisés",
-        "Moisés qualidades",
-        "Moisés exemplo",
-        "Moisés lições",
-        "Moisés erros",
-        "Moisés humildade",
+        "Moisés homem humilde",
         "Moisés fé",
+        "Moisés coragem",
+        "Moisés erros",
+        "Moisés exemplo",
     ]
     hits = [
         {"title": "Êxodo", "content_type": "bible", "publication": "Bíblia"},
@@ -242,6 +241,14 @@ def test_deep_research_expands_topic_and_prioritizes_diverse_sources(monkeypatch
     ]
     selected = research._select_diverse_hits(hits, 3, "Moisés")
     assert [hit["content_type"] for hit in selected][:2] == ["reference", "article"]
+
+
+def test_research_profiles_are_independent_and_deep_has_no_word_cap():
+    quick = research.research_profile("quick")
+    deep = research.research_profile("deep")
+    assert "sintetizado clássico" in quick and "pesquisa extensa" in quick
+    assert "não encurte" in deep and "transcreva integralmente" in deep
+    assert "1.100" not in deep and "1.000 palavras" not in deep
 
 
 def test_referenced_verses_are_exact_and_not_repeated_by_chapter(monkeypatch):
