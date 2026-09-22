@@ -90,3 +90,8 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - O Hy3 falhou tanto no modo amplo quanto no sintetizado, enquanto o Gemini concluiu a mesma pesquisa ampla em 38,2 segundos.
 - O catálogo atual do OpenRouter informa que `tencent/hy3` usa raciocínio alto por padrão e aceita os níveis `high`, `low` e `none`.
 - O JW Search agora solicita raciocínio `low` no modo amplo e `none` no sintetizado, preservando o modelo escolhido e evitando gastar toda a janela antes de iniciar a resposta visível.
+
+### Ajuste 2.20.4 — Hy3 amplo sem raciocínio interno
+
+- Em produção, Hy3 sintetizado com `none` concluiu em 15,5 segundos; Hy3 amplo com `low` continuou excedendo a janela.
+- Como o servidor já decompõe consultas, seleciona fontes e recupera textos, ambos os modos do Hy3 passam a usar `none`. A amplitude continua definida pela coleta e pelo perfil editorial.
