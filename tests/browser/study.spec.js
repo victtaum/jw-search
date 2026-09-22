@@ -11,14 +11,34 @@ test.beforeEach(async ({page})=>{
 });
 
 test('modes and all seven outline durations are configurable',async ({page})=>{
-  await page.locator('.jw-research-mode').first().selectOption('deep');
+  await expect(page.getByRole('button',{name:/Pesquisa sintetizada/})).toBeVisible();
+  await page.getByRole('button',{name:/Pesquisa sintetizada/}).click();
   expect(await page.evaluate(()=>JWStudy.getMode())).toBe('deep');
+  await expect(page.getByRole('button',{name:/Pesquisa ampla/})).toHaveAttribute('aria-pressed','true');
+  expect(await page.evaluate(()=>localStorage.getItem('jw_search_research_mode'))).toBe('deep');
   await page.evaluate(()=>{window.toolResult=null;JWStudy.configure('outline').then(result=>window.toolResult=result);});
   const options=await page.locator('#tool-time option').allTextContents();
   expect(options).toEqual(['3 minutos','5 minutos','10 minutos','15 minutos','30 minutos','45 minutos','60 minutos']);
   await page.locator('#tool-time').selectOption('45');
   await page.getByRole('button',{name:'Gerar material'}).click();
   await expect.poll(()=>page.evaluate(()=>window.toolResult?.duration_minutes)).toBe(45);
+});
+
+test('depth control stays beside source scope and private access is absent',async ({page})=>{
+  const scope=await page.locator('#btn-theocratic-toggle').boundingBox();
+  const depth=await page.locator('#btn-depth-toggle').boundingBox();
+  expect(scope).not.toBeNull();expect(depth).not.toBeNull();
+  expect(Math.abs(scope.y-depth.y)).toBeLessThan(8);
+  expect(await page.getByLabel('Código de acesso ao servidor').count()).toBe(0);
+  expect(await page.getByText('Código de acesso ao servidor').count()).toBe(0);
+});
+
+test('depth selection is synchronized in the follow-up controls',async ({page})=>{
+  await page.getByRole('button',{name:/Pesquisa sintetizada/}).click();
+  await expect(page.locator('#btn-followup-depth-toggle')).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('#followup-depth-label')).toHaveText('Ampla');
+  await page.locator('#btn-followup-depth-toggle').click();
+  await expect(page.locator('#depth-toggle-label')).toHaveText('Pesquisa sintetizada');
 });
 
 test('family options survive dialog submission',async ({page})=>{
