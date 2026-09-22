@@ -84,3 +84,9 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - O Gemini gerou 11.629 caracteres em 40,1 segundos com 11 fontes diversas, mas atingiu o limite de 3.200 tokens antes da conclusão.
 - O perfil amplo agora impõe máximo editorial de 1.100 palavras, pede 4–6 textos centrais e reserva espaço para concluir; a margem técnica subiu para 4.000 tokens e o raciocínio interno foi reduzido.
 - Citações agrupadas (`[S1, S2]`) agora são validadas e convertidas em links individuais, como já ocorria com citações simples.
+
+### Ajuste 2.20.3 — orçamento de raciocínio do Hy3
+
+- O Hy3 falhou tanto no modo amplo quanto no sintetizado, enquanto o Gemini concluiu a mesma pesquisa ampla em 38,2 segundos.
+- O catálogo atual do OpenRouter informa que `tencent/hy3` usa raciocínio alto por padrão e aceita os níveis `high`, `low` e `none`.
+- O JW Search agora solicita raciocínio `low` no modo amplo e `none` no sintetizado, preservando o modelo escolhido e evitando gastar toda a janela antes de iniciar a resposta visível.

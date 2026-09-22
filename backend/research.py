@@ -428,11 +428,19 @@ O histórico serve para entender o assunto; respostas antigas não são evidênc
             timeout=remaining(60 if mode == "deep" else 55),
             max_retries=0,
         ) as client:
+            request_options = {}
+            if provider == "hy3":
+                # Hy3 defaults to high reasoning on OpenRouter. That can consume
+                # the entire HTTP window before producing visible content.
+                request_options["extra_body"] = {
+                    "reasoning": {"effort": "low" if mode == "deep" else "none"}
+                }
             response = client.chat.completions.create(
                 model=used_model,
                 messages=messages,
                 temperature=0.2,
                 max_tokens=max_tokens,
+                **request_options,
             )
             answer = response.choices[0].message.content if response.choices else None
             finish_reason = response.choices[0].finish_reason if response.choices else None

@@ -1,5 +1,6 @@
 import socket
 import time
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -307,6 +308,46 @@ def test_empty_retrieval_does_not_call_model(monkeypatch):
     )
     assert result["status"] == "insufficient_evidence"
     llm.assert_not_called()
+
+
+def test_hy3_gets_explicit_reasoning_budget(monkeypatch):
+    monkeypatch.setattr(
+        research,
+        "collect_evidence",
+        lambda *a: [
+            {
+                "id": "S1",
+                "title": "Fonte",
+                "link": "https://wol.jw.org/fonte",
+                "publication": "A Sentinela",
+                "passages": [{"id": "S1P1", "text": "Evidência suficiente."}],
+            }
+        ],
+    )
+    completion = Mock(
+        return_value=SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content="Resposta fundamentada [S1]."),
+                    finish_reason="stop",
+                )
+            ]
+        )
+    )
+    context = Mock()
+    context.__enter__ = Mock(
+        return_value=SimpleNamespace(
+            chat=SimpleNamespace(completions=SimpleNamespace(create=completion))
+        )
+    )
+    context.__exit__ = Mock(return_value=False)
+    monkeypatch.setattr(research, "OpenAI", Mock(return_value=context))
+    research.run_research(
+        "amor", [], "hy3", "fake", "https://openrouter.ai/api/v1", None, "quick", "pt", False
+    )
+    assert completion.call_args.kwargs["extra_body"] == {
+        "reasoning": {"effort": "none"}
+    }
 
 
 def test_no_silent_fallback_and_deadline_reset(monkeypatch):
