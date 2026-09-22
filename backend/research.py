@@ -433,7 +433,7 @@ O histórico serve para entender o assunto; respostas antigas não são evidênc
                 # Hy3 defaults to high reasoning on OpenRouter. That can consume
                 # the entire HTTP window before producing visible content.
                 request_options["extra_body"] = {
-                    "reasoning": {"effort": "low" if mode == "deep" else "none"}
+                    "reasoning": {"effort": "none"}
                 }
             response = client.chat.completions.create(
                 model=used_model,
