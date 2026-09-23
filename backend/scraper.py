@@ -38,15 +38,12 @@ def get_api_status():
     has_deepseek = bool(os.environ.get("DEEPSEEK_API_KEY"))
     has_hy3 = bool(os.environ.get("HY3_API_KEY"))
 
-    default_prov = "gemini"
-    if has_hy3 and not has_gemini:
-        default_prov = "hy3"
-    elif has_deepseek and not has_gemini:
-        default_prov = "deepseek"
+    default_prov = "hy3" if has_hy3 else ("deepseek" if has_deepseek else "hy3")
 
     return {
-        "has_key": has_gemini or has_deepseek or has_hy3,
-        "has_gemini": has_gemini,
+        "has_key": has_deepseek or has_hy3,
+        "has_gemini": False,
+        "gemini_reserved": has_gemini,
         "has_deepseek": has_deepseek,
         "has_hy3": has_hy3,
         "default_provider": default_prov,

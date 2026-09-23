@@ -19,6 +19,7 @@ import json
 import urllib.request
 import urllib.error
 import html
+import hmac
 from collections import defaultdict, deque
 from urllib.parse import quote
 
@@ -51,7 +52,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.23.0",
+    version="2.24.0",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -253,6 +254,7 @@ def api_chat(
     x_deepseek_api_key: Optional[str] = Header(None, alias="X-Deepseek-Api-Key"),
     x_hy3_api_key: Optional[str] = Header(None, alias="X-Hy3-Api-Key"),
     x_api_key: Optional[str] = Header(None, alias="X-Api-Key"),
+    x_jw_owner_token: Optional[str] = Header(None, alias="X-JW-Owner-Token"),
 ):
     return handle_theocratic_search(
         q=req.query,
@@ -268,6 +270,7 @@ def api_chat(
         x_deepseek_api_key=x_deepseek_api_key,
         x_hy3_api_key=x_hy3_api_key,
         x_api_key=x_api_key,
+        x_jw_owner_token=x_jw_owner_token,
     )
 
 
@@ -318,6 +321,7 @@ def handle_theocratic_search(
     x_deepseek_api_key=None,
     x_hy3_api_key=None,
     x_api_key=None,
+    x_jw_owner_token=None,
     api_key=None,
     mode="quick",
     tool=None,
@@ -332,8 +336,13 @@ def handle_theocratic_search(
         prov, endpoint = provider_endpoint(provider, base_url)
     except ValueError as exc:
         raise HTTPException(400, str(exc))
+    owner_secret = os.environ.get("JW_OWNER_TOKEN", "")
+    owner_authorized = bool(owner_secret and x_jw_owner_token) and hmac.compare_digest(
+        owner_secret.encode(), x_jw_owner_token.encode()
+    )
+    server_gemini = os.environ.get("GEMINI_API_KEY") if owner_authorized else None
     keys = {
-        "gemini": x_gemini_api_key or os.environ.get("GEMINI_API_KEY"),
+        "gemini": x_gemini_api_key or server_gemini,
         "deepseek": x_deepseek_api_key or os.environ.get("DEEPSEEK_API_KEY"),
         "hy3": x_hy3_api_key or os.environ.get("HY3_API_KEY"),
     }
@@ -462,6 +471,7 @@ def api_search(
     x_deepseek_api_key: Optional[str] = Header(None, alias="X-Deepseek-Api-Key"),
     x_hy3_api_key: Optional[str] = Header(None, alias="X-Hy3-Api-Key"),
     x_api_key: Optional[str] = Header(None, alias="X-Api-Key"),
+    x_jw_owner_token: Optional[str] = Header(None, alias="X-JW-Owner-Token"),
     api_key: Optional[str] = Query(None, description="Chave API opcional do cliente"),
 ):
     return handle_theocratic_search(
@@ -476,6 +486,7 @@ def api_search(
         x_deepseek_api_key=x_deepseek_api_key,
         x_hy3_api_key=x_hy3_api_key,
         x_api_key=x_api_key,
+        x_jw_owner_token=x_jw_owner_token,
         api_key=api_key,
     )
 
@@ -570,7 +581,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.23.0"}
+    return {"status": "ok", "version": "2.24.0"}
 
 
 @app.get("/api/config")
@@ -604,8 +615,9 @@ def api_diagnostics():
     # 2. Check Gemini config
     gemini_key = os.environ.get("GEMINI_API_KEY")
     report["providers"]["gemini"] = {
-        "configured": bool(gemini_key),
-        "status": "ready" if gemini_key else "not_configured",
+        "configured": False,
+        "reserved": bool(gemini_key),
+        "status": "private_reserve" if gemini_key else "not_configured",
     }
 
     # 3. Check Hy3 config
