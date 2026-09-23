@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, model_validator
 from scraper import get_clean_document, get_api_status
 from bible import fetch_verse_content
 from rag_engine import search_wol_direct
-from safety import provider_endpoint, deadline, SearchDeadline, UnsafeURL
+from safety import provider_endpoint, deadline, remaining, SearchDeadline, UnsafeURL
 from research import run_research
 from middleware import RequestBoundary
 from study_tools import ToolOptions
@@ -27,7 +27,7 @@ class KeyConfigRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.21.2",
+    version="2.22.0",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -327,18 +327,50 @@ def handle_theocratic_search(
         )
     token = deadline.set(time.monotonic() + (150 if mode == "deep" else 75))
     try:
-        return run_research(
-            q.strip(),
-            history or [],
-            prov,
-            key,
-            endpoint,
-            model,
-            mode,
-            lang,
-            external,
-            tool,
-        )
+        try:
+            return run_research(
+                q.strip(),
+                history or [],
+                prov,
+                key,
+                endpoint,
+                model,
+                mode,
+                lang,
+                external,
+                tool,
+            )
+        except Exception as primary_exc:
+            status = getattr(primary_exc, "status_code", None) or getattr(
+                primary_exc, "code", None
+            )
+            gemini_key = keys["gemini"]
+            recoverable = status not in (400, 401, 403, 404, 422)
+            if prov != "hy3" or not gemini_key or not recoverable or remaining(150) < 25:
+                raise
+            _, gemini_endpoint = provider_endpoint("gemini", None)
+            result = run_research(
+                q.strip(),
+                history or [],
+                "gemini",
+                gemini_key,
+                gemini_endpoint,
+                None,
+                mode,
+                lang,
+                external,
+                tool,
+            )
+            warning = (
+                "O Hy3 ficou indisponível; a pesquisa foi concluída automaticamente "
+                "com o Gemini."
+            )
+            result["provider_requested"] = "hy3"
+            result["fallback_from"] = "hy3"
+            result.setdefault("warnings", []).append(warning)
+            if result.get("status") == "completed":
+                result["status"] = "completed_with_warnings"
+            return result
     except (SearchDeadline, TimeoutError) as exc:
         raise HTTPException(
             504,
@@ -442,7 +474,7 @@ def api_read(
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.21.2"}
+    return {"status": "ok", "version": "2.22.0"}
 
 
 @app.get("/api/config")

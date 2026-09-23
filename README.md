@@ -4,7 +4,7 @@ Pesquisa bíblica com leitura de fontes e preparação de materiais de estudo. P
 
 **Acompanhe:** [backlog](BACKLOG.md), [progresso](docs/planejamento/PROGRESSO.md), [requisitos](docs/planejamento/01-VISAO-E-REQUISITOS.md) e [arquitetura proposta](docs/planejamento/02-ARQUITETURA-E-DECISOES.md).
 
-## Esta entrega — 2.21.2
+## Esta entrega — 2.22.0
 
 - Dois pipelines editoriais independentes: o **sintetizado** recupera o estilo clássico do JW Search, com resposta direta, análise essencial, textos e publicações; o **amplo** aplica pesquisa teocrática profunda sem teto artificial de palavras, com consultas correlatas, publicações variadas e passagens bíblicas integrais.
 - Pesquisa compartilhada entre Gemini, DeepSeek e Hy3/OpenRouter: busca no WOL, leitura de documentos, seleção de trechos e geração com IDs de fontes. Links são resolvidos pelo código a partir dos documentos coletados.
@@ -41,7 +41,7 @@ Selecione um provedor e informe a chave nas configurações do navegador. As cha
 | `JW_DEEPSEEK_BASE_URL` | Endpoint autorizado pelo administrador; padrão `https://api.deepseek.com` |
 | `JW_DISABLE_DOTENV=1` | Desativa leitura do `.env` legado do Gemini; usado nos testes |
 
-O `base_url` do cliente precisa corresponder ao registro do servidor. Uma chave OpenAI não é inferida como chave OpenRouter. Não há troca automática de provedor/modelo nem retries do SDK nesta entrega. O usuário recebe erros de cota, credencial ou timeout para decidir a próxima ação.
+O `base_url` do cliente precisa corresponder ao registro do servidor. Uma chave OpenAI não é inferida como chave OpenRouter. Quando o Hy3 sofre falha recuperável e o servidor possui Gemini configurado, a pesquisa é refeita com Gemini e a troca é informada nos metadados e avisos. Credencial recusada, modelo inválido e erro de entrada não acionam fallback.
 
 Configure `JW_ACCESS_TOKEN` e HTTPS antes de expor uma chave do servidor em uma instalação privada. O campo não aparece na interface pública; quando a variável está ativa, clientes autorizados devem enviar o cabeçalho correspondente. Ele **não substitui contas, cotas por usuário ou isolamento de estudos**. A concorrência atual é limitada a quatro pesquisas por processo.
 

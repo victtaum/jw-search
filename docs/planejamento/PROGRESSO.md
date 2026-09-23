@@ -124,3 +124,10 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - O Hy3 retornou 503 ao receber o contexto ampliado da 2.21.1; o Gemini concluiu o mesmo fluxo.
 - Para Hy3 amplo, o contexto entregue ao modelo é distribuído em até 32 mil caracteres e a saída técnica usa 4.000 tokens, combinação anteriormente validada em produção.
 - As oito fontes continuam navegáveis na interface. Textos bíblicos nunca são truncados pelo orçamento; somente trechos editoriais longos são condensados. O Gemini conserva o contexto amplo integral e 7.000 tokens.
+
+## Entrega 2.22.0 — recuperação transparente de provedor
+
+- A consulta pública “como sair das dívidas?” foi reproduzida: WOL saudável, Gemini amplo concluído em 40,9 segundos com 16 fontes e 9.028 caracteres, enquanto Hy3 retornou 503.
+- Falhas recuperáveis do Hy3 acionam Gemini quando ele está configurado no servidor e ainda existe orçamento. O resultado identifica `provider: gemini`, `provider_requested: hy3`, `fallback_from: hy3` e inclui aviso explícito.
+- Erros de credencial, modelo inválido, entrada inválida e autorização continuam sendo devolvidos sem troca de provedor.
+- Se ambos os provedores falharem, o erro permanece tipado; a recuperação não mascara a indisponibilidade total.

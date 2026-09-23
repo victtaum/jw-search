@@ -396,6 +396,33 @@ class SimpleProviderError(Exception):
         self.status_code = status_code
 
 
+def test_hy3_recoverable_failure_uses_configured_gemini(monkeypatch):
+    generate = Mock(
+        side_effect=[
+            SimpleProviderError(503),
+            {
+                "ai_response": "Pesquisa concluída",
+                "results": [],
+                "provider": "gemini",
+                "status": "completed",
+                "warnings": [],
+            },
+        ]
+    )
+    monkeypatch.setattr(main, "run_research", generate)
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-server-key")
+    response = client.post(
+        "/api/chat",
+        headers={"X-Hy3-Api-Key": "hy3-key"},
+        json={"query": "dívidas", "provider": "hy3", "mode": "deep"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["provider"] == "gemini" and data["fallback_from"] == "hy3"
+    assert "Hy3 ficou indisponível" in data["warnings"][0]
+    assert generate.call_args_list[1].args[2] == "gemini"
+
+
 def test_expired_deadline_stops_work():
     token = safety.deadline.set(time.monotonic() - 1)
     try:
