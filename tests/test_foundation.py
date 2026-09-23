@@ -266,6 +266,8 @@ def test_deep_research_expands_topic_and_prioritizes_diverse_sources(monkeypatch
         "Moisés coragem",
         "Moisés erros",
         "Moisés exemplo",
+        "Moisés Estudo Perspicaz",
+        "Moisés A Sentinela",
     ]
     hits = [
         {"title": "Êxodo", "content_type": "bible", "publication": "Bíblia"},
