@@ -158,3 +158,34 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - A chave Gemini do servidor volta a ser usada automaticamente somente se o OpenRouter falhar ou se a primeira coleta terminar sem qualquer evidência.
 - Uma chave Gemini fornecida pelo visitante tem precedência sobre a reserva do servidor.
 - O acesso administrativo continua permitindo ao proprietário selecionar diretamente a reserva Gemini.
+
+## Entrega 2.25.0 — planejamento, segunda rodada e navegação contínua
+
+- O modo amplo passa a transformar a pergunta em uma agenda observável, com intenção, cinco subtemas e consultas específicas para publicações, personagens e questões práticas.
+- As buscas independentes no WOL são executadas com concorrência limitada. A coleta reserva tempo para a redação e registra duas rodadas: recuperação inicial/referências e uma rodada orientada apenas às lacunas ainda sem suporte.
+- Documentos oficiais relacionados podem ser seguidos por até duas camadas, com deduplicação por URL e título, limite de fontes e filtro de relevância. As fontes registram profundidade, origem, rodada e lacuna atendida.
+- Consultas práticas incluem uma busca natural de ação. No benchmark de dívida, isso recuperou diretamente *Lidar com dívidas* (A Sentinela, 2012), além do verbete *Dívida, devedor* do Estudo Perspicaz.
+- A detecção de pessoas deixou de tratar qualquer verbete do Perspicaz como personagem; o título do verbete precisa corresponder ao assunto.
+- Publicações antigas usam a identificação bibliográfica exibida pelo próprio WOL, e IDs numéricos de documentos não são mais confundidos com o Estudo Perspicaz.
+- No modo amplo, o servidor acrescenta integralmente o texto oficial recuperado de todo versículo usado pela resposta quando o provedor omite a transcrição.
+- Citações, cartões de fontes e links oficiais encontrados dentro do leitor continuam no painel integrado. A fonte original permanece disponível em ação separada.
+- A janela primária do OpenRouter amplo passou de 70 para 95 segundos dentro do limite global de 150 segundos, mantendo reserva para o Gemini como último recurso e eliminando o corte artificial perto de 90 segundos.
+
+### Evidências da candidata
+
+| Verificação | Resultado |
+|---|---|
+| Backend isolado | 64 testes aprovados |
+| Navegador | 10 jornadas aprovadas |
+| Moisés — recuperação real | 9 publicações + 8 passagens, Perspicaz e A Sentinela, 9,1 s na coleta completa |
+| Dívidas — recuperação real | verbete do Perspicaz + artigo central *Lidar com dívidas* + publicações correlatas, cerca de 5 s |
+| Medo do Diabo — recuperação real | 7 publicações + 8 passagens, cerca de 14 s antes dos ajustes finais |
+| Síntese ampla local | 9.668 caracteres, 16 fontes, sem aviso, usando Gemini Flash Lite apenas como benchmark técnico |
+
+### Próximos passos mantidos no backlog
+
+- JW-017/JW-018: validação semântica de afirmações e citações; o mapa atual mede cobertura lexical observável e não probabilidade de verdade.
+- JW-022/JW-025: execução assíncrona, progresso, cancelamento e retomada para pesquisas que ultrapassem uma conexão HTTP.
+- JW-050/JW-053: ampliar o conjunto editorial e revisar tom, atribuições, seleção de textos e utilidade com avaliadores humanos.
+- JW-052/JW-054: medir p50/p95 e testar carga moderada sem pressionar o WOL.
+- JW-064: considerar índice semântico somente se o benchmark demonstrar lacunas persistentes.

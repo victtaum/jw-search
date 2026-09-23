@@ -70,6 +70,29 @@ test('markdown and malicious source cards cannot inject event handlers',async ({
   expect(await page.evaluate(()=>window.pwned)).toBe(false);
 });
 
+test('citations and related official links stay in the integrated reader',async ({page})=>{
+  const opened=[];
+  await page.route('**/api/read**',async route=>{
+    const requestUrl=new URL(route.request().url());
+    const sourceUrl=requestUrl.searchParams.get('url');
+    opened.push(sourceUrl);
+    await route.fulfill({json:{content:sourceUrl.includes('/related')
+      ? '<article><h1>Documento relacionado</h1><p>Conteúdo relacionado.</p></article>'
+      : '<article><h1>Moisés</h1><p>Conteúdo principal.</p><a href="https://wol.jw.org/pt/wol/d/related">Referência relacionada</a></article>'}});
+  });
+  await page.evaluate(()=>{
+    const url='https://wol.jw.org/pt/wol/d/source';
+    activeConversation.turns=[{query:'Moisés',answer:`[Moisés](${url})`,results:[{title:'Moisés',link:url,publication:'Estudo Perspicaz das Escrituras'}]}];
+    renderConversationThread();
+  });
+  await page.locator('.wol-inline-link').click();
+  await expect(page.locator('#reader-pub')).toHaveText('Estudo Perspicaz das Escrituras');
+  await expect(page.locator('#reader-content')).toContainText('Conteúdo principal');
+  await page.locator('#reader-content a').click();
+  await expect(page.locator('#reader-content')).toContainText('Conteúdo relacionado');
+  expect(opened).toEqual(['https://wol.jw.org/pt/wol/d/source','https://wol.jw.org/pt/wol/d/related']);
+});
+
 test('DeepSeek request does not inherit Hy3 settings or old sources',async ({page})=>{
   let request;
   await page.route('**/api/chat',async route=>{

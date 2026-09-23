@@ -186,6 +186,14 @@ def _query_wol_html(
                 publication = infer_publication_info(
                     f"{title} {reference_label} {publication_code}", url
                 )
+                if publication == "Biblioteca Online (WOL)" and reference_label:
+                    # Older books often expose their exact publication name only
+                    # in the WOL bibliographic label (for example “Ajuda (ad)”).
+                    label_match = re.search(
+                        r"\s-\s(.+?)(?:\s+\([^)]*\))?$", reference_label
+                    )
+                    if label_match:
+                        publication = label_match.group(1).strip()
             seen.add(doc_id)
             results.append(
                 {

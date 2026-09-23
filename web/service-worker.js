@@ -1,9 +1,9 @@
-const CACHE_NAME = 'jw-search-cache-v33';
+const CACHE_NAME = 'jw-search-cache-v34';
 const ASSETS = [
   '/',
   '/index.html',
-  '/app.js?v=2.24.1',
-  '/study-controls.js?v=2.24.1',
+  '/app.js?v=2.25.0',
+  '/study-controls.js?v=2.25.0',
   '/vendor/purify.min.js',
   '/manifest.json'
 ];
