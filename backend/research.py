@@ -1047,7 +1047,7 @@ Desenvolva os pontos cobertos pelas evidências. Não preencha lacunas com memó
             answer = response.text
     else:
         used_model = model or (
-            "deepseek-chat" if provider == "deepseek" else "tencent/hy3"
+            "deepseek-chat" if provider == "deepseek" else "openrouter/free"
         )
         with OpenAI(
             api_key=key,
@@ -1056,7 +1056,7 @@ Desenvolva os pontos cobertos pelas evidências. Não preencha lacunas com memó
             max_retries=0,
         ) as client:
             request_options = {}
-            if provider == "hy3":
+            if provider == "hy3" and used_model == "tencent/hy3":
                 # Hy3 defaults to high reasoning on OpenRouter. That can consume
                 # the entire HTTP window before producing visible content.
                 request_options["extra_body"] = {

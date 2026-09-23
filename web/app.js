@@ -1277,7 +1277,7 @@ if (selectHy3Preset) {
         const preset = selectHy3Preset.value;
         if (preset === "openrouter") {
             if (inputHy3BaseUrl) inputHy3BaseUrl.value = "https://openrouter.ai/api/v1";
-            if (inputHy3Model) inputHy3Model.value = "tencent/hy3";
+            if (inputHy3Model) inputHy3Model.value = "openrouter/free";
         } else if (preset === "tencent") {
             if (inputHy3BaseUrl) inputHy3BaseUrl.value = "https://api.hunyuan.cloud.tencent.com/v1";
             if (inputHy3Model) inputHy3Model.value = "hunyuan-standard";
@@ -1303,7 +1303,7 @@ if (inputHy3Key) {
                 inputHy3BaseUrl.value = "https://openrouter.ai/api/v1";
             }
             if (inputHy3Model && (!inputHy3Model.value || inputHy3Model.value === "hy3" || inputHy3Model.value.includes("hunyuan-standard"))) {
-                inputHy3Model.value = "tencent/hy3";
+                inputHy3Model.value = "openrouter/free";
             }
         }
     });
@@ -1349,7 +1349,7 @@ function openKeyModal(noticeMessage = null) {
     if (inputDeepseekKey) inputDeepseekKey.value = localStorage.getItem("jw_search_deepseek_key") || "";
     if (inputHy3Key) inputHy3Key.value = localStorage.getItem("jw_search_hy3_key") || "";
     if (inputHy3BaseUrl) inputHy3BaseUrl.value = localStorage.getItem("jw_search_hy3_base_url") || "https://openrouter.ai/api/v1";
-    if (inputHy3Model) inputHy3Model.value = localStorage.getItem("jw_search_hy3_model") || "tencent/hy3";
+    if (inputHy3Model) inputHy3Model.value = localStorage.getItem("jw_search_hy3_model") || "openrouter/free";
     
     switchModalTab(currentProvider);
 
