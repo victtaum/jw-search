@@ -169,6 +169,13 @@ test('follow-up suggestions wrap without a horizontal scrollbar and keep support
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth+1);
   expect(dimensions.overflowX).not.toBe('auto');
+  await expect(page.locator('#followup-suggestions')).toHaveClass(/grid-cols-2/);
+  for (const button of await page.locator('#followup-suggestions .btn-prompt-pill').all()) {
+    await expect(button).toHaveClass(/w-full/);
+    await expect(button).toHaveClass(/min-w-0/);
+  }
+  await expect(page.locator('#followup-secondary-controls')).toHaveClass(/md:flex-col/);
+  await expect(page.locator('#followup-support')).toHaveClass(/md:justify-end/);
   await expect(page.locator('#dock-app-version')).toContainText(/^v\d+\.\d+\.\d+$/);
   await expect(page.getByRole('button',{name:'Reportar Bug / Contatar'}).last()).toBeVisible();
 });

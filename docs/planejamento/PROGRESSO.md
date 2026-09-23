@@ -244,3 +244,9 @@ Os tempos são amostras, não SLA. O roteador gratuito variou entre respostas r�
 ### Ajuste 2.25.7 — visibilidade consistente no CSS de produção
 
 - Os campos condicionais das ferramentas alternam a classe de exibição junto com o atributo HTML, impedindo que as classes do Tailwind tornem visível uma opção ocultada.
+
+### Ajuste 2.25.8 — composição visual da barra de acompanhamento
+
+- As quatro ferramentas ocupam uma grade 2×2, com botões de mesma largura e altura.
+- Os seletores de fonte e profundidade formam um painel lateral; versão e contato aparecem logo abaixo deles.
+- Em telas estreitas, os blocos se reorganizam em uma coluna sem rolagem horizontal.
