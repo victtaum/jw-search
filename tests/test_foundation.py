@@ -455,7 +455,7 @@ def test_empty_retrieval_does_not_call_model(monkeypatch):
     llm.assert_not_called()
 
 
-def test_hy3_gets_explicit_reasoning_budget(monkeypatch):
+def test_openrouter_free_is_default_and_hy3_reasoning_is_explicit(monkeypatch):
     monkeypatch.setattr(
         research,
         "collect_evidence",
@@ -488,11 +488,18 @@ def test_hy3_gets_explicit_reasoning_budget(monkeypatch):
     context.__exit__ = Mock(return_value=False)
     monkeypatch.setattr(research, "OpenAI", Mock(return_value=context))
     research.run_research(
-        "amor", [], "hy3", "fake", "https://openrouter.ai/api/v1", None, "quick", "pt", False
+        "amor", [], "hy3", "fake", "https://openrouter.ai/api/v1", "tencent/hy3", "quick", "pt", False
     )
     assert completion.call_args.kwargs["extra_body"] == {
         "reasoning": {"effort": "none"}
     }
+    completion.reset_mock()
+    result = research.run_research(
+        "amor", [], "hy3", "fake", "https://openrouter.ai/api/v1", None, "quick", "pt", False
+    )
+    assert result["model"] == "openrouter/free"
+    assert completion.call_args.kwargs["model"] == "openrouter/free"
+    assert "extra_body" not in completion.call_args.kwargs
 
 
 def test_no_silent_fallback_and_deadline_reset(monkeypatch):

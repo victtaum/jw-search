@@ -189,3 +189,10 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - JW-050/JW-053: ampliar o conjunto editorial e revisar tom, atribuições, seleção de textos e utilidade com avaliadores humanos.
 - JW-052/JW-054: medir p50/p95 e testar carga moderada sem pressionar o WOL.
 - JW-064: considerar índice semântico somente se o benchmark demonstrar lacunas persistentes.
+
+### Ajuste 2.25.1 — OpenRouter gratuito como rota pública
+
+- A validação pública da 2.25.0 mostrou que o modelo pago `tencent/hy3` retornava 503 e fazia a consulta usar o Gemini reservado.
+- O padrão do servidor e das novas configurações pessoais passa a `openrouter/free`, o roteador gratuito oficial do OpenRouter. O usuário continua podendo informar qualquer modelo em sua própria configuração.
+- Opções específicas de raciocínio são enviadas apenas quando `tencent/hy3` é escolhido explicitamente, evitando parâmetros incompatíveis no roteador gratuito.
+- Gemini permanece como último recurso quando toda a tentativa do OpenRouter falha.
