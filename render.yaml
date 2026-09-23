@@ -7,3 +7,9 @@
     envVars:
       - key: GEMINI_API_KEY
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CONTACT_RECIPIENT
+        sync: false
+      - key: CONTACT_FROM
+        sync: false

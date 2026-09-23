@@ -427,6 +427,61 @@ def test_hy3_recoverable_failure_uses_configured_gemini(monkeypatch):
     assert budgets[0] <= 70 and budgets[1] > 100
 
 
+def test_contact_relays_without_exposing_recipient(monkeypatch):
+    captured = {}
+
+    class MailResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    def send(request, timeout):
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return MailResponse()
+
+    monkeypatch.setenv("RESEND_API_KEY", "resend-secret")
+    monkeypatch.setenv("CONTACT_RECIPIENT", "private@example.com")
+    monkeypatch.setattr(main.urllib.request, "urlopen", send)
+    response = client.post(
+        "/api/contact",
+        headers={"X-Forwarded-For": "198.51.100.42"},
+        json={
+            "kind": "bug",
+            "name": "Pessoa",
+            "reply_to": "visitor@example.net",
+            "subject": "Falha na pesquisa",
+            "message": "A pesquisa apresentou uma falha inesperada.",
+            "website": "",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == {"status": "sent"}
+    body = captured["request"].data.decode()
+    assert "private@example.com" in body
+    assert "private@example.com" not in response.text
+    assert captured["request"].headers["Authorization"] == "Bearer resend-secret"
+
+
+def test_contact_requires_private_mail_configuration(monkeypatch):
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    monkeypatch.delenv("CONTACT_RECIPIENT", raising=False)
+    response = client.post(
+        "/api/contact",
+        headers={"X-Forwarded-For": "198.51.100.43"},
+        json={
+            "subject": "Quero falar com vocês",
+            "message": "Esta é uma mensagem suficientemente longa.",
+        },
+    )
+    assert response.status_code == 503
+    assert "destinat" not in response.text.lower()
+
+
 def test_expired_deadline_stops_work():
     token = safety.deadline.set(time.monotonic() - 1)
     try:

@@ -92,3 +92,19 @@ test('late response cannot enter another conversation',async ({page})=>{
   await expect.poll(()=>page.evaluate(()=>pendingSearch)).toBe(null);
   expect(await page.evaluate(()=>activeConversation.turns)).toEqual([]);
 });
+
+test('footer shows version and contact form sends through the backend',async ({page})=>{
+  let message;
+  await page.route('**/api/contact',async route=>{
+    message=route.request().postDataJSON();
+    await route.fulfill({json:{status:'sent'}});
+  });
+  await expect(page.locator('#app-version')).toContainText('Versão');
+  await page.getByRole('button',{name:/Reportar bug \/ contato/}).click();
+  await page.locator('#contact-subject').fill('Erro ao pesquisar');
+  await page.locator('#contact-message').fill('A pesquisa não terminou como esperado.');
+  await page.getByRole('button',{name:/Enviar mensagem/}).click();
+  await expect.poll(()=>message?.kind).toBe('bug');
+  expect(message).not.toHaveProperty('recipient');
+  await expect(page.locator('#contact-status')).toContainText('Mensagem enviada');
+});

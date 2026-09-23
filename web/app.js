@@ -4,6 +4,15 @@
 
 const API_BASE = "";
 
+const appVersion = document.getElementById("app-version");
+const contactModal = document.getElementById("contact-modal");
+const contactModalContainer = document.getElementById("contact-modal-container");
+const btnOpenContact = document.getElementById("btn-open-contact");
+const btnCloseContact = document.getElementById("btn-close-contact");
+const contactForm = document.getElementById("contact-form");
+const contactStatus = document.getElementById("contact-status");
+const btnSendContact = document.getElementById("btn-send-contact");
+
 // State
 // State
 let currentProvider = localStorage.getItem("jw_search_active_provider") || "gemini";
@@ -1618,4 +1627,57 @@ window.addEventListener("appinstalled", () => {
     dismissPwaInstallBanner();
     if (btnHeaderInstall) btnHeaderInstall.classList.add("hidden");
     console.log("JW Search instalado com sucesso como PWA!");
+});
+
+// Footer version and private contact relay
+fetch(`${API_BASE}/healthz`)
+    .then(response => response.ok ? response.json() : null)
+    .then(data => {
+        if (data?.version && appVersion) appVersion.textContent = `Versão ${data.version}`;
+    })
+    .catch(() => {});
+
+function setContactModal(open) {
+    if (!contactModal) return;
+    contactModal.classList.toggle("pointer-events-none", !open);
+    contactModal.classList.toggle("opacity-0", !open);
+    contactModalContainer?.classList.toggle("scale-95", !open);
+    if (open) setTimeout(() => document.getElementById("contact-subject")?.focus(), 100);
+}
+
+btnOpenContact?.addEventListener("click", () => setContactModal(true));
+btnCloseContact?.addEventListener("click", () => setContactModal(false));
+contactModal?.addEventListener("click", event => {
+    if (event.target === contactModal) setContactModal(false);
+});
+
+contactForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    btnSendContact.disabled = true;
+    contactStatus.className = "text-xs rounded-lg px-3 py-2 bg-blue-50 text-blue-700";
+    contactStatus.textContent = "Enviando mensagem…";
+    try {
+        const response = await fetch(`${API_BASE}/api/contact`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                kind: document.getElementById("contact-kind").value,
+                name: document.getElementById("contact-name").value.trim(),
+                reply_to: document.getElementById("contact-email").value.trim(),
+                subject: document.getElementById("contact-subject").value.trim(),
+                message: document.getElementById("contact-message").value.trim(),
+                website: document.getElementById("contact-website").value
+            })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || "Não foi possível enviar a mensagem.");
+        contactForm.reset();
+        contactStatus.className = "text-xs rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700";
+        contactStatus.textContent = "Mensagem enviada. Obrigado pelo contato!";
+    } catch (error) {
+        contactStatus.className = "text-xs rounded-lg px-3 py-2 bg-red-50 text-red-700";
+        contactStatus.textContent = error.message;
+    } finally {
+        btnSendContact.disabled = false;
+    }
 });

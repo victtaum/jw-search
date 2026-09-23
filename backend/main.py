@@ -1,6 +1,6 @@
 import uvicorn
 from typing import Optional, List, Literal
-from fastapi import FastAPI, Query, Header, HTTPException
+from fastapi import FastAPI, Query, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -15,19 +15,43 @@ from middleware import RequestBoundary
 from study_tools import ToolOptions
 import time
 import threading
+import json
+import urllib.request
+import urllib.error
+import html
+from collections import defaultdict, deque
 from urllib.parse import quote
 
 _search_slots = threading.BoundedSemaphore(4)
+_contact_attempts = defaultdict(deque)
+_contact_lock = threading.Lock()
 
 
 class KeyConfigRequest(BaseModel):
     api_key: str
 
 
+class ContactRequest(BaseModel):
+    kind: Literal["bug", "suggestion", "contact"] = "bug"
+    name: str = Field(default="", max_length=100)
+    reply_to: str = Field(default="", max_length=254)
+    subject: str = Field(min_length=3, max_length=140)
+    message: str = Field(min_length=10, max_length=5000)
+    website: str = Field(default="", max_length=200)
+
+    @model_validator(mode="after")
+    def validate_contact(self):
+        if self.reply_to and not re.fullmatch(
+            r"[^\s@]+@[^\s@]+\.[^\s@]+", self.reply_to
+        ):
+            raise ValueError("Informe um e-mail de retorno válido.")
+        return self
+
+
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.22.1",
+    version="2.23.0",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -482,9 +506,71 @@ def api_read(
         raise HTTPException(502, "Não foi possível ler esta fonte.")
 
 
+@app.post("/api/contact")
+def api_contact(payload: ContactRequest, request: Request):
+    """Relay feedback without exposing the recipient or mail credentials."""
+    if payload.website:
+        return {"status": "sent"}
+
+    api_key = os.environ.get("RESEND_API_KEY")
+    recipient = os.environ.get("CONTACT_RECIPIENT")
+    sender = os.environ.get("CONTACT_FROM", "JW Search <onboarding@resend.dev>")
+    if not api_key or not recipient:
+        raise HTTPException(503, "O canal de contato está temporariamente indisponível.")
+
+    client_ip = (request.headers.get("x-forwarded-for") or "unknown").split(",")[0]
+    now = time.monotonic()
+    with _contact_lock:
+        attempts = _contact_attempts[client_ip]
+        while attempts and now - attempts[0] > 900:
+            attempts.popleft()
+        if len(attempts) >= 3:
+            raise HTTPException(
+                429, "Limite de mensagens atingido. Tente novamente mais tarde."
+            )
+        attempts.append(now)
+
+    labels = {"bug": "Bug", "suggestion": "Sugestão", "contact": "Contato"}
+    safe_name = html.escape(payload.name.strip() or "Não informado")
+    safe_reply = html.escape(payload.reply_to.strip() or "Não informado")
+    safe_subject = html.escape(payload.subject.strip())
+    safe_message = html.escape(payload.message.strip()).replace("\n", "<br>")
+    email_payload = {
+        "from": sender,
+        "to": [recipient],
+        "subject": f"[JW Search - {labels[payload.kind]}] {payload.subject.strip()}",
+        "html": (
+            f"<h2>{labels[payload.kind]} recebido pelo JW Search</h2>"
+            f"<p><strong>Nome:</strong> {safe_name}</p>"
+            f"<p><strong>Retorno:</strong> {safe_reply}</p>"
+            f"<p><strong>Assunto:</strong> {safe_subject}</p>"
+            f"<p><strong>Mensagem:</strong><br>{safe_message}</p>"
+        ),
+    }
+    mail_request = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=json.dumps(email_payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "JWSearch/2.23",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(mail_request, timeout=10) as response:
+            if response.status not in (200, 201):
+                raise HTTPException(502, "Não foi possível enviar a mensagem.")
+    except urllib.error.HTTPError as exc:
+        raise HTTPException(502, "Não foi possível enviar a mensagem.") from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise HTTPException(504, "O serviço de contato demorou para responder.") from exc
+    return {"status": "sent"}
+
+
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.22.1"}
+    return {"status": "ok", "version": "2.23.0"}
 
 
 @app.get("/api/config")

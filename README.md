@@ -4,7 +4,7 @@ Pesquisa bíblica com leitura de fontes e preparação de materiais de estudo. P
 
 **Acompanhe:** [backlog](BACKLOG.md), [progresso](docs/planejamento/PROGRESSO.md), [requisitos](docs/planejamento/01-VISAO-E-REQUISITOS.md) e [arquitetura proposta](docs/planejamento/02-ARQUITETURA-E-DECISOES.md).
 
-## Esta entrega — 2.22.1
+## Esta entrega — 2.23.0
 
 - Dois pipelines editoriais independentes: o **sintetizado** recupera o estilo clássico do JW Search, com resposta direta, análise essencial, textos e publicações; o **amplo** aplica pesquisa teocrática profunda sem teto artificial de palavras, com consultas correlatas, publicações variadas e passagens bíblicas integrais.
 - Pesquisa compartilhada entre Gemini, DeepSeek e Hy3/OpenRouter: busca no WOL, leitura de documentos, seleção de trechos e geração com IDs de fontes. Links são resolvidos pelo código a partir dos documentos coletados.
@@ -63,6 +63,8 @@ npm test
 ```
 
 Os testes padrão usam fixtures e respostas simuladas: não gastam créditos nem acessam provedores. O navegador bloqueia recursos externos nos testes funcionais. A CI executa as duas suítes e verifica padrões de segredos nos arquivos versionados. Scripts exploratórios antigos `backend/test_*` foram substituídos pelas regressões isoladas em `tests/`.
+
+O formulário de contato usa o backend para que destinatário e credenciais nunca sejam enviados ao navegador. Configure `RESEND_API_KEY`, `CONTACT_RECIPIENT` e, opcionalmente, `CONTACT_FROM` como segredos no ambiente de hospedagem.
 
 Consultas reais são verificações separadas e não comprovam qualidade para todos os assuntos. Veja os resultados e limites no [registro de progresso](docs/planejamento/PROGRESSO.md).
 

@@ -136,3 +136,10 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - O Hy3 passa a ter um limite próprio de 70 segundos no modo amplo e 35 segundos no sintetizado quando o Gemini está configurado.
 - O limite global permanece em 150/75 segundos, deixando tempo real para a tentativa automática com Gemini.
 - A consulta pública `como sair das dívidas?` revelou que o Hy3 demorava cerca de 110 segundos para falhar, inviabilizando a recuperação anterior.
+
+## Entrega 2.23.0 — versão visível e contato privado
+
+- O rodapé mostra a versão informada pelo backend, evitando divergência entre interface e implantação.
+- O formulário de bug, sugestão e contato envia por `/api/contact`; destinatário e chave de e-mail permanecem somente nos segredos do Render.
+- A entrada tem limites de tamanho, validação do e-mail de retorno, honeypot e limite de três mensagens por origem a cada 15 minutos.
+- O envio usa a API HTTPS do Resend porque instâncias gratuitas do Render bloqueiam as portas SMTP usuais.
