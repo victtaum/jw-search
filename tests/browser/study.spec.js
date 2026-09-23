@@ -133,11 +133,28 @@ test('footer shows version and contact form sends through the backend',async ({p
     await route.fulfill({json:{status:'sent'}});
   });
   await expect(page.locator('#app-version')).toContainText('Versão');
-  await page.getByRole('button',{name:/Reportar bug \/ contato/}).click();
+  await page.getByRole('button',{name:'Reportar Bug / Contatar'}).first().click();
   await page.locator('#contact-subject').fill('Erro ao pesquisar');
   await page.locator('#contact-message').fill('A pesquisa não terminou como esperado.');
   await page.getByRole('button',{name:/Enviar mensagem/}).click();
   await expect.poll(()=>message?.kind).toBe('bug');
   expect(message).not.toHaveProperty('recipient');
   await expect(page.locator('#contact-status')).toContainText('Mensagem enviada');
+});
+
+test('follow-up suggestions wrap without a horizontal scrollbar and keep support visible',async ({page})=>{
+  await page.setViewportSize({width:900,height:700});
+  await page.evaluate(()=>{
+    activeConversation.turns=[{query:'Moisés',answer:'Resposta',results:[],timestamp:new Date().toISOString()}];
+    renderConversationThread();
+  });
+  const dimensions=await page.locator('#followup-suggestions').evaluate(element=>({
+    clientWidth:element.clientWidth,
+    scrollWidth:element.scrollWidth,
+    overflowX:getComputedStyle(element).overflowX
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth+1);
+  expect(dimensions.overflowX).not.toBe('auto');
+  await expect(page.locator('#dock-app-version')).toContainText('v2.25.5');
+  await expect(page.getByRole('button',{name:'Reportar Bug / Contatar'}).last()).toBeVisible();
 });
