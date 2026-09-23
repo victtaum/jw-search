@@ -240,3 +240,7 @@ Os tempos são amostras, não SLA. O roteador gratuito variou entre respostas r�
 - Somente o esboço estruturado pede duração e apresenta distribuição de tempo.
 - A tabela compara os assuntos e evidências examinados, destacando o que expressam, relações, princípios bílicos, pérolas espirituais, aplicações e fontes.
 - Textos bíblicos produz uma lista temática, sem comparação, concentrada no que cada passagem ensina sobre o tema e usando as publicações como apoio explicativo.
+
+### Ajuste 2.25.7 — visibilidade consistente no CSS de produção
+
+- Os campos condicionais das ferramentas alternam a classe de exibição junto com o atributo HTML, impedindo que as classes do Tailwind tornem visível uma opção ocultada.

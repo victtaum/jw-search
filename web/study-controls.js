@@ -81,9 +81,17 @@ window.JWStudy = (() => {
         if (pending) return resolve(null);
         pending={resolve,kind}; dialog.returnValue='cancel';
         dialog.querySelector('#tool-title').textContent=labels[kind];
-        dialog.querySelector('#tool-family').hidden=kind!=='family';
-        dialog.querySelector('#tool-time-label').hidden=kind!=='outline';
-        dialog.querySelector('#tool-editorial-note').hidden=kind!=='outline';
+        const familyOptions = dialog.querySelector('#tool-family');
+        const timeOptions = dialog.querySelector('#tool-time-label');
+        const editorialNote = dialog.querySelector('#tool-editorial-note');
+        familyOptions.hidden=kind!=='family';
+        timeOptions.hidden=kind!=='outline';
+        editorialNote.hidden=kind!=='outline';
+        // Tailwind's display utilities can override the native hidden
+        // attribute after its CDN stylesheet loads. Toggle its utility too.
+        familyOptions.classList.toggle('hidden',kind!=='family');
+        timeOptions.classList.toggle('hidden',kind!=='outline');
+        editorialNote.classList.toggle('hidden',kind!=='outline');
         dialog.showModal();
     })};
 })();
