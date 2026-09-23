@@ -304,7 +304,7 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
 
     // Transport margin above the server budget; elapsed time does not imply a stage.
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), mode === "deep" ? 165000 : 85000);
+    const timeoutId = setTimeout(() => controller.abort(), (mode === "deep" || tool) ? 165000 : 85000);
     pendingSearch = controller;
 
     try {

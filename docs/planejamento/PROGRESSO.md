@@ -202,3 +202,8 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - A pergunta original agora permanece separada do tema normalizado usado para pesquisar. Antes, `como sair das dívidas?` era reduzida a `dívida` cedo demais e perdia a intenção prática.
 - O plano e a segunda rodada usam a formulação original para reconhecer pedidos de ação, mantendo o tema resolvido para continuações da conversa.
 - Consultas práticas voltam a incluir expressões naturais como `lidar com dívidas`, que recuperam o artigo central antes da síntese.
+
+### Ajuste 2.25.3 — tempo compatível com as ferramentas derivadas
+
+- Tabela comparativa, estudo em família, textos bíblicos e esboço recebem a janela de transporte do modo amplo, mesmo quando são abertos a partir de uma resposta sintetizada.
+- O navegador acompanha essa janela maior. Isso evita interromper material estruturado no limite curto destinado a respostas simples e preserva tempo para o Gemini somente quando o OpenRouter gratuito falhar.

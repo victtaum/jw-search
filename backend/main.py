@@ -56,7 +56,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.25.2",
+    version="2.25.3",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -364,7 +364,11 @@ def handle_theocratic_search(
             "Há pesquisas em andamento. Aguarde antes de tentar novamente.",
             headers={"Retry-After": "10"},
         )
-    token = deadline.set(time.monotonic() + (150 if mode == "deep" else 75))
+    # Derived tools produce structured, longer material even when launched from
+    # a synthesized answer. Give them the same transport budget as broad
+    # research so the free provider can finish before the private fallback.
+    complex_request = mode == "deep" or tool is not None
+    token = deadline.set(time.monotonic() + (150 if complex_request else 75))
     try:
         try:
             primary_token = None
@@ -374,7 +378,7 @@ def handle_theocratic_search(
                 # Broad research needs time for both evidence collection and a
                 # developed answer. Keep a fallback reserve inside the 150 s
                 # request window without forcing OpenRouter to stop at 70 s.
-                primary_cap = 95 if mode == "deep" else 45
+                primary_cap = 95 if complex_request else 45
                 primary_token = deadline.set(time.monotonic() + primary_cap)
             try:
                 primary_result = run_research(
@@ -438,7 +442,7 @@ def handle_theocratic_search(
     except (SearchDeadline, TimeoutError) as exc:
         raise HTTPException(
             504,
-            "A pesquisa atingiu seu limite de tempo. Tente reduzir o assunto ou usar o modo amplo.",
+            "A pesquisa atingiu seu limite de tempo. Tente novamente ou reduza o assunto.",
         ) from exc
     except HTTPException:
         raise
@@ -602,7 +606,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.25.2"}
+    return {"status": "ok", "version": "2.25.3"}
 
 
 @app.get("/api/config")
