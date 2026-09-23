@@ -196,3 +196,9 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - O padrão do servidor e das novas configurações pessoais passa a `openrouter/free`, o roteador gratuito oficial do OpenRouter. O usuário continua podendo informar qualquer modelo em sua própria configuração.
 - Opções específicas de raciocínio são enviadas apenas quando `tencent/hy3` é escolhido explicitamente, evitando parâmetros incompatíveis no roteador gratuito.
 - Gemini permanece como último recurso quando toda a tentativa do OpenRouter falha.
+
+### Ajuste 2.25.2 — intenção preservada nas consultas práticas
+
+- A pergunta original agora permanece separada do tema normalizado usado para pesquisar. Antes, `como sair das dívidas?` era reduzida a `dívida` cedo demais e perdia a intenção prática.
+- O plano e a segunda rodada usam a formulação original para reconhecer pedidos de ação, mantendo o tema resolvido para continuações da conversa.
+- Consultas práticas voltam a incluir expressões naturais como `lidar com dívidas`, que recuperam o artigo central antes da síntese.
