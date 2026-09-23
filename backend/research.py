@@ -11,7 +11,7 @@ from google.genai import types
 from openai import OpenAI
 
 from rag_engine import search_wol_direct, extract_theocratic_keywords
-from scraper import get_clean_document
+from scraper import get_clean_document, infer_publication_info
 from safety import remaining, official_url
 from study_tools import tool_instruction, outline_schedule
 
@@ -416,13 +416,18 @@ def expand_related_documents(sources, terms, total_budget, max_sources=12, max_d
             ):
                 child_links.append({"link": child_url, "title": child_title[:180]})
         child_links = list({item["link"]: item for item in child_links}.values())[:20]
+        publication = infer_publication_info(
+            f"{title} {related['title']}", url
+        )
         sources.append(
             {
                 "id": source_id,
                 "title": title,
                 "link": url,
-                "publication": "Biblioteca Online (WOL)",
-                "publication_detail": f"Referência seguida a partir de {parent_id}",
+                "publication": publication,
+                "publication_detail": (
+                    f"{publication} — referência seguida a partir de {parent_id}"
+                ),
                 "content_type": "article",
                 "verification": "recursive_document_retrieved",
                 "is_external": False,
