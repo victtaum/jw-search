@@ -825,7 +825,10 @@ function attachThreadInteractiveListeners() {
             e.preventDefault();
             const url = link.getAttribute("data-url");
             const title = link.getAttribute("data-title");
-            if (url) openReader(url, title, "Biblioteca Online");
+            const source = activeConversation.turns
+                .flatMap(turn => turn.results || [])
+                .find(result => result.link === url);
+            if (url) openReader(url, title, source?.publication || "Biblioteca Online");
         });
     });
     document.querySelectorAll(".btn-open-wol-reader").forEach(btn => {
@@ -1122,11 +1125,30 @@ async function openReader(url, rawTitle, pub = "Publicação Oficial") {
         if (!res.ok) throw new Error("Fonte indisponível");
         const data = await res.json();
         if (sequence !== readerSequence) return;
-        if (readerContent) readerContent.innerHTML = DOMPurify.sanitize(data.content || "<p class='text-sm text-slate-500'>Conteúdo não disponível.</p>");
+        if (readerContent) {
+            readerContent.innerHTML = DOMPurify.sanitize(data.content || "<p class='text-sm text-slate-500'>Conteúdo não disponível.</p>");
+            readerContent.scrollTop = 0;
+        }
     } catch { 
         if (sequence !== readerSequence) return;
         if (readerContent) readerContent.innerHTML = '<div class="p-4 bg-rose-50 text-rose-700 rounded-xl text-sm border border-rose-200">Não foi possível carregar o texto completo deste artigo no momento. Você pode abri-lo diretamente no WOL pelo link abaixo.</div>'; 
     }
+}
+
+if (readerContent) {
+    readerContent.addEventListener("click", (event) => {
+        const anchor = event.target.closest("a[href]");
+        if (!anchor) return;
+        const href = anchor.href;
+        try {
+            const parsed = new URL(href);
+            if (parsed.protocol !== "https:" || !/(^|\.)jw\.org$/i.test(parsed.hostname)) return;
+            event.preventDefault();
+            openReader(href, anchor.textContent.trim() || "Referência relacionada", "Fonte oficial JW");
+        } catch {
+            // Invalid links are already removed by DOMPurify and the backend sanitizer.
+        }
+    });
 }
 
 function closeReader() {

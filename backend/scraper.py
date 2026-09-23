@@ -134,7 +134,7 @@ def infer_publication_info(title, url):
         return "Despertai!"
     elif any(
         k in url_lower or k in title_lower
-        for k in ["it-1", "it-2", "perspicaz", "insight", "estudo-perspicaz", "/1200"]
+        for k in ["it-1", "it-2", "perspicaz", "insight", "estudo-perspicaz"]
     ):
         return "Estudo Perspicaz das Escrituras"
     elif any(

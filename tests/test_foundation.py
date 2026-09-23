@@ -188,6 +188,101 @@ def test_keywords_preserve_debt_and_history():
     )
 
 
+def test_deep_research_plan_is_observable_and_source_specific():
+    plan = research.build_research_plan("como sair das dívidas?", "deep")
+    assert plan["recursive"] is True
+    assert len(plan["subtopics"]) == 5
+    assert any("Estudo Perspicaz" in query for query in plan["queries"])
+    assert any("A Sentinela" in query for query in plan["queries"])
+
+
+def test_deep_collection_follows_official_document_references(monkeypatch):
+    first = "https://wol.jw.org/pt/wol/d/r5/lp-t/100"
+    related = "https://wol.jw.org/pt/wol/d/r5/lp-t/200"
+    monkeypatch.setattr(
+        research,
+        "search_wol_direct",
+        lambda *args, **kwargs: [
+            {
+                "title": "Artigo inicial",
+                "link": first,
+                "snippet": "dívida conselho",
+                "publication": "A Sentinela",
+                "publication_code": "w",
+                "reference_label": "A Sentinela — Artigo inicial",
+                "content_type": "article",
+                "is_external": False,
+                "source_site": "wol.jw.org",
+            }
+        ],
+    )
+
+    def document(url, requested_title=None):
+        if url == first:
+            return f'<article><h1>Artigo inicial</h1><p>Conselho sobre dívida com informação relevante para a família.</p><a href="{related}">Veja também como lidar com dívidas</a></article>'
+        if url == related:
+            return '<article><h1>Estudo Perspicaz das Escrituras — Dívida</h1><p>Orientação adicional sobre pagamento de dívida e planejamento.</p></article>'
+        return None
+
+    monkeypatch.setattr(research, "get_clean_document", document)
+    sources = research.collect_evidence("dívida", "pt", "deep")
+    assert [source["link"] for source in sources] == [first, related]
+    assert sources[1]["depth"] == 1
+    assert sources[1]["discovered_from"] == "S1"
+    assert sources[1]["publication"] != "Biblioteca Online (WOL)"
+
+
+def test_second_round_reads_documents_for_observed_gaps(monkeypatch):
+    source = {
+        "id": "S1",
+        "title": "Dívida",
+        "link": "https://wol.jw.org/pt/wol/d/r5/lp-t/100",
+        "publication": "Estudo Perspicaz das Escrituras",
+        "passages": [{"id": "S1P1", "text": "Definição de dívida."}],
+    }
+    plan = research.build_research_plan("como sair das dívidas?", "deep")
+    coverage = {
+        "items": [],
+        "gaps": ["passos práticos apresentados nas publicações"],
+        "complete": False,
+    }
+    monkeypatch.setattr(
+        research,
+        "_search_queries_parallel",
+        lambda queries, *_args: [
+            (
+                queries[0],
+                {
+                    "title": "Como controlar seus gastos",
+                    "link": "https://wol.jw.org/pt/wol/d/r5/lp-t/200",
+                    "publication": "A Sentinela",
+                    "content_type": "article",
+                    "is_external": False,
+                    "source_site": "wol.jw.org",
+                },
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        research,
+        "get_clean_document",
+        lambda *_args, **_kwargs: "<article><h1>Como controlar seus gastos</h1><p>Faça um orçamento, reduza gastos e negocie honestamente suas obrigações.</p></article>",
+    )
+    sources, _ = research.fill_research_gaps(
+        [source],
+        plan,
+        coverage,
+        "pt",
+        {"dívidas"},
+        10000,
+        time.monotonic() + 10,
+    )
+    assert len(sources) == 2
+    assert sources[1]["research_round"] == 2
+    assert sources[1]["matched_gap"] == coverage["gaps"][0]
+    assert sources[1]["verification"] == "gap_document_retrieved"
+
+
 def test_titles_are_not_rewritten():
     assert (
         scraper.clean_result_title("Seja Feliz — Felipe", "https://wol.jw.org/a")
@@ -223,6 +318,8 @@ def test_deep_research_expands_topic_and_prioritizes_diverse_sources(monkeypatch
         "Moisés coragem",
         "Moisés erros",
         "Moisés exemplo",
+        "Moisés Estudo Perspicaz",
+        "Moisés A Sentinela",
     ]
     hits = [
         {"title": "Êxodo", "content_type": "bible", "publication": "Bíblia"},
@@ -272,6 +369,24 @@ def test_provider_context_budget_never_truncates_bible_passage():
     evidence = research.format_evidence(sources, character_budget=1200)
     assert "TEXTO BÍBLICO COMPLETO" in evidence
     assert "a" * 1500 not in evidence
+
+
+def test_deep_answer_appends_exact_text_for_every_mentioned_verse():
+    sources = [
+        {
+            "id": "S4",
+            "title": "Números 12:3",
+            "link": "https://wol.jw.org/pt/wol/b/r5/lp-t/nwt/4/12",
+            "content_type": "bible_passage",
+            "passages": [{"text": "3 Ora, Moisés era de longe o mais manso."}],
+        }
+    ]
+    answer = research.append_missing_bible_texts(
+        "Moisés se destacou pela mansidão [S4].", sources
+    )
+    assert "### Textos bíblicos citados" in answer
+    assert "> 3 Ora, Moisés era de longe o mais manso." in answer
+    assert answer.count("de longe o mais manso") == 1
 
 
 def test_referenced_verses_are_exact_and_not_repeated_by_chapter(monkeypatch):
@@ -428,7 +543,7 @@ def test_hy3_recoverable_failure_uses_visitors_gemini(monkeypatch):
     assert data["provider"] == "gemini" and data["fallback_from"] == "hy3"
     assert "OpenRouter ficou indisponível" in data["warnings"][0]
     assert generate.call_args_list[1].args[2] == "gemini"
-    assert budgets[0] <= 70 and budgets[1] > 100
+    assert budgets[0] <= 95 and budgets[1] > 100
 
 
 def test_public_hy3_failure_uses_server_gemini_as_last_resort(monkeypatch):

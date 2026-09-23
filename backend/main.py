@@ -56,7 +56,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.24.1",
+    version="2.25.0",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -371,7 +371,10 @@ def handle_theocratic_search(
             if prov == "hy3" and fallback_gemini:
                 # OpenRouter can otherwise consume almost the entire request
                 # window before reporting that Hy3 is unavailable.
-                primary_cap = 70 if mode == "deep" else 35
+                # Broad research needs time for both evidence collection and a
+                # developed answer. Keep a fallback reserve inside the 150 s
+                # request window without forcing OpenRouter to stop at 70 s.
+                primary_cap = 95 if mode == "deep" else 45
                 primary_token = deadline.set(time.monotonic() + primary_cap)
             try:
                 primary_result = run_research(
@@ -599,7 +602,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.24.1"}
+    return {"status": "ok", "version": "2.25.0"}
 
 
 @app.get("/api/config")
