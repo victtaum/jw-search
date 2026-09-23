@@ -251,6 +251,28 @@ def test_research_profiles_are_independent_and_deep_has_no_word_cap():
     assert "1.100" not in deep and "1.000 palavras" not in deep
 
 
+def test_provider_context_budget_never_truncates_bible_passage():
+    sources = [
+        {
+            "id": "S1",
+            "title": "Artigo",
+            "publication": "A Sentinela",
+            "content_type": "article",
+            "passages": [{"text": "a" * 5000}],
+        },
+        {
+            "id": "S2",
+            "title": "Números 12:3",
+            "publication": "Bíblia",
+            "content_type": "bible_passage",
+            "passages": [{"text": "TEXTO BÍBLICO COMPLETO"}],
+        },
+    ]
+    evidence = research.format_evidence(sources, character_budget=1200)
+    assert "TEXTO BÍBLICO COMPLETO" in evidence
+    assert "a" * 1500 not in evidence
+
+
 def test_referenced_verses_are_exact_and_not_repeated_by_chapter(monkeypatch):
     monkeypatch.setattr(
         "bible.fetch_verse_content",

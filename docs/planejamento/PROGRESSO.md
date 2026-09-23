@@ -118,3 +118,9 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - Referências bíblicas recorrentes em várias publicações agora recebem prioridade sobre menções isoladas, reduzindo passagens periféricas.
 - Documentos antigos sem título visível passam a exibir a identificação editorial do WOL, em vez de usar como título um trecho longo e truncado do resultado.
 - Hy3 amplo mantém 5.000 tokens de capacidade, limite técnico já validado nesse provedor; Gemini amplo conserva 7.000. Não há teto editorial de palavras em nenhum dos dois.
+
+### Ajuste 2.21.2 — contexto amplo compatível com Hy3
+
+- O Hy3 retornou 503 ao receber o contexto ampliado da 2.21.1; o Gemini concluiu o mesmo fluxo.
+- Para Hy3 amplo, o contexto entregue ao modelo é distribuído em até 32 mil caracteres e a saída técnica usa 4.000 tokens, combinação anteriormente validada em produção.
+- As oito fontes continuam navegáveis na interface. Textos bíblicos nunca são truncados pelo orçamento; somente trechos editoriais longos são condensados. O Gemini conserva o contexto amplo integral e 7.000 tokens.
