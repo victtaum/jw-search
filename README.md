@@ -4,7 +4,7 @@ Pesquisa bíblica com leitura de fontes e preparação de materiais de estudo. P
 
 **Acompanhe:** [backlog](BACKLOG.md), [progresso](docs/planejamento/PROGRESSO.md), [requisitos](docs/planejamento/01-VISAO-E-REQUISITOS.md) e [arquitetura proposta](docs/planejamento/02-ARQUITETURA-E-DECISOES.md).
 
-## Esta entrega — 2.21.0
+## Esta entrega — 2.21.1
 
 - Dois pipelines editoriais independentes: o **sintetizado** recupera o estilo clássico do JW Search, com resposta direta, análise essencial, textos e publicações; o **amplo** aplica pesquisa teocrática profunda sem teto artificial de palavras, com consultas correlatas, publicações variadas e passagens bíblicas integrais.
 - Pesquisa compartilhada entre Gemini, DeepSeek e Hy3/OpenRouter: busca no WOL, leitura de documentos, seleção de trechos e geração com IDs de fontes. Links são resolvidos pelo código a partir dos documentos coletados.

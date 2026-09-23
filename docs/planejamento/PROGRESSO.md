@@ -111,3 +111,10 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - Comparar publicamente sintetizado, amplo e conversa de referência com a mesma pergunta e a mesma rubrica.
 - Medir se todos os versículos citados foram transcritos integralmente e se a publicação aparece com identificação editorial suficiente.
 - Implementar navegação recursiva entre publicações; a entrega atual aprofunda consultas e segue referências bíblicas por uma camada.
+
+### Ajuste 2.21.1 — referências centrais e compatibilidade do Hy3
+
+- Validação pública da 2.21.0: sintetizado Hy3 concluiu com cinco fontes, 839 palavras e nenhum aviso; amplo Gemini concluiu com 16 fontes, 1.109 palavras e nenhum aviso.
+- Referências bíblicas recorrentes em várias publicações agora recebem prioridade sobre menções isoladas, reduzindo passagens periféricas.
+- Documentos antigos sem título visível passam a exibir a identificação editorial do WOL, em vez de usar como título um trecho longo e truncado do resultado.
+- Hy3 amplo mantém 5.000 tokens de capacidade, limite técnico já validado nesse provedor; Gemini amplo conserva 7.000. Não há teto editorial de palavras em nenhum dos dois.

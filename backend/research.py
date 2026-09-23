@@ -197,7 +197,10 @@ def collect_evidence(query, lang, mode):
         heading_text = (
             heading.get_text(" ", strip=True)
             if heading
-            else hit.get("title", "Publicação consultada")[:180]
+            else (
+                hit.get("reference_label")
+                or hit.get("title", "Publicação consultada")[:180]
+            )
         )
         if heading_text.casefold() in {
             "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -282,9 +285,30 @@ def collect_referenced_verses(sources, lang, query="", limit=8):
                 context = text[max(0, match.start() - 180) : match.end() + 180].lower()
                 score = sum(term in context for term in terms)
                 references.append((score, match.group(0)))
-    references.sort(key=lambda item: -item[0])
-    verse_sources, seen, seen_chapters = [], set(), set()
+    chapter_frequency = {}
     from bible import parse_bible_ref
+
+    for _, reference in references:
+        parsed = parse_bible_ref(reference)
+        if parsed:
+            key = (parsed["book_num"], parsed["chapter"])
+            chapter_frequency[key] = chapter_frequency.get(key, 0) + 1
+    references.sort(
+        key=lambda item: -(
+            item[0]
+            + 3
+            * chapter_frequency.get(
+                (
+                    parse_bible_ref(item[1])["book_num"],
+                    parse_bible_ref(item[1])["chapter"],
+                )
+                if parse_bible_ref(item[1])
+                else None,
+                0,
+            )
+        )
+    )
+    verse_sources, seen, seen_chapters = [], set(), set()
 
     for _, reference in references:
         normalized = re.sub(r"\s+", " ", reference).strip().lower()
@@ -459,6 +483,8 @@ O histórico serve para entender o assunto; respostas antigas não são evidênc
         + [{"role": "user", "content": query}]
     )
     max_tokens = 5000 if tool else (7000 if mode == "deep" else 2500)
+    if provider == "hy3" and mode == "deep" and not tool:
+        max_tokens = 5000
     if provider == "gemini":
         used_model = model or "gemini-2.5-flash"
         with genai.Client(
