@@ -64,7 +64,7 @@ window.JWStudy = (() => {
         <label class="block text-sm">Textos a considerar (opcional, um por linha)
           <textarea id="tool-refs" rows="3" maxlength="2400" class="block border rounded-lg p-2 w-full" placeholder="Provérbios 22:7&#10;Romanos 13:8"></textarea>
         </label>
-        <p class="text-xs text-slate-500">Aplicações e distribuição de tempo são sugestões editoriais. A duração de um discurso deve ser conferida no ensaio.</p>
+        <p id="tool-editorial-note" class="text-xs text-slate-500">A distribuição de tempo é uma sugestão editorial. A duração do discurso deve ser conferida no ensaio.</p>
         <div class="flex gap-3 justify-end"><button value="cancel" formnovalidate class="border rounded-lg p-2">Cancelar</button><button value="generate" class="bg-blue-600 text-white rounded-lg p-2">Gerar material</button></div>
     </form>`;
     document.body.append(dialog);
@@ -82,7 +82,8 @@ window.JWStudy = (() => {
         pending={resolve,kind}; dialog.returnValue='cancel';
         dialog.querySelector('#tool-title').textContent=labels[kind];
         dialog.querySelector('#tool-family').hidden=kind!=='family';
-        dialog.querySelector('#tool-time-label').hidden=!['family','outline'].includes(kind);
+        dialog.querySelector('#tool-time-label').hidden=kind!=='outline';
+        dialog.querySelector('#tool-editorial-note').hidden=kind!=='outline';
         dialog.showModal();
     })};
 })();

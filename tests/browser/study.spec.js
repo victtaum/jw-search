@@ -24,6 +24,20 @@ test('modes and all seven outline durations are configurable',async ({page})=>{
   await expect.poll(()=>page.evaluate(()=>window.toolResult?.duration_minutes)).toBe(45);
 });
 
+test('only the outline asks for a duration',async ({page})=>{
+  for (const kind of ['comparison','family','scriptures']) {
+    await page.evaluate(kind=>{window.toolPromise=JWStudy.configure(kind);},kind);
+    await expect(page.getByText('Tempo disponível')).toBeHidden();
+    await expect(page.locator('#tool-editorial-note')).toBeHidden();
+    await page.locator('#tool-config-form').getByRole('button',{name:'Cancelar'}).click();
+    await page.evaluate(()=>window.toolPromise);
+  }
+  await page.evaluate(()=>{window.toolPromise=JWStudy.configure('outline');});
+  await expect(page.getByText('Tempo disponível')).toBeVisible();
+  await expect(page.locator('#tool-editorial-note')).toBeVisible();
+  await page.locator('#tool-config-form').getByRole('button',{name:'Cancelar'}).click();
+});
+
 test('depth control stays beside source scope and private access is absent',async ({page})=>{
   const scope=await page.locator('#btn-theocratic-toggle').boundingBox();
   const depth=await page.locator('#btn-depth-toggle').boundingBox();
@@ -155,6 +169,6 @@ test('follow-up suggestions wrap without a horizontal scrollbar and keep support
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth+1);
   expect(dimensions.overflowX).not.toBe('auto');
-  await expect(page.locator('#dock-app-version')).toContainText('v2.25.5');
+  await expect(page.locator('#dock-app-version')).toContainText(/^v\d+\.\d+\.\d+$/);
   await expect(page.getByRole('button',{name:'Reportar Bug / Contatar'}).last()).toBeVisible();
 });

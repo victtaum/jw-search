@@ -234,3 +234,9 @@ Os tempos são amostras, não SLA. O roteador gratuito variou entre respostas r�
 - As sugestões passam a quebrar em linhas conforme a largura disponível, eliminando a barra de rolagem horizontal permanente.
 - A área de resultado reserva espaço para a barra fixa, evitando que os últimos cartões fiquem encobertos.
 - Versão e acesso a `Reportar Bug / Contatar` permanecem visíveis na barra durante o estudo, além do rodapé da página.
+
+### Ajuste 2.25.6 — finalidade das ferramentas de estudo
+
+- Somente o esboço estruturado pede duração e apresenta distribuição de tempo.
+- A tabela compara os assuntos e evidências examinados, destacando o que expressam, relações, princípios bílicos, pérolas espirituais, aplicações e fontes.
+- Textos bíblicos produz uma lista temática, sem comparação, concentrada no que cada passagem ensina sobre o tema e usando as publicações como apoio explicativo.

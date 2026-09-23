@@ -206,6 +206,17 @@ def test_family_instruction_names_every_selected_profile_in_portuguese():
     assert "CADA perfil escolhido" in instruction
 
 
+def test_comparison_and_scriptures_have_distinct_editorial_purposes():
+    comparison = research.tool_instruction(ToolOptions(kind="comparison"))
+    scriptures = research.tool_instruction(ToolOptions(kind="scriptures"))
+    assert "ASSUNTOS" in comparison
+    assert "princípio bíblico" in comparison
+    assert "pérola espiritual" in comparison
+    assert "LISTA TEMÁTICA" in scriptures
+    assert "sem comparar os textos" in scriptures
+    assert "Não use tabela" in scriptures
+
+
 def test_research_plan_preserves_question_intent_with_resolved_topic():
     plan = research.build_research_plan(
         "como sair das dívidas?", "deep", topic="dívida"
