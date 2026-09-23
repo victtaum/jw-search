@@ -196,6 +196,15 @@ def test_deep_research_plan_is_observable_and_source_specific():
     assert any("A Sentinela" in query for query in plan["queries"])
 
 
+def test_research_plan_preserves_question_intent_with_resolved_topic():
+    plan = research.build_research_plan(
+        "como sair das dívidas?", "deep", topic="dívida"
+    )
+    assert plan["topic"] == "dívida"
+    assert "caminho prático" in plan["intent"]
+    assert "lidar com dívidas" in plan["queries"]
+
+
 def test_deep_collection_follows_official_document_references(monkeypatch):
     first = "https://wol.jw.org/pt/wol/d/r5/lp-t/100"
     related = "https://wol.jw.org/pt/wol/d/r5/lp-t/200"
@@ -437,7 +446,7 @@ def test_grouped_citations_are_resolved_individually():
 
 
 def test_empty_retrieval_does_not_call_model(monkeypatch):
-    monkeypatch.setattr(research, "collect_evidence", lambda *a: [])
+    monkeypatch.setattr(research, "collect_evidence", lambda *a, **_kw: [])
     llm = Mock()
     monkeypatch.setattr(research, "OpenAI", llm)
     result = research.run_research(
@@ -459,7 +468,7 @@ def test_openrouter_free_is_default_and_hy3_reasoning_is_explicit(monkeypatch):
     monkeypatch.setattr(
         research,
         "collect_evidence",
-        lambda *a: [
+        lambda *a, **_kw: [
             {
                 "id": "S1",
                 "title": "Fonte",

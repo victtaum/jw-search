@@ -83,9 +83,9 @@ def research_queries(query, mode, entity=False, practical=False):
     return list(dict.fromkeys(v[:240] for v in variants))
 
 
-def build_research_plan(query, mode, entity=False):
+def build_research_plan(query, mode, entity=False, topic=None):
     """Turn a free-form question into an observable, provider-neutral agenda."""
-    base = extract_theocratic_keywords(query).strip()
+    base = (topic or extract_theocratic_keywords(query)).strip()
     lower = query.casefold()
     practical = any(word in lower for word in ("como ", "o que fa", "lidar", "sair "))
     if entity:
@@ -265,7 +265,7 @@ def _select_diverse_hits(hits, limit, query):
     return selected
 
 
-def collect_evidence(query, lang, mode):
+def collect_evidence(query, lang, mode, intent_query=None):
     started = time.monotonic()
     # Keep a predictable synthesis window even when WOL is slow.
     stop_at = started + (40 if mode == "deep" else 22)
@@ -289,7 +289,7 @@ def collect_evidence(query, lang, mode):
         == normalized_base
         for hit in hits
     )
-    lower_query = query.casefold()
+    lower_query = (intent_query or query).casefold()
     practical = any(
         word in lower_query for word in ("como ", "o que fa", "lidar", "sair ")
     )
@@ -448,7 +448,9 @@ def collect_evidence(query, lang, mode):
         and time.monotonic() < stop_at
         and remaining(75) >= 25
     ):
-        plan = build_research_plan(query, mode, entity=entity)
+        plan = build_research_plan(
+            intent_query or query, mode, entity=entity, topic=base
+        )
         coverage = assess_research_coverage(plan, sources)
         sources, total_budget = fill_research_gaps(
             sources,
@@ -879,9 +881,9 @@ def run_research(
 ):
     started = time.monotonic()
     search_query = topic_query(query, history, tool)
-    sources = collect_evidence(search_query, lang, mode)
+    sources = collect_evidence(search_query, lang, mode, intent_query=query)
     entity = is_entity_topic(search_query, sources)
-    plan = build_research_plan(search_query, mode, entity=entity)
+    plan = build_research_plan(query, mode, entity=entity, topic=search_query)
     if mode == "deep" and not tool:
         sources.extend(collect_referenced_verses(sources, lang, search_query))
     if tool:
