@@ -188,6 +188,49 @@ def test_keywords_preserve_debt_and_history():
     )
 
 
+def test_deep_research_plan_is_observable_and_source_specific():
+    plan = research.build_research_plan("como sair das dívidas?", "deep")
+    assert plan["recursive"] is True
+    assert len(plan["subtopics"]) == 5
+    assert any("Estudo Perspicaz" in query for query in plan["queries"])
+    assert any("A Sentinela" in query for query in plan["queries"])
+
+
+def test_deep_collection_follows_official_document_references(monkeypatch):
+    first = "https://wol.jw.org/pt/wol/d/r5/lp-t/100"
+    related = "https://wol.jw.org/pt/wol/d/r5/lp-t/200"
+    monkeypatch.setattr(
+        research,
+        "search_wol_direct",
+        lambda *args, **kwargs: [
+            {
+                "title": "Artigo inicial",
+                "link": first,
+                "snippet": "dívida conselho",
+                "publication": "A Sentinela",
+                "publication_code": "w",
+                "reference_label": "A Sentinela — Artigo inicial",
+                "content_type": "article",
+                "is_external": False,
+                "source_site": "wol.jw.org",
+            }
+        ],
+    )
+
+    def document(url, requested_title=None):
+        if url == first:
+            return f'<article><h1>Artigo inicial</h1><p>Conselho sobre dívida com informação relevante para a família.</p><a href="{related}">Veja também como lidar com dívidas</a></article>'
+        if url == related:
+            return '<article><h1>Artigo relacionado</h1><p>Orientação adicional sobre pagamento de dívida e planejamento.</p></article>'
+        return None
+
+    monkeypatch.setattr(research, "get_clean_document", document)
+    sources = research.collect_evidence("dívida", "pt", "deep")
+    assert [source["link"] for source in sources] == [first, related]
+    assert sources[1]["depth"] == 1
+    assert sources[1]["discovered_from"] == "S1"
+
+
 def test_titles_are_not_rewritten():
     assert (
         scraper.clean_result_title("Seja Feliz — Felipe", "https://wol.jw.org/a")
