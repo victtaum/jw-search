@@ -11,6 +11,15 @@ O planejamento tem 68 itens. Os estados no documento original representam a prop
 - [ ] M4 — Qualidade e compatibilidade
 - [ ] M5 — Lançamento e operação
 
+### Sustentabilidade pública
+
+- [ ] Adicionar cache compartilhado de resultados por consulta, modo, idioma e versão do pipeline.
+- [ ] Aplicar cotas anônimas de pesquisa e limite global por provedor, com resposta clara ao atingir a capacidade gratuita.
+- [ ] Criar modo de leitura sem IA a partir das evidências recuperadas, disponível mesmo quando todas as cotas acabarem.
+- [ ] Priorizar um modelo gratuito Flash/Lite configurável e manter provedores gratuitos secundários como recuperação, sem promessa de disponibilidade.
+- [ ] Publicar painel de saúde com cota disponível, fila, cache e estado dos provedores sem revelar segredos.
+- [ ] Migrar o limitador em memória para armazenamento compartilhado antes de executar mais de uma instância.
+
 ## Como acompanhar
 
 Cada entrega deve indicar IDs JW, mudanças, testes, limitações e próximos passos em `docs/planejamento/PROGRESSO.md`. As caixas acima só devem ser marcadas quando todo o marco satisfizer os critérios do roadmap.
