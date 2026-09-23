@@ -212,3 +212,19 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 
 - Os identificadores internos de faixa etária são traduzidos antes da síntese.
 - O roteiro exige uma sugestão concreta para cada perfil selecionado, incluindo crianças de 3 a 5 anos, adolescentes, adultos, casal e idosos.
+
+## Validação pública da série 2.25
+
+| Jornada no Render | Resultado observado |
+|---|---|
+| Moisés, modo amplo | 16 fontes, 12.503 caracteres, Perspicaz e A Sentinela, 25,6 s, OpenRouter gratuito |
+| Sair das dívidas, modo amplo | 16 fontes, 9.423 caracteres, artigo *Lidar com dívidas* recuperado, 64 s, OpenRouter gratuito |
+| Medo do Diabo, modo amplo | 16 fontes, 7.117 caracteres, cinco artigos de A Sentinela e textos integrais, 36,7 s, OpenRouter gratuito |
+| Medo do Diabo, sintetizado | 5 fontes, 3.773 caracteres; OpenRouter falhou e Gemini concluiu como último recurso |
+| Tabela comparativa | 8 fontes, tabela entre os textos selecionados, 23 s |
+| Textos bíblicos | 8 fontes, textos organizados com as referências selecionadas, 14,3 s |
+| Estudo em família | 8 fontes; sugestões para todas as sete faixas/perfis, 62,9 s |
+| Esboço de 10 minutos | 8 fontes; distribuição total de 600 segundos, 32,4 s |
+| Leitor integrado | artigo de 16.192 caracteres, com imagens e links oficiais preservados |
+
+Os tempos são amostras, não SLA. O roteador gratuito variou entre respostas rápidas, falha recuperada pelo Gemini e uma conexão 520 que concluiu ao repetir. A prioridade seguinte é JW-022/JW-025: transformar pesquisas longas em trabalhos assíncronos com progresso e retomada, removendo a dependência de uma conexão HTTP contínua. Depois entram JW-017/JW-018 (validação semântica das citações) e JW-050/JW-053 (benchmark editorial humano ampliado).
