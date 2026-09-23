@@ -207,3 +207,8 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 
 - Tabela comparativa, estudo em família, textos bíblicos e esboço recebem a janela de transporte do modo amplo, mesmo quando são abertos a partir de uma resposta sintetizada.
 - O navegador acompanha essa janela maior. Isso evita interromper material estruturado no limite curto destinado a respostas simples e preserva tempo para o Gemini somente quando o OpenRouter gratuito falhar.
+
+### Ajuste 2.25.4 — perfis completos no estudo em família
+
+- Os identificadores internos de faixa etária são traduzidos antes da síntese.
+- O roteiro exige uma sugestão concreta para cada perfil selecionado, incluindo crianças de 3 a 5 anos, adolescentes, adultos, casal e idosos.

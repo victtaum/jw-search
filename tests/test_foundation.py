@@ -196,6 +196,16 @@ def test_deep_research_plan_is_observable_and_source_specific():
     assert any("A Sentinela" in query for query in plan["queries"])
 
 
+def test_family_instruction_names_every_selected_profile_in_portuguese():
+    instruction = research.tool_instruction(
+        ToolOptions(kind="family", profiles=["children_3_5", "teens", "seniors"])
+    )
+    assert "crianças de 3 a 5 anos" in instruction
+    assert "adolescentes" in instruction
+    assert "idosos" in instruction
+    assert "CADA perfil escolhido" in instruction
+
+
 def test_research_plan_preserves_question_intent_with_resolved_topic():
     plan = research.build_research_plan(
         "como sair das dívidas?", "deep", topic="dívida"
