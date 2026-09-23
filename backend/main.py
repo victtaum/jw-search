@@ -27,7 +27,7 @@ class KeyConfigRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.22.0",
+    version="2.22.1",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -328,18 +328,28 @@ def handle_theocratic_search(
     token = deadline.set(time.monotonic() + (150 if mode == "deep" else 75))
     try:
         try:
-            return run_research(
-                q.strip(),
-                history or [],
-                prov,
-                key,
-                endpoint,
-                model,
-                mode,
-                lang,
-                external,
-                tool,
-            )
+            primary_token = None
+            if prov == "hy3" and keys["gemini"]:
+                # OpenRouter can otherwise consume almost the entire request
+                # window before reporting that Hy3 is unavailable.
+                primary_cap = 70 if mode == "deep" else 35
+                primary_token = deadline.set(time.monotonic() + primary_cap)
+            try:
+                return run_research(
+                    q.strip(),
+                    history or [],
+                    prov,
+                    key,
+                    endpoint,
+                    model,
+                    mode,
+                    lang,
+                    external,
+                    tool,
+                )
+            finally:
+                if primary_token is not None:
+                    deadline.reset(primary_token)
         except Exception as primary_exc:
             status = getattr(primary_exc, "status_code", None) or getattr(
                 primary_exc, "code", None
@@ -474,7 +484,7 @@ def api_read(
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.22.0"}
+    return {"status": "ok", "version": "2.22.1"}
 
 
 @app.get("/api/config")

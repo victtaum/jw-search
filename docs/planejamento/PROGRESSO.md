@@ -131,3 +131,8 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - Falhas recuperáveis do Hy3 acionam Gemini quando ele está configurado no servidor e ainda existe orçamento. O resultado identifica `provider: gemini`, `provider_requested: hy3`, `fallback_from: hy3` e inclui aviso explícito.
 - Erros de credencial, modelo inválido, entrada inválida e autorização continuam sendo devolvidos sem troca de provedor.
 - Se ambos os provedores falharem, o erro permanece tipado; a recuperação não mascara a indisponibilidade total.
+## Entrega 2.22.1 — reserva de tempo para recuperação
+
+- O Hy3 passa a ter um limite próprio de 70 segundos no modo amplo e 35 segundos no sintetizado quando o Gemini está configurado.
+- O limite global permanece em 150/75 segundos, deixando tempo real para a tentativa automática com Gemini.
+- A consulta pública `como sair das dívidas?` revelou que o Hy3 demorava cerca de 110 segundos para falhar, inviabilizando a recuperação anterior.
