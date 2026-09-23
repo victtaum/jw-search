@@ -228,3 +228,9 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 | Leitor integrado | artigo de 16.192 caracteres, com imagens e links oficiais preservados |
 
 Os tempos são amostras, não SLA. O roteador gratuito variou entre respostas rápidas, falha recuperada pelo Gemini e uma conexão 520 que concluiu ao repetir. A prioridade seguinte é JW-022/JW-025: transformar pesquisas longas em trabalhos assíncronos com progresso e retomada, removendo a dependência de uma conexão HTTP contínua. Depois entram JW-017/JW-018 (validação semântica das citações) e JW-050/JW-053 (benchmark editorial humano ampliado).
+
+### Ajuste 2.25.5 — barra de acompanhamento responsiva
+
+- As sugestões passam a quebrar em linhas conforme a largura disponível, eliminando a barra de rolagem horizontal permanente.
+- A área de resultado reserva espaço para a barra fixa, evitando que os últimos cartões fiquem encobertos.
+- Versão e acesso a `Reportar Bug / Contatar` permanecem visíveis na barra durante o estudo, além do rodapé da página.

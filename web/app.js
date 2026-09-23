@@ -5,9 +5,11 @@
 const API_BASE = "";
 
 const appVersion = document.getElementById("app-version");
+const dockAppVersion = document.getElementById("dock-app-version");
 const contactModal = document.getElementById("contact-modal");
 const contactModalContainer = document.getElementById("contact-modal-container");
 const btnOpenContact = document.getElementById("btn-open-contact");
+const btnOpenContactDock = document.getElementById("btn-open-contact-dock");
 const btnCloseContact = document.getElementById("btn-close-contact");
 const contactForm = document.getElementById("contact-form");
 const contactStatus = document.getElementById("contact-status");
@@ -1669,7 +1671,10 @@ window.addEventListener("appinstalled", () => {
 fetch(`${API_BASE}/healthz`)
     .then(response => response.ok ? response.json() : null)
     .then(data => {
-        if (data?.version && appVersion) appVersion.textContent = `Versão ${data.version}`;
+        if (data?.version) {
+            if (appVersion) appVersion.textContent = `Versão ${data.version}`;
+            if (dockAppVersion) dockAppVersion.textContent = `v${data.version}`;
+        }
     })
     .catch(() => {});
 
@@ -1682,6 +1687,7 @@ function setContactModal(open) {
 }
 
 btnOpenContact?.addEventListener("click", () => setContactModal(true));
+btnOpenContactDock?.addEventListener("click", () => setContactModal(true));
 btnCloseContact?.addEventListener("click", () => setContactModal(false));
 contactModal?.addEventListener("click", event => {
     if (event.target === contactModal) setContactModal(false);
