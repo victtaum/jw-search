@@ -396,7 +396,7 @@ class SimpleProviderError(Exception):
         self.status_code = status_code
 
 
-def test_hy3_recoverable_failure_uses_configured_gemini(monkeypatch):
+def test_hy3_recoverable_failure_uses_visitors_gemini(monkeypatch):
     budgets = []
 
     def generate_result(*args):
@@ -416,7 +416,10 @@ def test_hy3_recoverable_failure_uses_configured_gemini(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-server-key")
     response = client.post(
         "/api/chat",
-        headers={"X-Hy3-Api-Key": "hy3-key"},
+        headers={
+            "X-Hy3-Api-Key": "hy3-key",
+            "X-Gemini-Api-Key": "visitors-gemini-key",
+        },
         json={"query": "dívidas", "provider": "hy3", "mode": "deep"},
     )
     assert response.status_code == 200
@@ -425,6 +428,43 @@ def test_hy3_recoverable_failure_uses_configured_gemini(monkeypatch):
     assert "Hy3 ficou indisponível" in data["warnings"][0]
     assert generate.call_args_list[1].args[2] == "gemini"
     assert budgets[0] <= 70 and budgets[1] > 100
+
+
+def test_public_hy3_failure_does_not_spend_server_gemini(monkeypatch):
+    generate = Mock(side_effect=SimpleProviderError(503))
+    monkeypatch.setattr(main, "run_research", generate)
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-server-key")
+    response = client.post(
+        "/api/chat",
+        headers={"X-Hy3-Api-Key": "hy3-key"},
+        json={"query": "dívidas", "provider": "hy3", "mode": "deep"},
+    )
+    assert response.status_code == 503
+    assert generate.call_count == 1
+
+
+def test_owner_can_explicitly_use_reserved_server_gemini(monkeypatch):
+    generate = Mock(return_value={"ai_response": "ok", "results": []})
+    monkeypatch.setattr(main, "run_research", generate)
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-server-key")
+    monkeypatch.setenv("JW_OWNER_TOKEN", "private-owner-token")
+    response = client.post(
+        "/api/chat",
+        headers={"X-JW-Owner-Token": "private-owner-token"},
+        json={"query": "amor", "provider": "gemini"},
+    )
+    assert response.status_code == 200
+    assert generate.call_args.args[3] == "gemini-server-key"
+
+
+def test_public_config_prefers_openrouter_and_hides_reserved_gemini(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-server-key")
+    monkeypatch.setenv("HY3_API_KEY", "openrouter-key")
+    response = client.get("/api/config")
+    assert response.status_code == 200
+    assert response.json()["default_provider"] == "hy3"
+    assert response.json()["has_gemini"] is False
+    assert response.json()["gemini_reserved"] is True
 
 
 def test_contact_relays_without_exposing_recipient(monkeypatch):

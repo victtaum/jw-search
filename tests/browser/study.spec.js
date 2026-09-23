@@ -33,6 +33,16 @@ test('depth control stays beside source scope and private access is absent',asyn
   expect(await page.getByText('Código de acesso ao servidor').count()).toBe(0);
 });
 
+test('OpenRouter is the public default and provider tabs select personal keys',async ({page})=>{
+  expect(await page.evaluate(()=>currentProvider)).toBe('hy3');
+  expect(await page.evaluate(()=>localStorage.getItem('jw_search_active_provider'))).toBe('hy3');
+  await page.locator('#btn-open-key-modal').click();
+  await page.locator('#modal-tab-gemini').click();
+  expect(await page.evaluate(()=>currentProvider)).toBe('gemini');
+  await page.locator('#modal-tab-hy3').click();
+  expect(await page.evaluate(()=>currentProvider)).toBe('hy3');
+});
+
 test('depth selection is synchronized in the follow-up controls',async ({page})=>{
   await page.getByRole('button',{name:/Pesquisa sintetizada/}).click();
   await expect(page.locator('#btn-followup-depth-toggle')).toHaveAttribute('aria-pressed','true');

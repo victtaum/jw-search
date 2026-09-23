@@ -7,6 +7,8 @@
     envVars:
       - key: GEMINI_API_KEY
         sync: false
+      - key: JW_OWNER_TOKEN
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: CONTACT_RECIPIENT

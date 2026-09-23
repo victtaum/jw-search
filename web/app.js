@@ -15,7 +15,12 @@ const btnSendContact = document.getElementById("btn-send-contact");
 
 // State
 // State
-let currentProvider = localStorage.getItem("jw_search_active_provider") || "gemini";
+const PROVIDER_POLICY_VERSION = "openrouter-default-v1";
+if (localStorage.getItem("jw_search_provider_policy") !== PROVIDER_POLICY_VERSION) {
+    localStorage.setItem("jw_search_active_provider", "hy3");
+    localStorage.setItem("jw_search_provider_policy", PROVIDER_POLICY_VERSION);
+}
+let currentProvider = localStorage.getItem("jw_search_active_provider") || "hy3";
 let currentFontSize = 18; // Reader font size in pixels
 
 let activeConversation = {
@@ -1300,9 +1305,18 @@ function switchModalTab(tabName) {
     }
 }
 
-document.getElementById("modal-tab-gemini")?.addEventListener("click", () => switchModalTab("gemini"));
-document.getElementById("modal-tab-deepseek")?.addEventListener("click", () => switchModalTab("deepseek"));
-document.getElementById("modal-tab-hy3")?.addEventListener("click", () => switchModalTab("hy3"));
+function selectProvider(provider) {
+    currentProvider = provider;
+    localStorage.setItem("jw_search_active_provider", provider);
+    activeConversation.provider = provider;
+    updateProviderUI();
+    switchModalTab(provider);
+    checkKeyStatus();
+}
+
+document.getElementById("modal-tab-gemini")?.addEventListener("click", () => selectProvider("gemini"));
+document.getElementById("modal-tab-deepseek")?.addEventListener("click", () => selectProvider("deepseek"));
+document.getElementById("modal-tab-hy3")?.addEventListener("click", () => selectProvider("hy3"));
 
 function openKeyModal(noticeMessage = null) {
     keyModal.classList.remove("pointer-events-none", "opacity-0");
@@ -1464,10 +1478,10 @@ async function runDiagnostics() {
                 <div class="p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
                     <div>
                         <span class="font-bold text-gray-800 block">✨ Google Gemini 2.5</span>
-                        <span class="text-[10px] text-gray-500">${geminiStatus.configured ? 'Chave pronta no servidor' : 'Sem chave'}</span>
+                        <span class="text-[10px] text-gray-500">${geminiStatus.reserved ? 'Reserva privada do responsável' : 'Use sua própria chave'}</span>
                     </div>
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${geminiStatus.configured ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}">
-                        ${geminiStatus.configured ? 'Configurado (não testado)' : 'Inativo'}
+                        ${geminiStatus.reserved ? 'Reservado' : 'Chave própria'}
                     </span>
                 </div>
 

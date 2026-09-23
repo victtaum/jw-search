@@ -143,3 +143,11 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - O formulário de bug, sugestão e contato envia por `/api/contact`; destinatário e chave de e-mail permanecem somente nos segredos do Render.
 - A entrada tem limites de tamanho, validação do e-mail de retorno, honeypot e limite de três mensagens por origem a cada 15 minutos.
 - O envio usa a API HTTPS do Resend porque instâncias gratuitas do Render bloqueiam as portas SMTP usuais.
+
+## Entrega 2.24.0 — OpenRouter público e Gemini privado
+
+- OpenRouter/Hy3 passa a ser o padrão para instalações novas e existentes; uma migração local remove o antigo padrão Gemini uma única vez.
+- A chave Gemini do servidor deixa de participar de pesquisas ou recuperações públicas, mesmo quando continua cadastrada no Render.
+- O Gemini reservado só pode ser usado com um token administrativo separado; esse controle não aparece na interface pública.
+- Se o visitante cadastrar sua própria chave Gemini, ela pode ser selecionada diretamente e pode recuperar uma falha do OpenRouter daquele visitante.
+- As abas da janela de chaves agora também selecionam de fato o provedor; antes elas apenas alternavam o formulário visível.
