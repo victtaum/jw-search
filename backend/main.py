@@ -28,6 +28,10 @@ _contact_attempts = defaultdict(deque)
 _contact_lock = threading.Lock()
 
 
+class InsufficientEvidence(RuntimeError):
+    pass
+
+
 class KeyConfigRequest(BaseModel):
     api_key: str
 
@@ -52,7 +56,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.24.0",
+    version="2.24.1",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -340,7 +344,9 @@ def handle_theocratic_search(
     owner_authorized = bool(owner_secret and x_jw_owner_token) and hmac.compare_digest(
         owner_secret.encode(), x_jw_owner_token.encode()
     )
-    server_gemini = os.environ.get("GEMINI_API_KEY") if owner_authorized else None
+    configured_gemini = os.environ.get("GEMINI_API_KEY")
+    server_gemini = configured_gemini if owner_authorized else None
+    fallback_gemini = x_gemini_api_key or configured_gemini
     keys = {
         "gemini": x_gemini_api_key or server_gemini,
         "deepseek": x_deepseek_api_key or os.environ.get("DEEPSEEK_API_KEY"),
@@ -362,13 +368,13 @@ def handle_theocratic_search(
     try:
         try:
             primary_token = None
-            if prov == "hy3" and keys["gemini"]:
+            if prov == "hy3" and fallback_gemini:
                 # OpenRouter can otherwise consume almost the entire request
                 # window before reporting that Hy3 is unavailable.
                 primary_cap = 70 if mode == "deep" else 35
                 primary_token = deadline.set(time.monotonic() + primary_cap)
             try:
-                return run_research(
+                primary_result = run_research(
                     q.strip(),
                     history or [],
                     prov,
@@ -380,6 +386,15 @@ def handle_theocratic_search(
                     external,
                     tool,
                 )
+                if (
+                    prov == "hy3"
+                    and primary_result.get("status") == "insufficient_evidence"
+                    and fallback_gemini
+                ):
+                    raise InsufficientEvidence(
+                        "O OpenRouter não obteve evidências na primeira coleta."
+                    )
+                return primary_result
             finally:
                 if primary_token is not None:
                     deadline.reset(primary_token)
@@ -387,7 +402,7 @@ def handle_theocratic_search(
             status = getattr(primary_exc, "status_code", None) or getattr(
                 primary_exc, "code", None
             )
-            gemini_key = keys["gemini"]
+            gemini_key = fallback_gemini
             recoverable = status not in (400, 401, 403, 404, 422)
             if prov != "hy3" or not gemini_key or not recoverable or remaining(150) < 25:
                 raise
@@ -405,8 +420,11 @@ def handle_theocratic_search(
                 tool,
             )
             warning = (
-                "O Hy3 ficou indisponível; a pesquisa foi concluída automaticamente "
-                "com o Gemini."
+                "A primeira tentativa não encontrou fontes suficientes; a pesquisa "
+                "foi refeita com o Gemini como último recurso."
+                if isinstance(primary_exc, InsufficientEvidence)
+                else "O OpenRouter ficou indisponível; a pesquisa foi concluída "
+                "com o Gemini como último recurso."
             )
             result["provider_requested"] = "hy3"
             result["fallback_from"] = "hy3"
@@ -581,7 +599,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.24.0"}
+    return {"status": "ok", "version": "2.24.1"}
 
 
 @app.get("/api/config")

@@ -177,6 +177,7 @@ def test_keywords_preserve_debt_and_history():
     assert "dividas" in extract_theocratic_keywords(
         "Quais princios e exemplos bíblicos temos para lidar com dividas e fabricar dinheiro?"
     )
+    assert extract_theocratic_keywords("devo ter medo do diabo?") == "medo diabo"
     history = [
         {"role": "user", "content": "Como lidar com dívida?"},
         {"role": "assistant", "content": "Resposta anterior"},
@@ -430,8 +431,13 @@ def test_hy3_recoverable_failure_uses_visitors_gemini(monkeypatch):
     assert budgets[0] <= 70 and budgets[1] > 100
 
 
-def test_public_hy3_failure_does_not_spend_server_gemini(monkeypatch):
-    generate = Mock(side_effect=SimpleProviderError(503))
+def test_public_hy3_failure_uses_server_gemini_as_last_resort(monkeypatch):
+    generate = Mock(
+        side_effect=[
+            SimpleProviderError(503),
+            {"ai_response": "ok", "results": [], "status": "completed"},
+        ]
+    )
     monkeypatch.setattr(main, "run_research", generate)
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-server-key")
     response = client.post(
@@ -439,8 +445,29 @@ def test_public_hy3_failure_does_not_spend_server_gemini(monkeypatch):
         headers={"X-Hy3-Api-Key": "hy3-key"},
         json={"query": "dívidas", "provider": "hy3", "mode": "deep"},
     )
-    assert response.status_code == 503
-    assert generate.call_count == 1
+    assert response.status_code == 200
+    assert generate.call_count == 2
+    assert generate.call_args_list[1].args[2] == "gemini"
+    assert generate.call_args_list[1].args[3] == "gemini-server-key"
+
+
+def test_insufficient_openrouter_evidence_retries_with_gemini(monkeypatch):
+    generate = Mock(
+        side_effect=[
+            {"ai_response": "sem fontes", "results": [], "status": "insufficient_evidence"},
+            {"ai_response": "com fontes", "results": [{}], "status": "completed", "provider": "gemini"},
+        ]
+    )
+    monkeypatch.setattr(main, "run_research", generate)
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-server-key")
+    response = client.post(
+        "/api/chat",
+        headers={"X-Hy3-Api-Key": "hy3-key"},
+        json={"query": "diabo", "provider": "hy3"},
+    )
+    assert response.status_code == 200
+    assert response.json()["provider"] == "gemini"
+    assert "último recurso" in response.json()["warnings"][0]
 
 
 def test_owner_can_explicitly_use_reserved_server_gemini(monkeypatch):

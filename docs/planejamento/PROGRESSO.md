@@ -151,3 +151,10 @@ Uma tentativa real do Gemini retornou 504 em cerca de 57 segundos. O fluxo agora
 - O Gemini reservado só pode ser usado com um token administrativo separado; esse controle não aparece na interface pública.
 - Se o visitante cadastrar sua própria chave Gemini, ela pode ser selecionada diretamente e pode recuperar uma falha do OpenRouter daquele visitante.
 - As abas da janela de chaves agora também selecionam de fato o provedor; antes elas apenas alternavam o formulário visível.
+
+### Ajuste 2.24.1 — Gemini como último recurso funcional
+
+- OpenRouter permanece como padrão e recebe sempre a primeira tentativa.
+- A chave Gemini do servidor volta a ser usada automaticamente somente se o OpenRouter falhar ou se a primeira coleta terminar sem qualquer evidência.
+- Uma chave Gemini fornecida pelo visitante tem precedência sobre a reserva do servidor.
+- O acesso administrativo continua permitindo ao proprietário selecionar diretamente a reserva Gemini.
