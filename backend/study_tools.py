@@ -14,6 +14,16 @@ PROFILES = (
     "seniors",
 )
 
+PROFILE_LABELS = {
+    "children_3_5": "crianças de 3 a 5 anos",
+    "children_6_9": "crianças de 6 a 9 anos",
+    "children_10_12": "crianças de 10 a 12 anos",
+    "teens": "adolescentes",
+    "adults": "adultos",
+    "couple": "casal (marido e mulher)",
+    "seniors": "idosos",
+}
+
 
 class ToolOptions(BaseModel):
     kind: Literal["comparison", "family", "scriptures", "outline"]
@@ -69,10 +79,11 @@ def tool_instruction(options):
         "\nMATERIAL DERIVADO: use o assunto da conversa e somente as evidências coletadas nesta execução. "
         "Não trate a resposta anterior como fonte. Identifique sugestões de aplicação e lacunas. "
     )
+    profile_labels = [PROFILE_LABELS[profile] for profile in options.profiles]
     prompts = {
         "comparison": "Crie uma tabela COMPARANDO OS TEXTOS BÍBLICOS da consulta: referência, contexto, princípio, semelhanças, diferenças, aplicação sugerida e fonte. Não substitua por comparação genérica de tópicos. Se faltar o texto, declare a lacuna.",
         "scriptures": "Organize os textos bíblicos citados por assunto, explicando contexto e relação com a pergunta. Separe textos já citados de sugestões complementares. Só transcreva versos presentes nas evidências; não invente transcrição nem URL.",
-        "family": f"Prepare um estudo em família de {options.duration_minutes} minutos com objetivo, sequência de leituras, perguntas abertas, atividade, aplicação na semana e recapitulação. Perfis escolhidos: {', '.join(options.profiles)}. Ofereça alternativas adequadas às idades selecionadas; atividades alternativas não se somam ao tempo comum. Para casal, inclua reflexão individual de marido e mulher e conversa conjunta, sem estereótipos. Para idosos, permita leitura ampliada e participação oral. Separe roteiro comum de notas do facilitador. Não peça nomes ou datas de nascimento.",
+        "family": f"Prepare um estudo em família de {options.duration_minutes} minutos com objetivo, sequência de leituras, perguntas abertas, atividade, aplicação na semana e recapitulação. Perfis escolhidos: {', '.join(profile_labels)}. Crie uma subseção com sugestão concreta para CADA perfil escolhido, usando exatamente esses nomes em português e sem omitir nenhum. Atividades alternativas não se somam ao tempo comum. Para crianças de 3 a 5 anos, use linguagem simples e atividade curta sem exigir leitura. Para casal, inclua reflexão individual de marido e mulher e conversa conjunta, sem estereótipos. Para idosos, permita leitura ampliada e participação oral. Separe roteiro comum de notas do facilitador. Não peça nomes ou datas de nascimento.",
         "outline": f"Prepare um esboço para discurso de {options.duration_minutes} minutos, com tema, objetivo, introdução, pontos principais, textos para ler, explicação, aplicações, transições e conclusão. Use esta distribuição em segundos: {outline_schedule(options.duration_minutes)}. Leituras estão incluídas no desenvolvimento. Apresente tópicos para o orador, não só um texto corrido. A distribuição é sugestão editorial, não esboço oficial. O tempo de fala depende de ensaio.",
     }
     return common + prompts[options.kind] + references
