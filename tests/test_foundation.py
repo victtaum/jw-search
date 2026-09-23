@@ -426,7 +426,7 @@ def test_hy3_recoverable_failure_uses_visitors_gemini(monkeypatch):
     assert response.status_code == 200
     data = response.json()
     assert data["provider"] == "gemini" and data["fallback_from"] == "hy3"
-    assert "Hy3 ficou indisponível" in data["warnings"][0]
+    assert "OpenRouter ficou indisponível" in data["warnings"][0]
     assert generate.call_args_list[1].args[2] == "gemini"
     assert budgets[0] <= 70 and budgets[1] > 100
 
