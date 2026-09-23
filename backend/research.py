@@ -353,6 +353,30 @@ def research_profile(mode):
     return """Use o perfil de pesquisa teocrática profunda. A extensão deve ser determinada pelo assunto e pelas evidências; não encurte para obedecer a uma meta artificial de palavras. Responda primeiro à pergunta na linguagem do usuário e depois desenvolva uma linha de raciocínio contínua. Pesquise conceitos relacionados, referências cruzadas, personagens, relatos, princípios, contrapontos e aplicações. Integre as publicações no ponto exato em que sustentam a análise, sempre identificando a publicação e o artigo ou verbete. Escolha os textos bíblicos que realmente aprofundam a resposta e transcreva integralmente o texto recuperado, sem reticências, resumos ou cortes. Explique como os textos se complementam. Distinga claramente declaração bíblica, explicação da publicação, inferência e aplicação. Inclua exemplos positivos e negativos quando forem relevantes. Siga as referências disponíveis até extrair detalhes importantes e conclua o raciocínio; não use um molde rígido nem uma lista mecânica de tudo que foi coletado."""
 
 
+def format_evidence(sources, character_budget=None):
+    """Format model context without ever slicing an exact Bible passage."""
+    if character_budget is None:
+        character_budget = sum(
+            len(p["text"]) for source in sources for p in source["passages"]
+        ) + 10000
+    bible = [s for s in sources if s.get("content_type") == "bible_passage"]
+    publications = [s for s in sources if s.get("content_type") != "bible_passage"]
+    bible_size = sum(len(p["text"]) for s in bible for p in s["passages"])
+    publication_budget = max(1000, character_budget - bible_size)
+    per_publication = max(1000, publication_budget // max(1, len(publications)))
+    parts = []
+    for source in publications + bible:
+        heading = (
+            f"[{source['id']}] {source['title']} — "
+            f"{source.get('publication_detail') or source.get('publication', 'WOL')}"
+        )
+        body = "\n".join(p["text"] for p in source["passages"])
+        if source.get("content_type") != "bible_passage":
+            body = body[:per_publication]
+        parts.append(f"{heading}\n{body}")
+    return "\n\n".join(parts)
+
+
 def render_citations(text, sources):
     """Only collected IDs become links. This validates identity, not semantic entailment."""
     by_id = {s["id"]: s for s in sources}
@@ -459,10 +483,9 @@ def run_research(
             "model": None,
             "warnings": ["Nenhuma fonte documental recuperada."],
         }
-    evidence = "\n\n".join(
-        f"[{s['id']}] {s['title']} — {s.get('publication_detail') or s.get('publication', 'WOL')}\n"
-        + "\n".join(p["text"] for p in s["passages"])
-        for s in sources
+    evidence = format_evidence(
+        sources,
+        character_budget=32000 if provider == "hy3" and mode == "deep" else None,
     )
     profile = research_profile(mode)
     system = f"""Você auxilia pesquisa bíblica em {lang}. {profile}
@@ -484,7 +507,7 @@ O histórico serve para entender o assunto; respostas antigas não são evidênc
     )
     max_tokens = 5000 if tool else (7000 if mode == "deep" else 2500)
     if provider == "hy3" and mode == "deep" and not tool:
-        max_tokens = 5000
+        max_tokens = 4000
     if provider == "gemini":
         used_model = model or "gemini-2.5-flash"
         with genai.Client(
