@@ -188,6 +188,29 @@ def test_keywords_preserve_debt_and_history():
     )
 
 
+def test_long_natural_question_reduces_to_central_wol_concept(monkeypatch):
+    calls = []
+
+    def query_wol(term, *_args, **_kwargs):
+        calls.append(term)
+        return (
+            [{"title": "Santos", "link": "https://wol.jw.org/pt/wol/d/1"}]
+            if term.casefold() == "santos"
+            else []
+        )
+
+    monkeypatch.setattr("rag_engine._query_wol_html", query_wol)
+    question = (
+        "Quem são os santos que ao longo das Escrituras Sagradas aparecem "
+        "sendo mencionados, por que são chamados assim e qual a relação "
+        "desse termo com os santos utilizados na adoração em muitas religiões?"
+    )
+    results = search_wol_direct(question, max_results=10)
+    assert results[0]["title"] == "Santos"
+    assert calls[-1] == "santos"
+    assert len(calls) == 3
+
+
 def test_deep_research_plan_is_observable_and_source_specific():
     plan = research.build_research_plan("como sair das dívidas?", "deep")
     assert plan["recursive"] is True

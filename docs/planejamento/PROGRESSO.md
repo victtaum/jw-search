@@ -250,3 +250,8 @@ Os tempos são amostras, não SLA. O roteador gratuito variou entre respostas r�
 - As quatro ferramentas ocupam uma grade 2×2, com botões de mesma largura e altura.
 - Os seletores de fonte e profundidade formam um painel lateral; versão e contato aparecem logo abaixo deles.
 - Em telas estreitas, os blocos se reorganizam em uma coluna sem rolagem horizontal.
+
+### Ajuste 2.25.9 — recuperação de perguntas naturais longas
+
+- Quando a consulta completa e sua forma limpa não retornam resultados, a busca reduz progressivamente a expressão aos conceitos centrais.
+- A pergunta sobre quem são os santos passa a buscar `santos` antes de declarar evidência insuficiente, permitindo recuperar o verbete do Estudo Perspicaz e publicações correlatas.

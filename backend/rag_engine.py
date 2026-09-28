@@ -126,6 +126,22 @@ def extract_theocratic_keywords(query: str) -> str:
             "continue",
             "mais",
             "detalhes",
+            "longo",
+            "aparecem",
+            "mencionados",
+            "mencionadas",
+            "chamados",
+            "chamadas",
+            "assim",
+            "relação",
+            "relacao",
+            "desse",
+            "dessa",
+            "termo",
+            "utilizados",
+            "utilizadas",
+            "muitas",
+            "muitos",
         }
     )
     words = [w for w in clean_q.split() if w.lower() not in stop_words and len(w) > 2]
@@ -244,12 +260,27 @@ def search_wol_direct(query: str, lang: str = "pt", max_results: int = 6):
     # 1. Search with raw query
     results = _query_wol_html(query, config, headers, max_results=max_results)
 
-    # 2. If 0 results, search with extracted theocratic keywords
+    # 2. If 0 results, search with extracted theocratic keywords.
     if not results:
         keywords = extract_theocratic_keywords(query)
         if keywords and keywords.lower() != query.lower():
             results = _query_wol_html(
                 keywords, config, headers, max_results=max_results
             )
+
+    # 3. Natural questions can still leave a long keyword chain that WOL
+    # interprets too narrowly. Reduce it progressively to its leading concepts
+    # instead of reporting "no evidence" for an otherwise well-indexed topic.
+    if not results:
+        keywords = extract_theocratic_keywords(query)
+        concepts = list(dict.fromkeys(keywords.split()))
+        for concept in concepts[:4]:
+            if len(concept) < 4 or concept.casefold() == query.strip().casefold():
+                continue
+            results = _query_wol_html(
+                concept, config, headers, max_results=max_results
+            )
+            if results:
+                break
 
     return results
