@@ -255,3 +255,13 @@ Os tempos são amostras, não SLA. O roteador gratuito variou entre respostas r�
 
 - Quando a consulta completa e sua forma limpa não retornam resultados, a busca reduz progressivamente a expressão aos conceitos centrais.
 - A pergunta sobre quem são os santos passa a buscar `santos` antes de declarar evidência insuficiente, permitindo recuperar o verbete do Estudo Perspicaz e publicações correlatas.
+
+### Versão 2.26.0 — planejamento semântico da pesquisa ampla
+
+- Antes de consultar a biblioteca, o modo amplo pede ao provedor selecionado um plano curto: assunto central, intenção, ambiguidades, conceitos relacionados, subtemas e consultas específicas.
+- O planejador não responde à pergunta e não consulta a web. Sua saída é JSON validado, limitado e filtrado; URLs e mecanismos externos são rejeitados.
+- As consultas semânticas alimentam a coleta real no WOL/JW. Os termos de cada subtema também orientam o mapa de cobertura e a segunda rodada voltada a lacunas.
+- Consultas determinísticas para Bíblia, Estudo Perspicaz e A Sentinela continuam obrigatórias, mesmo quando o plano do modelo as omite.
+- O planejamento tem janela própria curta e não tenta o Gemini por conta própria. Se o modelo gratuito atrasar, falhar ou devolver conteúdo inválido, a pesquisa continua com o mecanismo estável anterior e registra `deterministic_fallback` no diagnóstico.
+- O modo sintetizado e as quatro ferramentas derivadas conservam seu fluxo, sem uma chamada adicional ao provedor.
+- Entrega parcial de JW-012 e JW-028: a pergunta passa a ser decomposta semanticamente e as lacunas orientam novas buscas; persistência e retomada entre sessões permanecem pendentes.
