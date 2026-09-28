@@ -219,6 +219,69 @@ def test_deep_research_plan_is_observable_and_source_specific():
     assert any("A Sentinela" in query for query in plan["queries"])
 
 
+def test_semantic_plan_is_constrained_and_keeps_official_source_queries():
+    fallback = research.build_research_plan(
+        "quem são os santos mencionados na Bíblia?", "deep", topic="santos"
+    )
+    plan = research.validate_semantic_plan(
+        {
+            "central_topic": "sentido bíblico de santos",
+            "intent": "identificar quem recebe essa designação e por quê",
+            "ambiguities": ["santidade moral ou designação de grupo"],
+            "concepts": ["santo", "santificação", "ungidos"],
+            "subtopics": [
+                {"name": "uso nas Escrituras", "search_terms": ["santos Bíblia"]},
+                {"name": "quem é chamado santo", "search_terms": ["povo santo"]},
+                {"name": "diferença para veneração religiosa", "search_terms": ["veneração"]},
+            ],
+            "queries": [
+                "santos significado bíblico",
+                "https://google.test/santos",
+            ],
+        },
+        fallback,
+        "modelo-teste",
+    )
+    assert plan["planner"] == "semantic"
+    assert plan["planner_model"] == "modelo-teste"
+    assert "santos significado bíblico" in plan["queries"]
+    assert not any("google" in query for query in plan["queries"])
+    assert any("Estudo Perspicaz" in query for query in plan["queries"])
+    assert plan["coverage_terms"]["uso nas Escrituras"] == ["santos Bíblia"]
+
+
+def test_semantic_planner_failure_preserves_deterministic_research(monkeypatch):
+    fallback = research.build_research_plan("como sair das dívidas?", "deep")
+    monkeypatch.setattr(research, "OpenAI", Mock(side_effect=TimeoutError()))
+    plan = research.build_semantic_plan(
+        "como sair das dívidas?",
+        "dívida",
+        "hy3",
+        "fake",
+        "https://openrouter.ai/api/v1",
+        None,
+        fallback,
+    )
+    assert plan["planner"] == "deterministic_fallback"
+    assert plan["queries"] == fallback["queries"]
+    assert "TimeoutError" in plan["planner_warning"]
+
+
+def test_deep_collection_uses_semantic_queries(monkeypatch):
+    calls = []
+    plan = research.build_research_plan("quem são os santos?", "deep", topic="santos")
+    plan["queries"] = ["santos quem recebe designação"]
+    monkeypatch.setattr(research, "search_wol_direct", lambda *args, **kwargs: [])
+
+    def parallel(queries, *_args):
+        calls.extend(queries)
+        return []
+
+    monkeypatch.setattr(research, "_search_queries_parallel", parallel)
+    research.collect_evidence("santos", "pt", "deep", plan=plan)
+    assert "santos quem recebe designação" in calls
+
+
 def test_family_instruction_names_every_selected_profile_in_portuguese():
     instruction = research.tool_instruction(
         ToolOptions(kind="family", profiles=["children_3_5", "teens", "seniors"])

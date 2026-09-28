@@ -1,6 +1,7 @@
 """Evidence-first research shared by providers and study tools."""
 
 import hashlib
+import json
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -124,13 +125,164 @@ def build_research_plan(query, mode, entity=False, topic=None):
         "subtopics": subtopics,
         "queries": research_queries(base, mode, entity, practical=practical),
         "recursive": mode == "deep",
+        "planner": "deterministic",
+        "ambiguities": [],
+        "concepts": [base] if base else [],
+        "coverage_terms": {},
     }
+
+
+def _json_object(text):
+    """Extract one JSON object from a provider response without trusting prose."""
+    cleaned = (text or "").strip()
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.I)
+    start, end = cleaned.find("{"), cleaned.rfind("}")
+    if start < 0 or end <= start:
+        raise ValueError("O planejador não retornou JSON.")
+    value = json.loads(cleaned[start : end + 1])
+    if not isinstance(value, dict):
+        raise ValueError("O plano semântico não é um objeto.")
+    return value
+
+
+def _clean_plan_strings(value, limit, length=180):
+    if not isinstance(value, list):
+        return []
+    result = []
+    for item in value:
+        if not isinstance(item, str):
+            continue
+        item = re.sub(r"\s+", " ", item).strip()[:length]
+        if item and not re.search(r"https?://|\b(?:google|bing|wikipedia)\b", item, re.I):
+            result.append(item)
+    return list(dict.fromkeys(result))[:limit]
+
+
+def validate_semantic_plan(raw, fallback, model=None):
+    """Constrain model planning to a small, observable official-source agenda."""
+    topic = str(raw.get("central_topic") or fallback["topic"]).strip()[:160]
+    intent = str(raw.get("intent") or fallback["intent"]).strip()[:300]
+    ambiguities = _clean_plan_strings(raw.get("ambiguities"), 3)
+    concepts = _clean_plan_strings(raw.get("concepts"), 8, 100)
+    queries = _clean_plan_strings(raw.get("queries"), 10, 240)
+    normalized_subtopics, coverage_terms = [], {}
+    items = raw.get("subtopics", []) if isinstance(raw.get("subtopics"), list) else []
+    for item in items:
+        if isinstance(item, str):
+            name, terms = item, []
+        elif isinstance(item, dict):
+            name = item.get("name", "")
+            terms = _clean_plan_strings(item.get("search_terms"), 8, 80)
+        else:
+            continue
+        name = re.sub(r"\s+", " ", str(name)).strip()[:180]
+        if name and name not in normalized_subtopics:
+            normalized_subtopics.append(name)
+            if terms:
+                coverage_terms[name] = terms
+        if len(normalized_subtopics) >= 7:
+            break
+    if len(normalized_subtopics) < 3:
+        normalized_subtopics = fallback["subtopics"]
+    # Keep source-specific discovery even when the model omits it.
+    queries = list(
+        dict.fromkeys([fallback["topic"], *queries, *fallback["queries"]])
+    )[:12]
+    if not topic or not queries:
+        raise ValueError("O plano semântico ficou vazio.")
+    return {
+        **fallback,
+        "topic": topic,
+        "intent": intent,
+        "subtopics": normalized_subtopics,
+        "queries": queries,
+        "ambiguities": ambiguities,
+        "concepts": concepts or fallback["concepts"],
+        "coverage_terms": coverage_terms,
+        "planner": "semantic",
+        "planner_model": model,
+    }
+
+
+def build_semantic_plan(query, topic, provider, key, endpoint, model, fallback):
+    """Ask the selected model to plan a deep search; fail closed to the stable plan."""
+    planner_model = model or (
+        "gemini-2.5-flash" if provider == "gemini"
+        else "deepseek-chat" if provider == "deepseek"
+        else "openrouter/free"
+    )
+    prompt = f"""Analise a pergunta abaixo como pesquisador da Biblioteca Online da Torre de Vigia.
+Não responda à pergunta. Crie apenas um plano de pesquisa para wol.jw.org e jw.org.
+Identifique o assunto central, a intenção real, ambiguidades, conceitos relacionados,
+subtemas que precisam de prova e consultas curtas que encontrariam Bíblia, Estudo
+Perspicaz, revistas e outras publicações oficiais. Não use conhecimento como evidência.
+Retorne SOMENTE JSON neste formato:
+{{"central_topic":"...","intent":"...","ambiguities":["..."],
+"concepts":["..."],"subtopics":[{{"name":"...","search_terms":["..."]}}],
+"queries":["..."]}}
+Pergunta: {query}
+Tema preliminar: {topic}"""
+    try:
+        if provider == "gemini":
+            with genai.Client(
+                api_key=key,
+                http_options=types.HttpOptions(
+                    timeout=int(min(10, remaining(20)) * 1000),
+                    retry_options=types.HttpRetryOptions(attempts=1),
+                ),
+            ) as client:
+                response = client.models.generate_content(
+                    model=planner_model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.1,
+                        max_output_tokens=900,
+                        response_mime_type="application/json",
+                        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+                        thinking_config=types.ThinkingConfig(thinking_budget=0)
+                        if planner_model.startswith("gemini-2.5") else None,
+                    ),
+                )
+                text = response.text
+        else:
+            with OpenAI(
+                api_key=key,
+                base_url=endpoint,
+                timeout=min(10, remaining(20)),
+                max_retries=0,
+            ) as client:
+                options = {}
+                if provider == "hy3" and planner_model == "tencent/hy3":
+                    options["extra_body"] = {"reasoning": {"effort": "none"}}
+                response = client.chat.completions.create(
+                    model=planner_model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.1,
+                    max_tokens=900,
+                    **options,
+                )
+                text = response.choices[0].message.content if response.choices else ""
+        return validate_semantic_plan(_json_object(text), fallback, planner_model)
+    except Exception as exc:
+        # Planning is an enhancement. Retrieval remains available when a free
+        # model is slow, malformed or temporarily unavailable.
+        return {
+            **fallback,
+            "planner": "deterministic_fallback",
+            "planner_model": planner_model,
+            "planner_warning": f"Planejamento semântico indisponível: {type(exc).__name__}",
+        }
 
 
 def assess_research_coverage(plan, sources):
     coverage, gaps = [], []
     for subtopic in plan["subtopics"]:
-        terms = set(extract_theocratic_keywords(subtopic).casefold().split())
+        semantic_terms = plan.get("coverage_terms", {}).get(subtopic, [])
+        terms = set(
+            extract_theocratic_keywords(" ".join(semantic_terms) or subtopic)
+            .casefold()
+            .split()
+        )
         supporting = []
         for source in sources:
             text = " ".join(
@@ -265,7 +417,7 @@ def _select_diverse_hits(hits, limit, query):
     return selected
 
 
-def collect_evidence(query, lang, mode, intent_query=None):
+def collect_evidence(query, lang, mode, intent_query=None, plan=None):
     started = time.monotonic()
     # Keep a predictable synthesis window even when WOL is slow.
     stop_at = started + (40 if mode == "deep" else 22)
@@ -293,9 +445,17 @@ def collect_evidence(query, lang, mode, intent_query=None):
     practical = any(
         word in lower_query for word in ("como ", "o que fa", "lidar", "sair ")
     )
-    variants = research_queries(
+    deterministic_variants = research_queries(
         base, mode, entity=entity, practical=practical
     )[1:]
+    planned_variants = (plan or {}).get("queries", [])
+    variants = list(
+        dict.fromkeys(
+            candidate
+            for candidate in [*planned_variants, *deterministic_variants]
+            if candidate and candidate.casefold() != base.casefold()
+        )
+    )[:12]
     for matched_query, hit in _search_queries_parallel(
         variants, lang, 10, stop_at
     ):
@@ -448,13 +608,13 @@ def collect_evidence(query, lang, mode, intent_query=None):
         and time.monotonic() < stop_at
         and remaining(75) >= 25
     ):
-        plan = build_research_plan(
+        active_plan = plan or build_research_plan(
             intent_query or query, mode, entity=entity, topic=base
         )
-        coverage = assess_research_coverage(plan, sources)
+        coverage = assess_research_coverage(active_plan, sources)
         sources, total_budget = fill_research_gaps(
             sources,
-            plan,
+            active_plan,
             coverage,
             lang,
             terms,
@@ -881,9 +1041,23 @@ def run_research(
 ):
     started = time.monotonic()
     search_query = topic_query(query, history, tool)
-    sources = collect_evidence(search_query, lang, mode, intent_query=query)
+    plan = build_research_plan(query, mode, topic=search_query)
+    if mode == "deep" and not tool:
+        plan = build_semantic_plan(
+            query, search_query, provider, key, endpoint, model, plan
+        )
+    sources = collect_evidence(
+        search_query, lang, mode, intent_query=query, plan=plan
+    )
     entity = is_entity_topic(search_query, sources)
-    plan = build_research_plan(query, mode, entity=entity, topic=search_query)
+    if entity and plan.get("planner") != "semantic":
+        entity_plan = build_research_plan(
+            query, mode, entity=True, topic=search_query
+        )
+        entity_plan.update(
+            {key: value for key, value in plan.items() if key.startswith("planner")}
+        )
+        plan = entity_plan
     if mode == "deep" and not tool:
         sources.extend(collect_referenced_verses(sources, lang, search_query))
     if tool:
