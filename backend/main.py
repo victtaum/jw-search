@@ -574,6 +574,9 @@ def handle_theocratic_search(
                 primary_cap = 95 if complex_request else 45
                 primary_token = deadline.set(time.monotonic() + primary_cap)
             try:
+                progress_options = (
+                    {"progress": progress_callback} if progress_callback else {}
+                )
                 primary_result = run_research(
                     q.strip(),
                     history or [],
@@ -585,7 +588,7 @@ def handle_theocratic_search(
                     lang,
                     external,
                     tool,
-                    progress=progress_callback,
+                    **progress_options,
                 )
                 if (
                     prov == "hy3"
@@ -619,7 +622,7 @@ def handle_theocratic_search(
                 lang,
                 external,
                 tool,
-                progress=progress_callback,
+                **progress_options,
             )
             warning = (
                 "A primeira tentativa não encontrou fontes suficientes; a pesquisa "
