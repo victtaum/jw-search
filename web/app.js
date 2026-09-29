@@ -24,6 +24,7 @@ if (localStorage.getItem("jw_search_provider_policy") !== PROVIDER_POLICY_VERSIO
 }
 let currentProvider = localStorage.getItem("jw_search_active_provider") || "hy3";
 let currentFontSize = 18; // Reader font size in pixels
+let researchTransport = "recoverable_job";
 
 let activeConversation = {
     id: "conv_" + Date.now(),
@@ -309,8 +310,9 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
     // Long work runs as a recoverable server task. The browser connection can
     // reconnect and fetch the result without restarting the research.
     const controller = new AbortController();
-    const useResearchJob = mode === "deep" || Boolean(tool);
-    const timeoutId = setTimeout(() => controller.abort(), useResearchJob ? 600000 : 85000);
+    const longResearch = mode === "deep" || Boolean(tool);
+    const useResearchJob = longResearch && researchTransport === "recoverable_job";
+    const timeoutId = setTimeout(() => controller.abort(), longResearch ? 300000 : 85000);
     pendingSearch = controller;
 
     try {
@@ -1575,6 +1577,7 @@ async function checkKeyStatus() {
         const res = await fetch(`${API_BASE}/api/config`);
         if (res.ok) {
             const data = await res.json();
+            researchTransport = data.research_transport || "recoverable_job";
             let serverHasForActive = (currentProvider === "gemini" && data.has_gemini) || (currentProvider === "deepseek" && data.has_deepseek) || (currentProvider === "hy3" && data.has_hy3);
             if (keyBadgeText) keyBadgeText.innerHTML = serverHasForActive ? `<span class="text-blue-300">●</span> Servidor Ativo` : `<span class="text-amber-300">●</span> Inserir Chave`;
         }

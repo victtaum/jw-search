@@ -63,7 +63,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.27.0",
+    version="2.28.0",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -804,12 +804,20 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.27.0"}
+    return {"status": "ok", "version": "2.28.0"}
 
 
 @app.get("/api/config")
 def api_get_config():
-    return get_api_status()
+    status = get_api_status()
+    # Background threads are recoverable on a persistent server such as Render.
+    # A Vercel Function may be frozen as soon as its response is sent, so long
+    # searches must remain attached to their original HTTP request there.
+    status["research_transport"] = (
+        "synchronous" if os.environ.get("VERCEL") else "recoverable_job"
+    )
+    status["deployment_platform"] = "vercel" if os.environ.get("VERCEL") else "server"
+    return status
 
 
 @app.get("/api/diagnostics")
