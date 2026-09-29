@@ -571,6 +571,54 @@ def test_empty_retrieval_does_not_call_model(monkeypatch):
     llm.assert_not_called()
 
 
+def test_long_research_job_is_private_and_recoverable(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "handle_theocratic_search",
+        lambda **kwargs: {
+            "status": "completed",
+            "ai_response": f"Resposta para {kwargs['q']}",
+            "results": [],
+        },
+    )
+    created = client.post(
+        "/api/research-jobs",
+        headers={"X-Hy3-Api-Key": "private-key"},
+        json={"query": "como sair das dívidas?", "provider": "hy3", "mode": "deep"},
+    )
+    assert created.status_code == 202
+    payload = created.json()
+    assert payload["access_token"]
+    assert "private-key" not in created.text
+    assert client.get(f"/api/research-jobs/{payload['id']}").status_code == 404
+    for _ in range(50):
+        status = client.get(
+            f"/api/research-jobs/{payload['id']}",
+            headers={"X-Job-Token": payload["access_token"]},
+        )
+        if status.json()["status"] == "completed":
+            break
+        time.sleep(0.01)
+    result = status.json()
+    assert result["status"] == "completed"
+    assert result["result"]["ai_response"] == "Resposta para como sair das dívidas?"
+
+
+def test_queued_research_job_can_be_cancelled(monkeypatch):
+    monkeypatch.setattr(main._research_job_executor, "submit", lambda *args: None)
+    created = client.post(
+        "/api/research-jobs",
+        headers={"X-Hy3-Api-Key": "private-key"},
+        json={"query": "Moisés", "provider": "hy3", "mode": "deep"},
+    ).json()
+    cancelled = client.delete(
+        f"/api/research-jobs/{created['id']}",
+        headers={"X-Job-Token": created["access_token"]},
+    )
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+
+
 def test_openrouter_free_is_default_and_hy3_reasoning_is_explicit(monkeypatch):
     monkeypatch.setattr(
         research,

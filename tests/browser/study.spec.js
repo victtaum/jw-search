@@ -140,6 +140,38 @@ test('late response cannot enter another conversation',async ({page})=>{
   expect(await page.evaluate(()=>activeConversation.turns)).toEqual([]);
 });
 
+test('broad research uses a recoverable server job',async ({page})=>{
+  let polls=0;
+  await page.route('**/api/research-jobs',async route=>{
+    expect(route.request().method()).toBe('POST');
+    await route.fulfill({status:202,json:{id:'job-1',access_token:'job-token',status:'queued',message:'Pesquisa adicionada à fila.'}});
+  });
+  await page.route('**/api/research-jobs/job-1',async route=>{
+    polls++;
+    expect(route.request().headers()['x-job-token']).toBe('job-token');
+    await route.fulfill({json:{id:'job-1',status:'completed',stage:'completed',message:'Pesquisa concluída.',result:{ai_response:'Resposta ampla recuperável',results:[],provider:'hy3'}}});
+  });
+  await page.getByRole('button',{name:/Pesquisa sintetizada/}).click();
+  await page.evaluate(()=>executeTurnSearch('Quem são os santos?'));
+  await expect.poll(()=>polls,{timeout:5000}).toBe(1);
+  await expect.poll(()=>page.evaluate(()=>activeConversation.turns.at(-1)?.answer),{timeout:5000}).toBe('Resposta ampla recuperável');
+  expect(await page.evaluate(()=>sessionStorage.getItem('jw_search_pending_job'))).toBe(null);
+});
+
+test('a broad result is recovered after the page reloads',async ({page})=>{
+  await page.route('**/api/research-jobs/job-resume',async route=>{
+    await route.fulfill({json:{id:'job-resume',status:'completed',stage:'completed',message:'Pesquisa concluída.',result:{ai_response:'Resultado recuperado após reconexão',results:[],provider:'hy3'}}});
+  });
+  await page.evaluate(()=>sessionStorage.setItem('jw_search_pending_job',JSON.stringify({
+    id:'job-resume',token:'resume-token',query:'Como sair das dívidas?',
+    conversationId:'conv-resume',mode:'deep',tool:null,
+    conversation:{id:'conv-resume',title:'Dívidas',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),turns:[],provider:'hy3'}
+  })));
+  await page.reload();
+  await expect.poll(()=>page.evaluate(()=>activeConversation.turns.at(-1)?.answer),{timeout:5000}).toBe('Resultado recuperado após reconexão');
+  expect(await page.evaluate(()=>sessionStorage.getItem('jw_search_pending_job'))).toBe(null);
+});
+
 test('footer shows version and contact form sends through the backend',async ({page})=>{
   let message;
   await page.route('**/api/contact',async route=>{

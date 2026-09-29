@@ -15,6 +15,9 @@ from middleware import RequestBoundary
 from study_tools import ToolOptions
 import time
 import threading
+import secrets
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 import json
 import urllib.request
 import urllib.error
@@ -26,6 +29,10 @@ from urllib.parse import quote
 _search_slots = threading.BoundedSemaphore(4)
 _contact_attempts = defaultdict(deque)
 _contact_lock = threading.Lock()
+_research_jobs = {}
+_research_jobs_lock = threading.Lock()
+_research_job_ttl = 60 * 60
+_research_job_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="research")
 
 
 class InsufficientEvidence(RuntimeError):
@@ -56,7 +63,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.26.0",
+    version="2.27.0",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -103,6 +110,191 @@ class ChatRequest(BaseModel):
         if self.tool and any(len(r) > 120 for r in self.tool.selected_references):
             raise ValueError("Referência selecionada muito longa.")
         return self
+
+
+def _job_view(job, include_result=False):
+    view = {
+        "id": job["id"],
+        "status": job["status"],
+        "stage": job["stage"],
+        "message": job["message"],
+        "created_at": job["created_at"],
+        "updated_at": job["updated_at"],
+    }
+    if include_result and job["status"] == "completed":
+        view["result"] = job.get("result")
+    if job["status"] == "failed":
+        view["error"] = job.get("error")
+        view["status_code"] = job.get("status_code", 503)
+    return view
+
+
+def _authorized_job(job_id, supplied_token):
+    with _research_jobs_lock:
+        job = _research_jobs.get(job_id)
+        if not job:
+            raise HTTPException(404, "Pesquisa não encontrada ou expirada.")
+        expected = job["access_token"]
+        if not supplied_token or not hmac.compare_digest(
+            expected.encode(), supplied_token.encode()
+        ):
+            raise HTTPException(404, "Pesquisa não encontrada ou expirada.")
+        return job
+
+
+def _cleanup_research_jobs():
+    cutoff = time.time() - _research_job_ttl
+    with _research_jobs_lock:
+        expired = [
+            job_id
+            for job_id, job in _research_jobs.items()
+            if job["updated_at"] < cutoff
+        ]
+        for job_id in expired:
+            del _research_jobs[job_id]
+
+
+def _run_research_job(job_id):
+    with _research_jobs_lock:
+        job = _research_jobs.get(job_id)
+        if not job or job["status"] == "cancelled":
+            return
+        job["status"] = "running"
+        job["stage"] = "researching"
+        job["message"] = "Interpretando a pergunta e consultando as fontes oficiais."
+        job["updated_at"] = time.time()
+        arguments = job.pop("arguments")
+    def report(stage, message):
+        with _research_jobs_lock:
+            current = _research_jobs.get(job_id)
+            if current and current["status"] == "running":
+                current["stage"] = stage
+                current["message"] = message
+                current["updated_at"] = time.time()
+
+    arguments["progress_callback"] = report
+    try:
+        result = handle_theocratic_search(**arguments)
+        with _research_jobs_lock:
+            job = _research_jobs.get(job_id)
+            if not job:
+                return
+            job["result"] = result
+            job["status"] = "completed"
+            job["stage"] = "completed"
+            job["message"] = "Pesquisa concluída."
+            job["updated_at"] = time.time()
+    except HTTPException as exc:
+        with _research_jobs_lock:
+            job = _research_jobs.get(job_id)
+            if job:
+                job["status"] = "failed"
+                job["stage"] = "failed"
+                job["error"] = str(exc.detail)
+                job["status_code"] = exc.status_code
+                job["message"] = "A pesquisa não pôde ser concluída."
+                job["updated_at"] = time.time()
+    except Exception:
+        with _research_jobs_lock:
+            job = _research_jobs.get(job_id)
+            if job:
+                job["status"] = "failed"
+                job["stage"] = "failed"
+                job["error"] = "Falha inesperada ao executar a pesquisa."
+                job["status_code"] = 503
+                job["message"] = "A pesquisa não pôde ser concluída."
+                job["updated_at"] = time.time()
+
+
+@app.post("/api/research-jobs", status_code=202)
+def create_research_job(
+    req: ChatRequest,
+    x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-Api-Key"),
+    x_deepseek_api_key: Optional[str] = Header(None, alias="X-Deepseek-Api-Key"),
+    x_hy3_api_key: Optional[str] = Header(None, alias="X-Hy3-Api-Key"),
+    x_api_key: Optional[str] = Header(None, alias="X-Api-Key"),
+    x_jw_owner_token: Optional[str] = Header(None, alias="X-JW-Owner-Token"),
+):
+    _cleanup_research_jobs()
+    job_id, access_token = str(uuid.uuid4()), secrets.token_urlsafe(32)
+    now = time.time()
+    arguments = {
+        "q": req.query,
+        "mode": req.mode,
+        "tool": req.tool,
+        "external": req.include_external,
+        "lang": req.lang,
+        "provider": req.provider,
+        "model": req.model,
+        "base_url": req.base_url,
+        "history": [
+            {"role": message.role, "content": message.content}
+            for message in req.history
+        ],
+        "x_gemini_api_key": x_gemini_api_key,
+        "x_deepseek_api_key": x_deepseek_api_key,
+        "x_hy3_api_key": x_hy3_api_key,
+        "x_api_key": x_api_key,
+        "x_jw_owner_token": x_jw_owner_token,
+    }
+    job = {
+        "id": job_id,
+        "access_token": access_token,
+        "status": "queued",
+        "stage": "queued",
+        "message": "Pesquisa adicionada à fila.",
+        "created_at": now,
+        "updated_at": now,
+        "arguments": arguments,
+    }
+    with _research_jobs_lock:
+        if len(_research_jobs) >= 100:
+            terminal = sorted(
+                (
+                    item
+                    for item in _research_jobs.items()
+                    if item[1]["status"] in ("completed", "failed", "cancelled")
+                ),
+                key=lambda item: item[1]["updated_at"],
+            )
+            for old_id, _ in terminal[: max(1, len(_research_jobs) - 99)]:
+                del _research_jobs[old_id]
+        if len(_research_jobs) >= 100:
+            raise HTTPException(429, "A fila de pesquisas está cheia. Tente novamente.")
+        _research_jobs[job_id] = job
+    _research_job_executor.submit(_run_research_job, job_id)
+    return {**_job_view(job), "access_token": access_token}
+
+
+@app.get("/api/research-jobs/{job_id}")
+def get_research_job(
+    job_id: str,
+    x_job_token: Optional[str] = Header(None, alias="X-Job-Token"),
+):
+    job = _authorized_job(job_id, x_job_token)
+    with _research_jobs_lock:
+        return _job_view(job, include_result=True)
+
+
+@app.delete("/api/research-jobs/{job_id}")
+def cancel_research_job(
+    job_id: str,
+    x_job_token: Optional[str] = Header(None, alias="X-Job-Token"),
+):
+    job = _authorized_job(job_id, x_job_token)
+    with _research_jobs_lock:
+        if job["status"] == "queued":
+            job["status"] = "cancelled"
+            job["stage"] = "cancelled"
+            job["message"] = "Pesquisa cancelada antes de iniciar."
+            job.pop("arguments", None)
+            job["updated_at"] = time.time()
+        elif job["status"] == "running":
+            return {
+                **_job_view(job),
+                "message": "A pesquisa já está consultando o provedor e será preservada para recuperação.",
+            }
+        return _job_view(job)
 
 
 class ExportDocxRequest(BaseModel):
@@ -329,6 +521,7 @@ def handle_theocratic_search(
     api_key=None,
     mode="quick",
     tool=None,
+    progress_callback=None,
 ):
     if not q.strip() or len(q) > 4000:
         raise HTTPException(422, "A pergunta deve conter entre 1 e 4.000 caracteres.")
@@ -392,6 +585,7 @@ def handle_theocratic_search(
                     lang,
                     external,
                     tool,
+                    progress_callback,
                 )
                 if (
                     prov == "hy3"
@@ -425,6 +619,7 @@ def handle_theocratic_search(
                 lang,
                 external,
                 tool,
+                progress_callback,
             )
             warning = (
                 "A primeira tentativa não encontrou fontes suficientes; a pesquisa "
@@ -606,7 +801,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.26.0"}
+    return {"status": "ok", "version": "2.27.0"}
 
 
 @app.get("/api/config")

@@ -265,3 +265,13 @@ Os tempos são amostras, não SLA. O roteador gratuito variou entre respostas r�
 - O planejamento tem janela própria curta e não tenta o Gemini por conta própria. Se o modelo gratuito atrasar, falhar ou devolver conteúdo inválido, a pesquisa continua com o mecanismo estável anterior e registra `deterministic_fallback` no diagnóstico.
 - O modo sintetizado e as quatro ferramentas derivadas conservam seu fluxo, sem uma chamada adicional ao provedor.
 - Entrega parcial de JW-012 e JW-028: a pergunta passa a ser decomposta semanticamente e as lacunas orientam novas buscas; persistência e retomada entre sessões permanecem pendentes.
+
+### Versão 2.27.0 — pesquisas longas recuperáveis
+
+- Pesquisa ampla e as quatro ferramentas passam a ser criadas como tarefas no servidor. A resposta inicial retorna imediatamente com identificador e token privativo; o navegador acompanha o estado até o resultado ficar disponível.
+- A consulta deixa de depender de uma única conexão HTTP aberta durante planejamento, recuperação e síntese. Interrupções momentâneas na consulta de estado não reiniciam o trabalho no provedor.
+- Os estados exibidos são observados (`queued`, `researching`, `completed`, `failed`), sem percentuais inventados.
+- O resultado fica recuperável por uma hora mediante um token aleatório específico da tarefa. Credenciais dos provedores não aparecem nas respostas e são descartadas do registro assim que a execução começa.
+- Uma tarefa ainda na fila pode ser cancelada. Se já estiver consultando o provedor, o resultado é preservado para recuperação, pois as bibliotecas atuais não oferecem interrupção segura em todos os transportes.
+- O endpoint síncrono permanece disponível para modo sintetizado e clientes existentes.
+- Entrega parcial de JW-022, JW-023, JW-025 e JW-026. Persistência após reinício da instância e cancelamento cooperativo durante cada etapa continuam no backlog.

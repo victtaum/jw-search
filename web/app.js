@@ -282,13 +282,15 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
     let startTime = Date.now();
     let progressTimer = null;
     let secondsElapsed = 0;
+    let serverStageMessage = "";
 
     const isRegenerate = replaceTurnIndex !== null;
 
     const updateStatusMessage = () => {
         secondsElapsed = Math.floor((Date.now() - startTime) / 1000);
         const prefix = isRegenerate ? "🔄 Regerando resposta: " : "";
-        if (statusText) statusText.innerText = `${prefix}Pesquisa em andamento (${secondsElapsed}s). Modo ${mode === 'deep' ? 'amplo' : 'sintetizado'}.`;
+        const detail = serverStageMessage || `Pesquisa em andamento. Modo ${mode === 'deep' ? 'amplo' : 'sintetizado'}.`;
+        if (statusText) statusText.innerText = `${prefix}${detail} (${secondsElapsed}s)`;
 
     };
 
@@ -304,9 +306,11 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
         historyPayload.push({ role: "assistant", content: turn.answer.slice(0, 10000) });
     }
 
-    // Transport margin above the server budget; elapsed time does not imply a stage.
+    // Long work runs as a recoverable server task. The browser connection can
+    // reconnect and fetch the result without restarting the research.
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), (mode === "deep" || tool) ? 165000 : 85000);
+    const useResearchJob = mode === "deep" || Boolean(tool);
+    const timeoutId = setTimeout(() => controller.abort(), useResearchJob ? 600000 : 85000);
     pendingSearch = controller;
 
     try {
@@ -326,12 +330,69 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
             lang: lang
         };
 
-        const res = await fetch(`${API_BASE}/api/chat`, {
+        let res = await fetch(`${API_BASE}${useResearchJob ? '/api/research-jobs' : '/api/chat'}`, {
             method: "POST",
             headers: headers,
             body: JSON.stringify(bodyData),
             signal: controller.signal
         });
+
+        if (useResearchJob && res.ok) {
+            const created = await res.json();
+            const pendingJob = {
+                id: created.id,
+                token: created.access_token,
+                query,
+                conversationId: conversation.id,
+                conversation,
+                mode,
+                tool,
+                startedAt: new Date().toISOString()
+            };
+            sessionStorage.setItem("jw_search_pending_job", JSON.stringify(pendingJob));
+            serverStageMessage = created.message || "Pesquisa adicionada à fila.";
+            updateStatusMessage();
+            while (true) {
+                await new Promise((resolve, reject) => {
+                    const timer = setTimeout(resolve, 2000);
+                    controller.signal.addEventListener("abort", () => {
+                        clearTimeout(timer);
+                        reject(new DOMException("Pesquisa interrompida", "AbortError"));
+                    }, {once: true});
+                });
+                try {
+                    res = await fetch(`${API_BASE}/api/research-jobs/${created.id}`, {
+                        headers: {"X-Job-Token": created.access_token},
+                        signal: controller.signal
+                    });
+                } catch (pollError) {
+                    if (pollError.name === "AbortError") throw pollError;
+                    serverStageMessage = "Reconectando ao andamento da pesquisa.";
+                    updateStatusMessage();
+                    continue;
+                }
+                if (!res.ok) break;
+                const state = await res.json();
+                serverStageMessage = state.message || "Pesquisa em andamento.";
+                updateStatusMessage();
+                if (state.status === "completed") {
+                    sessionStorage.removeItem("jw_search_pending_job");
+                    res = new Response(JSON.stringify(state.result), {
+                        status: 200,
+                        headers: {"Content-Type": "application/json"}
+                    });
+                    break;
+                }
+                if (state.status === "failed" || state.status === "cancelled") {
+                    sessionStorage.removeItem("jw_search_pending_job");
+                    res = new Response(JSON.stringify({detail: state.error || state.message}), {
+                        status: state.status_code || 503,
+                        headers: {"Content-Type": "application/json"}
+                    });
+                    break;
+                }
+            }
+        }
 
         clearTimeout(timeoutId);
 
@@ -391,6 +452,73 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
         statusContainer.classList.add("hidden");
     }
 }
+
+async function resumePendingResearchJob() {
+    if (pendingSearch) return;
+    let pending;
+    try {
+        pending = JSON.parse(sessionStorage.getItem("jw_search_pending_job") || "null");
+    } catch {
+        sessionStorage.removeItem("jw_search_pending_job");
+        return;
+    }
+    if (!pending?.id || !pending?.token || !pending?.query) return;
+    pendingSearch = true;
+    if (pending.conversation?.id === pending.conversationId) {
+        activeConversation = pending.conversation;
+    }
+    statusContainer.classList.remove("hidden");
+    if (statusText) statusText.innerText = "Reconectando à pesquisa em andamento…";
+    try {
+        while (true) {
+            let response;
+            try {
+                response = await fetch(`${API_BASE}/api/research-jobs/${pending.id}`, {
+                    headers: {"X-Job-Token": pending.token}
+                });
+            } catch {
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                continue;
+            }
+            const state = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(state.detail || "A pesquisa anterior expirou.");
+            if (statusText) statusText.innerText = state.message || "Pesquisa em andamento.";
+            if (state.status === "completed") {
+                const data = state.result || {};
+                activeConversation.turns.push({
+                    query: pending.query,
+                    answer: data.ai_response || "Nenhuma resposta gerada.",
+                    results: data.results || [],
+                    mode: pending.mode || "deep",
+                    tool: pending.tool || null,
+                    evidence: data.evidence,
+                    warnings: data.warnings || [],
+                    provider: data.provider || currentProvider,
+                    model: data.model || "",
+                    latency: "recuperada",
+                    timestamp: new Date().toISOString()
+                });
+                activeConversation.updatedAt = new Date().toISOString();
+                sessionStorage.removeItem("jw_search_pending_job");
+                saveCurrentThreadToStorage();
+                renderConversationThread();
+                break;
+            }
+            if (state.status === "failed" || state.status === "cancelled") {
+                throw new Error(state.error || state.message || "A pesquisa não foi concluída.");
+            }
+            await new Promise(resolve => setTimeout(resolve, 2500));
+        }
+    } catch (error) {
+        sessionStorage.removeItem("jw_search_pending_job");
+        alert(`Não foi possível recuperar a pesquisa: ${error.message}`);
+    } finally {
+        pendingSearch = null;
+        statusContainer.classList.add("hidden");
+    }
+}
+
+setTimeout(resumePendingResearchJob, 0);
 
 if (searchForm) {
     searchForm.addEventListener("submit", (e) => {
