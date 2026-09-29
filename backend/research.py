@@ -1037,15 +1037,29 @@ def append_missing_bible_texts(answer, sources):
 
 
 def run_research(
-    query, history, provider, key, endpoint, model, mode, lang, external, tool=None
+    query,
+    history,
+    provider,
+    key,
+    endpoint,
+    model,
+    mode,
+    lang,
+    external,
+    tool=None,
+    progress=None,
 ):
     started = time.monotonic()
     search_query = topic_query(query, history, tool)
     plan = build_research_plan(query, mode, topic=search_query)
     if mode == "deep" and not tool:
+        if progress:
+            progress("planning", "Interpretando a pergunta e planejando a pesquisa.")
         plan = build_semantic_plan(
             query, search_query, provider, key, endpoint, model, plan
         )
+    if progress:
+        progress("retrieving", "Buscando publicações e textos bíblicos oficiais.")
     sources = collect_evidence(
         search_query, lang, mode, intent_query=query, plan=plan
     )
@@ -1059,6 +1073,8 @@ def run_research(
         )
         plan = entity_plan
     if mode == "deep" and not tool:
+        if progress:
+            progress("reading", "Lendo as fontes e seguindo referências relacionadas.")
         sources.extend(collect_referenced_verses(sources, lang, search_query))
     if tool:
         from bible import fetch_verse_content
@@ -1188,6 +1204,8 @@ Desenvolva os pontos cobertos pelas evidências. Não preencha lacunas com memó
     max_tokens = 5000 if tool else (7000 if mode == "deep" else 2500)
     if provider == "hy3" and mode == "deep" and not tool:
         max_tokens = 4000
+    if progress:
+        progress("synthesizing", "Organizando as evidências em uma resposta fundamentada.")
     if provider == "gemini":
         used_model = model or "gemini-2.5-flash"
         with genai.Client(
@@ -1250,6 +1268,8 @@ Desenvolva os pontos cobertos pelas evidências. Não preencha lacunas com memó
     remaining()
     if not answer or not answer.strip():
         raise ValueError("O provedor retornou uma resposta vazia.")
+    if progress:
+        progress("validating", "Validando citações, fontes e textos bíblicos.")
     if provider == "gemini":
         finish_reason = getattr(response.candidates[0], "finish_reason", None) if response.candidates else None
     if mode == "deep":

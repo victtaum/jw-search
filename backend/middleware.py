@@ -14,9 +14,14 @@ class RequestBoundary:
             return await self.app(scope, receive, send)
         headers = dict(scope["headers"])
         access = os.environ.get("JW_ACCESS_TOKEN", "")
+        protected_path = scope["path"] in (
+            "/api/chat",
+            "/api/search",
+            "/api/diagnostics",
+        ) or scope["path"].startswith("/api/research-jobs")
         if (
             access
-            and scope["path"] in ("/api/chat", "/api/search", "/api/diagnostics")
+            and protected_path
             and scope["method"] != "OPTIONS"
         ):
             supplied = headers.get(b"x-jw-access-token", b"").decode("utf-8", "replace")
