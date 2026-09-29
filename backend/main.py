@@ -585,7 +585,7 @@ def handle_theocratic_search(
                     lang,
                     external,
                     tool,
-                    progress_callback,
+                    progress=progress_callback,
                 )
                 if (
                     prov == "hy3"
@@ -619,7 +619,7 @@ def handle_theocratic_search(
                 lang,
                 external,
                 tool,
-                progress_callback,
+                progress=progress_callback,
             )
             warning = (
                 "A primeira tentativa não encontrou fontes suficientes; a pesquisa "
