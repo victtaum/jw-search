@@ -158,6 +158,32 @@ test('broad research uses a recoverable server job',async ({page})=>{
   expect(await page.evaluate(()=>sessionStorage.getItem('jw_search_pending_job'))).toBe(null);
 });
 
+test('Vercel keeps broad research in one synchronous request',async ({page})=>{
+  await page.unroute('**/*');
+  await page.route('**/*',route=>{
+    const url=new URL(route.request().url());
+    if(url.host!=='127.0.0.1:8766') return route.abort();
+    if(url.pathname==='/api/config') return route.fulfill({json:{has_key:false,research_transport:'synchronous'}});
+    return route.continue();
+  });
+  let chatRequests=0;
+  let jobRequests=0;
+  await page.route('**/api/chat',async route=>{
+    chatRequests++;
+    await route.fulfill({json:{ai_response:'Resposta ampla no Vercel',results:[],provider:'hy3'}});
+  });
+  await page.route('**/api/research-jobs',async route=>{
+    jobRequests++;
+    await route.abort();
+  });
+  await page.reload();
+  await page.getByRole('button',{name:/Pesquisa sintetizada/}).click();
+  await page.evaluate(()=>executeTurnSearch('Quem são os santos?'));
+  await expect.poll(()=>chatRequests).toBe(1);
+  expect(jobRequests).toBe(0);
+  await expect.poll(()=>page.evaluate(()=>activeConversation.turns.at(-1)?.answer)).toBe('Resposta ampla no Vercel');
+});
+
 test('a broad result is recovered after the page reloads',async ({page})=>{
   await page.route('**/api/research-jobs/job-resume',async route=>{
     await route.fulfill({json:{id:'job-resume',status:'completed',stage:'completed',message:'Pesquisa concluída.',result:{ai_response:'Resultado recuperado após reconexão',results:[],provider:'hy3'}}});

@@ -604,6 +604,21 @@ def test_long_research_job_is_private_and_recoverable(monkeypatch):
     assert result["result"]["ai_response"] == "Resposta para como sair das dívidas?"
 
 
+def test_vercel_config_uses_synchronous_research(monkeypatch):
+    monkeypatch.setenv("VERCEL", "1")
+    response = client.get("/api/config")
+    assert response.status_code == 200
+    assert response.json()["research_transport"] == "synchronous"
+    assert response.json()["deployment_platform"] == "vercel"
+
+
+def test_persistent_server_config_uses_recoverable_jobs(monkeypatch):
+    monkeypatch.delenv("VERCEL", raising=False)
+    response = client.get("/api/config")
+    assert response.status_code == 200
+    assert response.json()["research_transport"] == "recoverable_job"
+
+
 def test_queued_research_job_can_be_cancelled(monkeypatch):
     monkeypatch.setattr(main._research_job_executor, "submit", lambda *args: None)
     created = client.post(
