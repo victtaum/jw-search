@@ -1485,11 +1485,11 @@ function openKeyModal(noticeMessage = null) {
     
     switchModalTab(currentProvider);
 
-    if (noticeMessage) {
+    if (noticeMessage && keyStatusMsg) {
         keyStatusMsg.className = "text-xs p-3 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 mt-3 flex items-center space-x-2";
         keyStatusMsg.innerHTML = `<i class="fa-solid fa-triangle-exclamation flex-shrink-0 text-sm"></i> <span>${escapeHtml(noticeMessage)}</span>`;
         keyStatusMsg.classList.remove("hidden");
-    } else {
+    } else if (keyStatusMsg) {
         keyStatusMsg.classList.add("hidden");
     }
 }
@@ -1552,9 +1552,11 @@ if (btnSaveKey) {
         if (hModel) localStorage.setItem("jw_search_hy3_model", hModel);
         else localStorage.removeItem("jw_search_hy3_model");
 
-        keyStatusMsg.className = "text-xs p-3 rounded-lg bg-green-50 text-green-700 border border-green-200 mt-3 flex items-center space-x-2";
-        keyStatusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> <span>Configurações salvas com sucesso!</span>`;
-        keyStatusMsg.classList.remove("hidden");
+        if (keyStatusMsg) {
+            keyStatusMsg.className = "text-xs p-3 rounded-lg bg-green-50 text-green-700 border border-green-200 mt-3 flex items-center space-x-2";
+            keyStatusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> <span>Configurações salvas com sucesso!</span>`;
+            keyStatusMsg.classList.remove("hidden");
+        }
         
         checkKeyStatus();
         setTimeout(() => {
