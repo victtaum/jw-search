@@ -63,7 +63,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.28.1",
+    version="2.28.2",
 )
 
 # Configure CORS so both local web frontend and Android app can access the API
@@ -804,7 +804,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.28.1"}
+    return {"status": "ok", "version": "2.28.2"}
 
 
 @app.get("/api/config")
