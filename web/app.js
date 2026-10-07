@@ -16,7 +16,7 @@ const API_BASE = "";
 const BACKUP_API_BASE = "https://jw-search.onrender.com";
 
 function canFailOver(response) {
-    return !response || response.status === 502 || response.status === 503 || response.status === 504;
+    return !response || response.status >= 500;
 }
 
 const appVersion = document.getElementById("app-version");
@@ -324,7 +324,7 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
 
     // Long work runs as a recoverable server task. The browser connection can
     // reconnect and fetch the result without restarting the research.
-    const controller = new AbortController();
+    let controller = new AbortController();
     const longResearch = mode === "deep" || Boolean(tool);
     let useResearchJob = longResearch && researchTransport === "recoverable_job";
     // Reserve time for the independent backup before the browser gives up.
@@ -350,7 +350,7 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
 
         let requestBase = API_BASE;
         let usedBackup = false;
-        const requestPath = useResearchJob ? '/api/research-jobs' : '/api/chat';
+        let requestPath = useResearchJob ? '/api/research-jobs' : '/api/chat';
         const makeResearchRequest = (base, signal) => fetch(`${base}${requestPath}`, {
             method: "POST",
             headers: headers,
@@ -360,21 +360,18 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
         const useBackup = async () => {
             usedBackup = true;
             requestBase = BACKUP_API_BASE;
-            // Render can retain a research job, but a direct request also works
-            // for the synchronous failover path from Vercel.
-            useResearchJob = false;
+            // A broad request moves to Render's durable job endpoint. Its work
+            // can continue while the phone reconnects instead of repeating the
+            // same short synchronous limit that just failed on Vercel.
+            useResearchJob = longResearch;
+            requestPath = useResearchJob ? '/api/research-jobs' : '/api/chat';
             serverStageMessage = "O servidor principal demorou; continuando pelo servidor de contingência.";
             updateStatusMessage();
-            const fallbackController = new AbortController();
-            pendingSearch = fallbackController;
+            controller = new AbortController();
+            pendingSearch = controller;
             clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => fallbackController.abort(), longResearch ? 300000 : 85000);
-            return fetch(`${requestBase}/api/chat`, {
-                method: "POST",
-                headers,
-                body: JSON.stringify(bodyData),
-                signal: fallbackController.signal
-            });
+            timeoutId = setTimeout(() => controller.abort(), longResearch ? 300000 : 85000);
+            return makeResearchRequest(requestBase, controller.signal);
         };
 
         let res;
@@ -399,6 +396,7 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
                 conversation,
                 mode,
                 tool,
+                apiBase: requestBase,
                 startedAt: new Date().toISOString()
             };
             sessionStorage.setItem("jw_search_pending_job", JSON.stringify(pendingJob));
@@ -499,7 +497,7 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
 
     } catch (err) {
         if (err.name === 'AbortError') {
-            alert("A consulta foi interrompida ou atingiu o tempo limite. Você pode reduzir o assunto ou tentar o modo amplo.");
+            alert("A pesquisa excedeu o tempo disponível nos servidores. Tente novamente; se continuar, reporte o ocorrido para podermos investigar a consulta.");
         } else {
             alert(`Erro de conexão: ${err.message}`);
         }
@@ -531,7 +529,7 @@ async function resumePendingResearchJob() {
         while (true) {
             let response;
             try {
-                response = await fetch(`${API_BASE}/api/research-jobs/${pending.id}`, {
+                response = await fetch(`${pending.apiBase || API_BASE}/api/research-jobs/${pending.id}`, {
                     headers: {"X-Job-Token": pending.token}
                 });
             } catch {
