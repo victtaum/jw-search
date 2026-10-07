@@ -187,10 +187,11 @@ test('Vercel keeps broad research in one synchronous request',async ({page})=>{
 test('uses the Render API only when the Vercel research request fails',async ({page})=>{
   await page.route('**/api/config',route=>route.fulfill({json:{has_key:false,research_transport:'synchronous'}}));
   await page.reload();
+  await page.getByRole('button',{name:/Pesquisa sintetizada/}).click();
   await page.route('**/api/chat',async route=>{
     const url=new URL(route.request().url());
     if(url.host==='jw-search.onrender.com') {
-      await route.fulfill({json:{ai_response:'Resposta do servidor de contingência',results:[],provider:'hy3'}});
+      await route.fulfill({headers:{'access-control-allow-origin':'*'},json:{ai_response:'Resposta do servidor de contingência',results:[],provider:'hy3'}});
       return;
     }
     await route.fulfill({status:503,json:{detail:'Indisponível temporariamente'}});

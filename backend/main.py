@@ -64,7 +64,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.28.3",
+    version="2.28.4",
 )
 
 
@@ -578,7 +578,16 @@ def handle_theocratic_search(
     # a synthesized answer. Give them the same transport budget as broad
     # research so the free provider can finish before the private fallback.
     complex_request = mode == "deep" or tool is not None
-    token = deadline.set(time.monotonic() + (150 if complex_request else 75))
+    # Vercel must leave time for the browser to switch to the independent
+    # Render worker. Render jobs, on the other hand, can keep working without
+    # holding the original browser request open.
+    running_on_vercel = bool(os.environ.get("VERCEL"))
+    request_budget = (
+        155 if complex_request and running_on_vercel
+        else 270 if complex_request
+        else 75
+    )
+    token = deadline.set(time.monotonic() + request_budget)
     try:
         try:
             primary_token = None
@@ -625,7 +634,7 @@ def handle_theocratic_search(
             )
             gemini_key = fallback_gemini
             recoverable = status not in (400, 401, 403, 404, 422)
-            if prov != "hy3" or not gemini_key or not recoverable or remaining(150) < 25:
+            if prov != "hy3" or not gemini_key or not recoverable or remaining(request_budget) < 25:
                 raise
             _, gemini_endpoint = provider_endpoint("gemini", None)
             result = run_research(
@@ -821,7 +830,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.28.3"}
+    return {"status": "ok", "version": "2.28.4"}
 
 
 @app.get("/api/config")
