@@ -235,7 +235,26 @@ test('footer shows version and contact form sends through the backend',async ({p
   await page.getByRole('button',{name:/Enviar mensagem/}).click();
   await expect.poll(()=>message?.kind).toBe('bug');
   expect(message).not.toHaveProperty('recipient');
+  expect(message.diagnostic_markdown).toContain('# Diagnóstico JW Search');
   await expect(page.locator('#contact-status')).toContainText('Mensagem enviada');
+});
+
+test('research errors offer a contextual bug report',async ({page})=>{
+  let report;
+  await page.evaluate(()=>localStorage.setItem('jw_search_research_mode','quick'));
+  await page.reload();
+  await page.route('**/api/chat',route=>route.fulfill({status:503,json:{detail:'Biblioteca indisponível'}}));
+  await page.route('**/api/contact',async route=>{
+    report=route.request().postDataJSON();
+    await route.fulfill({json:{status:'sent'}});
+  });
+  await page.evaluate(()=>executeTurnSearch('Como sair das dívidas?'));
+  await expect(page.locator('#error-modal')).not.toHaveClass(/pointer-events-none/);
+  await page.getByRole('button',{name:/Reportar bug com dados/}).click();
+  await expect(page.locator('#contact-diagnostic-note')).not.toHaveClass(/hidden/);
+  await page.locator('#contact-message').fill('A pesquisa não pôde ser concluída.');
+  await page.getByRole('button',{name:/Enviar mensagem/}).click();
+  await expect.poll(()=>report?.diagnostic_markdown).toContain('Como sair das dívidas?');
 });
 
 test('follow-up suggestions wrap without a horizontal scrollbar and keep support visible',async ({page})=>{
