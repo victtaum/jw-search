@@ -24,6 +24,7 @@ import urllib.request
 import urllib.error
 import html
 import hmac
+import base64
 from collections import defaultdict, deque
 from urllib.parse import quote
 
@@ -50,6 +51,7 @@ class ContactRequest(BaseModel):
     reply_to: str = Field(default="", max_length=254)
     subject: str = Field(min_length=3, max_length=140)
     message: str = Field(min_length=10, max_length=5000)
+    diagnostic_markdown: str = Field(default="", max_length=60000)
     website: str = Field(default="", max_length=200)
 
     @model_validator(mode="after")
@@ -64,7 +66,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.28.4",
+    version="2.28.5",
 )
 
 
@@ -807,6 +809,15 @@ def api_contact(payload: ContactRequest, request: Request):
             f"<p><strong>Mensagem:</strong><br>{safe_message}</p>"
         ),
     }
+    if payload.diagnostic_markdown:
+        email_payload["attachments"] = [
+            {
+                "filename": "jw-search-diagnostico.md",
+                "content": base64.b64encode(
+                    payload.diagnostic_markdown.encode("utf-8")
+                ).decode("ascii"),
+            }
+        ]
     mail_request = urllib.request.Request(
         "https://api.resend.com/emails",
         data=json.dumps(email_payload).encode("utf-8"),
@@ -830,7 +841,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.28.4"}
+    return {"status": "ok", "version": "2.28.5"}
 
 
 @app.get("/api/config")

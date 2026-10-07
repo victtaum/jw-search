@@ -1,5 +1,7 @@
 import socket
 import time
+import base64
+import json
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -835,6 +837,7 @@ def test_contact_relays_without_exposing_recipient(monkeypatch):
             "reply_to": "visitor@example.net",
             "subject": "Falha na pesquisa",
             "message": "A pesquisa apresentou uma falha inesperada.",
+            "diagnostic_markdown": "# Diagnóstico\n\nConsulta: dívidas",
             "website": "",
         },
     )
@@ -844,6 +847,8 @@ def test_contact_relays_without_exposing_recipient(monkeypatch):
     assert "private@example.com" in body
     assert "private@example.com" not in response.text
     assert captured["request"].headers["Authorization"] == "Bearer resend-secret"
+    payload = json.loads(body)
+    assert base64.b64decode(payload["attachments"][0]["content"]).decode() == "# Diagnóstico\n\nConsulta: dívidas"
 
 
 def test_contact_requires_private_mail_configuration(monkeypatch):

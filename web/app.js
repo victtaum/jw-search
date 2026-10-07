@@ -29,6 +29,12 @@ const btnCloseContact = document.getElementById("btn-close-contact");
 const contactForm = document.getElementById("contact-form");
 const contactStatus = document.getElementById("contact-status");
 const btnSendContact = document.getElementById("btn-send-contact");
+const contactDiagnosticNote = document.getElementById("contact-diagnostic-note");
+const errorModal = document.getElementById("error-modal");
+const errorModalContainer = document.getElementById("error-modal-container");
+const errorModalMessage = document.getElementById("error-modal-message");
+const btnDismissError = document.getElementById("btn-dismiss-error");
+const btnReportError = document.getElementById("btn-report-error");
 
 // State
 // State
@@ -451,7 +457,10 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
             if (res.status === 401 || res.status === 429) {
                 openKeyModal(errData.detail || "Cota esgotada ou chave necessária.");
             } else {
-                alert(`Erro na pesquisa: ${errData.detail || "Falha desconhecida"}`);
+                showSystemError(`Erro na pesquisa: ${errData.detail || "Falha desconhecida"}`, {
+                    query, mode, provider: requestProvider, status: res.status,
+                    elapsed: `${((Date.now() - startTime) / 1000).toFixed(1)} s`
+                });
             }
             return;
         }
@@ -497,9 +506,15 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
 
     } catch (err) {
         if (err.name === 'AbortError') {
-            alert("A pesquisa excedeu o tempo disponível nos servidores. Tente novamente; se continuar, reporte o ocorrido para podermos investigar a consulta.");
+            showSystemError("A pesquisa excedeu o tempo disponível nos servidores.", {
+                query, mode, provider: requestProvider,
+                elapsed: `${((Date.now() - startTime) / 1000).toFixed(1)} s`
+            });
         } else {
-            alert(`Erro de conexão: ${err.message}`);
+            showSystemError(`Erro de conexão: ${err.message}`, {
+                query, mode, provider: requestProvider,
+                elapsed: `${((Date.now() - startTime) / 1000).toFixed(1)} s`
+            });
         }
     } finally {
         clearTimeout(timeoutId);
@@ -567,7 +582,9 @@ async function resumePendingResearchJob() {
         }
     } catch (error) {
         sessionStorage.removeItem("jw_search_pending_job");
-        alert(`Não foi possível recuperar a pesquisa: ${error.message}`);
+        showSystemError(`Não foi possível recuperar a pesquisa: ${error.message}`, {
+            query: pending.query, mode: pending.mode, error: error.message
+        });
     } finally {
         pendingSearch = null;
         statusContainer.classList.add("hidden");
@@ -1854,6 +1871,75 @@ window.addEventListener("appinstalled", () => {
     console.log("JW Search instalado com sucesso como PWA!");
 });
 
+// Error reports retain enough context to reproduce a failure without ever
+// collecting local API keys. The Markdown is attached by the private server
+// relay, so the recipient address remains hidden from the visitor.
+let diagnosticContext = null;
+
+function buildDiagnosticMarkdown(context = {}) {
+    const turns = (activeConversation?.turns || []).slice(-20);
+    const currentTurn = context.query ? [{query: context.query, answer: context.partialAnswer || ""}] : [];
+    const conversation = [...turns, ...currentTurn];
+    const metadata = [
+        ["Ocorrência", context.error || "Relato enviado pelo usuário"],
+        ["Data", new Date().toISOString()],
+        ["Versão", appVersion?.textContent || "não disponível"],
+        ["Página", window.location.href],
+        ["Modo", context.mode || JWStudy.getMode()],
+        ["Provedor", context.provider || currentProvider],
+        ["Status HTTP", context.status || "não disponível"],
+        ["Tempo decorrido", context.elapsed || "não disponível"],
+        ["Navegador", navigator.userAgent]
+    ].map(([key, value]) => `- **${key}:** ${String(value || "não disponível")}`).join("\n");
+    const transcript = conversation.length
+        ? conversation.map((turn, index) => [
+            `## Interação ${index + 1}`,
+            "### Pergunta",
+            String(turn.query || "").slice(0, 4000),
+            turn.answer ? `### Resposta\n${String(turn.answer).slice(0, 10000)}` : ""
+        ].filter(Boolean).join("\n\n")).join("\n\n")
+        : "Nenhuma conversa estava disponível neste dispositivo.";
+    return (`# Diagnóstico JW Search\n\n${metadata}\n\n# Conversa\n\n${transcript}`).slice(0, 58000);
+}
+
+function setErrorModal(open) {
+    if (!errorModal) return;
+    errorModal.classList.toggle("pointer-events-none", !open);
+    errorModal.classList.toggle("opacity-0", !open);
+    errorModalContainer?.classList.toggle("scale-95", !open);
+}
+
+function openBugReport(context = {}) {
+    diagnosticContext = {
+        ...context,
+        query: context.query || activeConversation?.turns?.at(-1)?.query || "",
+        provider: context.provider || currentProvider,
+        mode: context.mode || JWStudy.getMode()
+    };
+    const kind = document.getElementById("contact-kind");
+    const subject = document.getElementById("contact-subject");
+    const message = document.getElementById("contact-message");
+    if (kind) kind.value = "bug";
+    if (subject && !subject.value) subject.value = diagnosticContext.error ? "Falha durante uma pesquisa" : "Relato sobre uma pesquisa";
+    if (message && !message.value) message.value = diagnosticContext.error
+        ? `O sistema informou: ${diagnosticContext.error}\n\nDescreva aqui o que você esperava que acontecesse.`
+        : "Descreva aqui o que aconteceu ou o que pode ser melhorado.";
+    contactDiagnosticNote?.classList.remove("hidden");
+    setContactModal(true);
+}
+
+function showSystemError(message, context = {}) {
+    diagnosticContext = {
+        ...context,
+        error: message,
+        query: context.query || "",
+        provider: context.provider || currentProvider,
+        mode: context.mode || JWStudy.getMode()
+    };
+    if (errorModalMessage) errorModalMessage.textContent = message;
+    setErrorModal(true);
+}
+
 // Footer version and private contact relay
 fetch(`${API_BASE}/healthz`)
     .then(response => response.ok ? response.json() : null)
@@ -1873,11 +1959,19 @@ function setContactModal(open) {
     if (open) setTimeout(() => document.getElementById("contact-subject")?.focus(), 100);
 }
 
-btnOpenContact?.addEventListener("click", () => setContactModal(true));
-btnOpenContactDock?.addEventListener("click", () => setContactModal(true));
+btnOpenContact?.addEventListener("click", () => openBugReport());
+btnOpenContactDock?.addEventListener("click", () => openBugReport());
 btnCloseContact?.addEventListener("click", () => setContactModal(false));
 contactModal?.addEventListener("click", event => {
     if (event.target === contactModal) setContactModal(false);
+});
+btnDismissError?.addEventListener("click", () => setErrorModal(false));
+btnReportError?.addEventListener("click", () => {
+    setErrorModal(false);
+    openBugReport(diagnosticContext || {});
+});
+errorModal?.addEventListener("click", event => {
+    if (event.target === errorModal) setErrorModal(false);
 });
 
 contactForm?.addEventListener("submit", async event => {
@@ -1895,12 +1989,15 @@ contactForm?.addEventListener("submit", async event => {
                 reply_to: document.getElementById("contact-email").value.trim(),
                 subject: document.getElementById("contact-subject").value.trim(),
                 message: document.getElementById("contact-message").value.trim(),
+                diagnostic_markdown: diagnosticContext ? buildDiagnosticMarkdown(diagnosticContext) : "",
                 website: document.getElementById("contact-website").value
             })
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || "Não foi possível enviar a mensagem.");
         contactForm.reset();
+        diagnosticContext = null;
+        contactDiagnosticNote?.classList.add("hidden");
         contactStatus.className = "text-xs rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700";
         contactStatus.textContent = "Mensagem enviada. Obrigado pelo contato!";
     } catch (error) {
