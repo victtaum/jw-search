@@ -26,6 +26,17 @@ def test_config_and_health_never_expose_key(monkeypatch):
     assert client.post("/api/config", json={"api_key": "fake"}).status_code == 405
 
 
+def test_legacy_render_domain_redirects_to_vercel():
+    response = client.get(
+        "/?consulta=moises",
+        headers={"host": "jw-search.onrender.com"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 307
+    assert response.headers["location"] == "https://jw-search.vercel.app/?consulta=moises"
+    assert client.get("/healthz", headers={"host": "jw-search.onrender.com"}).status_code == 200
+
+
 def test_arbitrary_provider_destination_rejected_before_generation(monkeypatch):
     generate = Mock()
     monkeypatch.setattr(main, "run_research", generate)

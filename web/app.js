@@ -2,7 +2,22 @@
 // JW Search - Conversational Theocratic Agent
 // ==========================================
 
+// Render was the original host. Send stale bookmarks and installed PWAs to
+// the canonical deployment before they begin a long-running research request.
+if (window.location.hostname === "jw-search.onrender.com") {
+    window.location.replace(
+        `https://jw-search.vercel.app${window.location.pathname}${window.location.search}${window.location.hash}`
+    );
+}
+
 const API_BASE = "";
+// The page is served by Vercel. Render remains a separate, CORS-enabled API
+// contingency for a temporary platform failure or execution limit.
+const BACKUP_API_BASE = "https://jw-search.onrender.com";
+
+function canFailOver(response) {
+    return !response || response.status === 502 || response.status === 503 || response.status === 504;
+}
 
 const appVersion = document.getElementById("app-version");
 const dockAppVersion = document.getElementById("dock-app-version");
@@ -311,8 +326,9 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
     // reconnect and fetch the result without restarting the research.
     const controller = new AbortController();
     const longResearch = mode === "deep" || Boolean(tool);
-    const useResearchJob = longResearch && researchTransport === "recoverable_job";
-    const timeoutId = setTimeout(() => controller.abort(), longResearch ? 300000 : 85000);
+    let useResearchJob = longResearch && researchTransport === "recoverable_job";
+    // Reserve time for the independent backup before the browser gives up.
+    let timeoutId = setTimeout(() => controller.abort(), longResearch ? 180000 : 65000);
     pendingSearch = controller;
 
     try {
@@ -332,12 +348,46 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
             lang: lang
         };
 
-        let res = await fetch(`${API_BASE}${useResearchJob ? '/api/research-jobs' : '/api/chat'}`, {
+        let requestBase = API_BASE;
+        let usedBackup = false;
+        const requestPath = useResearchJob ? '/api/research-jobs' : '/api/chat';
+        const makeResearchRequest = (base, signal) => fetch(`${base}${requestPath}`, {
             method: "POST",
             headers: headers,
             body: JSON.stringify(bodyData),
-            signal: controller.signal
+            signal
         });
+        const useBackup = async () => {
+            usedBackup = true;
+            requestBase = BACKUP_API_BASE;
+            // Render can retain a research job, but a direct request also works
+            // for the synchronous failover path from Vercel.
+            useResearchJob = false;
+            serverStageMessage = "O servidor principal demorou; continuando pelo servidor de contingência.";
+            updateStatusMessage();
+            const fallbackController = new AbortController();
+            pendingSearch = fallbackController;
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => fallbackController.abort(), longResearch ? 300000 : 85000);
+            return fetch(`${requestBase}/api/chat`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify(bodyData),
+                signal: fallbackController.signal
+            });
+        };
+
+        let res;
+        try {
+            res = await makeResearchRequest(requestBase, controller.signal);
+        } catch (requestError) {
+            // A timeout or transport failure at the primary host is precisely
+            // when the independent Render deployment should take over.
+            res = await useBackup();
+        }
+        if (!usedBackup && canFailOver(res)) {
+            res = await useBackup();
+        }
 
         if (useResearchJob && res.ok) {
             const created = await res.json();
@@ -363,7 +413,7 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
                     }, {once: true});
                 });
                 try {
-                    res = await fetch(`${API_BASE}/api/research-jobs/${created.id}`, {
+                    res = await fetch(`${requestBase}/api/research-jobs/${created.id}`, {
                         headers: {"X-Job-Token": created.access_token},
                         signal: controller.signal
                     });
@@ -409,6 +459,12 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
         }
 
         const data = await res.json();
+        if (usedBackup) {
+            data.warnings = [
+                ...(data.warnings || []),
+                "A infraestrutura principal não respondeu a tempo; esta pesquisa foi concluída pelo servidor de contingência."
+            ];
+        }
         const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
 
         const newTurn = {
