@@ -191,7 +191,7 @@ test('uses the Render API only when the Vercel research request fails',async ({p
   await page.route('**/api/chat',async route=>{
     const url=new URL(route.request().url());
     if(url.host==='jw-search.onrender.com') {
-      await route.fulfill({json:{ai_response:'Resposta do servidor de contingência',results:[],provider:'hy3'}});
+      await route.fulfill({headers:{'access-control-allow-origin':'*'},json:{ai_response:'Resposta do servidor de contingência',results:[],provider:'hy3'}});
       return;
     }
     await route.fulfill({status:503,json:{detail:'Indisponível temporariamente'}});

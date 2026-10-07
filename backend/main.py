@@ -597,11 +597,7 @@ def handle_theocratic_search(
                 # Broad research needs time for both evidence collection and a
                 # developed answer. Keep a fallback reserve inside the 150 s
                 # request window without forcing OpenRouter to stop at 70 s.
-                primary_cap = (
-                    95 if complex_request and running_on_vercel
-                    else 175 if complex_request
-                    else 45
-                )
+                primary_cap = 95 if complex_request else 45
                 primary_token = deadline.set(time.monotonic() + primary_cap)
             try:
                 progress_options = (
