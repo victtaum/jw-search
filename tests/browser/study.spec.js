@@ -184,6 +184,20 @@ test('Vercel keeps broad research in one synchronous request',async ({page})=>{
   await expect.poll(()=>page.evaluate(()=>activeConversation.turns.at(-1)?.answer)).toBe('Resposta ampla no Vercel');
 });
 
+test('uses the Render API only when the Vercel research request fails',async ({page})=>{
+  await page.route('**/api/chat',async route=>{
+    const url=new URL(route.request().url());
+    if(url.host==='jw-search.onrender.com') {
+      await route.fulfill({json:{ai_response:'Resposta do servidor de contingência',results:[],provider:'hy3'}});
+      return;
+    }
+    await route.fulfill({status:503,json:{detail:'Indisponível temporariamente'}});
+  });
+  await page.evaluate(()=>executeTurnSearch('Quem são os santos?'));
+  await expect.poll(()=>page.evaluate(()=>activeConversation.turns.at(-1)?.answer)).toBe('Resposta do servidor de contingência');
+  expect(await page.evaluate(()=>activeConversation.turns.at(-1)?.warnings)).toContain('A infraestrutura principal não respondeu a tempo; esta pesquisa foi concluída pelo servidor de contingência.');
+});
+
 test('a broad result is recovered after the page reloads',async ({page})=>{
   await page.route('**/api/research-jobs/job-resume',async route=>{
     await route.fulfill({json:{id:'job-resume',status:'completed',stage:'completed',message:'Pesquisa concluída.',result:{ai_response:'Resultado recuperado após reconexão',results:[],provider:'hy3'}}});

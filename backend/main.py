@@ -1,6 +1,7 @@
 import uvicorn
 from typing import Optional, List, Literal
 from fastapi import FastAPI, Query, Header, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -63,8 +64,24 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.28.2",
+    version="2.28.3",
 )
+
+
+@app.middleware("http")
+async def redirect_legacy_render_domain(request: Request, call_next):
+    """Direct stale Render bookmarks and PWAs to the canonical deployment."""
+    host = request.headers.get("host", "").split(":", 1)[0].lower()
+    if (
+        host == "jw-search.onrender.com"
+        and request.method in {"GET", "HEAD"}
+        and request.url.path != "/healthz"
+    ):
+        destination = "https://jw-search.vercel.app" + request.url.path
+        if request.url.query:
+            destination += "?" + request.url.query
+        return RedirectResponse(destination, status_code=307)
+    return await call_next(request)
 
 # Configure CORS so both local web frontend and Android app can access the API
 app.add_middleware(
@@ -804,7 +821,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.28.2"}
+    return {"status": "ok", "version": "2.28.3"}
 
 
 @app.get("/api/config")
