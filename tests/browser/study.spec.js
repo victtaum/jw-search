@@ -140,24 +140,6 @@ test('late response cannot enter another conversation',async ({page})=>{
   expect(await page.evaluate(()=>activeConversation.turns)).toEqual([]);
 });
 
-test('broad research uses a recoverable server job',async ({page})=>{
-  let polls=0;
-  await page.route('**/api/research-jobs',async route=>{
-    expect(route.request().method()).toBe('POST');
-    await route.fulfill({status:202,json:{id:'job-1',access_token:'job-token',status:'queued',message:'Pesquisa adicionada à fila.'}});
-  });
-  await page.route('**/api/research-jobs/job-1',async route=>{
-    polls++;
-    expect(route.request().headers()['x-job-token']).toBe('job-token');
-    await route.fulfill({json:{id:'job-1',status:'completed',stage:'completed',message:'Pesquisa concluída.',result:{ai_response:'Resposta ampla recuperável',results:[],provider:'hy3'}}});
-  });
-  await page.getByRole('button',{name:/Pesquisa sintetizada/}).click();
-  await page.evaluate(()=>executeTurnSearch('Quem são os santos?'));
-  await expect.poll(()=>polls,{timeout:5000}).toBe(1);
-  await expect.poll(()=>page.evaluate(()=>activeConversation.turns.at(-1)?.answer),{timeout:5000}).toBe('Resposta ampla recuperável');
-  expect(await page.evaluate(()=>sessionStorage.getItem('jw_search_pending_job'))).toBe(null);
-});
-
 test('Vercel keeps broad research in one synchronous request',async ({page})=>{
   await page.unroute('**/*');
   await page.route('**/*',route=>{
@@ -167,58 +149,15 @@ test('Vercel keeps broad research in one synchronous request',async ({page})=>{
     return route.continue();
   });
   let chatRequests=0;
-  let jobRequests=0;
   await page.route('**/api/chat',async route=>{
     chatRequests++;
     await route.fulfill({json:{ai_response:'Resposta ampla no Vercel',results:[],provider:'hy3'}});
-  });
-  await page.route('**/api/research-jobs',async route=>{
-    jobRequests++;
-    await route.abort();
   });
   await page.reload();
   await page.getByRole('button',{name:/Pesquisa sintetizada/}).click();
   await page.evaluate(()=>executeTurnSearch('Quem são os santos?'));
   await expect.poll(()=>chatRequests).toBe(1);
-  expect(jobRequests).toBe(0);
   await expect.poll(()=>page.evaluate(()=>activeConversation.turns.at(-1)?.answer)).toBe('Resposta ampla no Vercel');
-});
-
-test('uses the Render API only when the Vercel research request fails',async ({page})=>{
-  await page.route('**/api/config',route=>route.fulfill({json:{has_key:false,research_transport:'synchronous'}}));
-  await page.reload();
-  await page.route('**/api/chat',async route=>{
-    const url=new URL(route.request().url());
-    if(route.request().method()==='OPTIONS') {
-      await route.fulfill({status:204,headers:{
-        'access-control-allow-origin':'*',
-        'access-control-allow-methods':'POST, OPTIONS',
-        'access-control-allow-headers':'content-type'
-      }});
-      return;
-    }
-    if(url.host==='jw-search.onrender.com') {
-      await route.fulfill({headers:{'access-control-allow-origin':'*'},json:{ai_response:'Resposta do servidor de contingência',results:[],provider:'hy3'}});
-      return;
-    }
-    await route.fulfill({status:503,json:{detail:'Indisponível temporariamente'}});
-  });
-  await page.evaluate(()=>executeTurnSearch('Quem são os santos?'));
-  await expect.poll(()=>page.evaluate(()=>activeConversation.turns.at(-1)?.answer)).toBe('Resposta do servidor de contingência');
-  expect(await page.evaluate(()=>activeConversation.turns.at(-1)?.warnings)).toContain('A infraestrutura principal não respondeu a tempo; esta pesquisa foi concluída pelo servidor de contingência.');
-});
-
-test('a broad result is recovered after the page reloads',async ({page})=>{
-  await page.route('**/api/research-jobs/job-resume',async route=>{
-    await route.fulfill({json:{id:'job-resume',status:'completed',stage:'completed',message:'Pesquisa concluída.',result:{ai_response:'Resultado recuperado após reconexão',results:[],provider:'hy3'}}});
-  });
-  await page.evaluate(()=>sessionStorage.setItem('jw_search_pending_job',JSON.stringify({
-    id:'job-resume',token:'resume-token',query:'Como sair das dívidas?',
-    conversationId:'conv-resume',mode:'deep',tool:null,
-    conversation:{id:'conv-resume',title:'Dívidas',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),turns:[],provider:'hy3'}
-  })));
-  await page.reload();
-  await expect.poll(()=>page.evaluate(()=>activeConversation.turns.at(-1)?.answer),{timeout:5000}).toBe('Resultado recuperado após reconexão');
   expect(await page.evaluate(()=>sessionStorage.getItem('jw_search_pending_job'))).toBe(null);
 });
 

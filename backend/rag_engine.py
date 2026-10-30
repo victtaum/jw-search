@@ -160,19 +160,27 @@ def _query_wol_html(
         results, seen = [], set()
         region = config["url"].split("/wol/s/")[-1]
         lang_prefix = config["url"].split("/wol/s/")[0]
-        # WOL result cards expose the document ID as server-provided metadata.
-        # Their first anchors are often verse cross-references, not the article.
-        for card in soup.select(".searchResult"):
+
+        def add_result(card, title_el=None, container=None):
+            """Read WOL's document-result wrapper before falling back to its snippet.
+
+            In current WOL markup the actual document title is in a sibling
+            ``li.caption``.  The ``.searchResult`` element only contains the
+            matched paragraph.  Treating that paragraph as the title made
+            broad queries look relevant when they merely shared a generic word
+            such as "relato".
+            """
+            nonlocal results
             classes = card.get("class", [])
             doc_id = next(
                 (c[6:] for c in classes if re.fullmatch(r"docId-\d+", c)),
                 None,
             )
             if not doc_id or doc_id in seen:
-                continue
-            title_el = card.select_one("h1, h2, h3, p")
+                return
+            title_el = title_el or card.select_one("h1, h2, h3, p")
             if title_el is None:
-                continue
+                return
             url = f"{lang_prefix}/wol/d/{region}/{doc_id}"
             title = title_el.get_text(" ", strip=True)
             publication_code = next(
@@ -183,7 +191,11 @@ def _query_wol_html(
                 ),
                 "",
             )
-            reference = card.find_next_sibling("li", class_="ref")
+            reference = (
+                container.select_one("li.ref")
+                if container is not None
+                else card.find_next_sibling("li", class_="ref")
+            )
             reference_label = reference.get_text(" ", strip=True) if reference else ""
             if "bibleBook" in classes or "bible" in classes:
                 content_type = "bible"
@@ -224,8 +236,24 @@ def _query_wol_html(
                     "source_site": "wol.jw.org",
                 }
             )
+
+        # The document wrapper carries authoritative title, publication label
+        # and the result snippet together.  Prefer it whenever present.
+        for container in soup.select("ul.resultContentDocument"):
+            card = container.select_one(".searchResult")
+            title_el = container.select_one("li.caption a.lnk")
+            if card is not None and title_el is not None:
+                add_result(card, title_el, container)
             if len(results) >= max_results:
                 break
+
+        # Keep supporting historical/minimal markup used by older pages and
+        # tests, where the card itself contains the title.
+        if not results:
+            for card in soup.select(".searchResult"):
+                add_result(card)
+                if len(results) >= max_results:
+                    break
         return results
     except SearchDeadline:
         raise

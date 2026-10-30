@@ -2,22 +2,7 @@
 // JW Search - Conversational Theocratic Agent
 // ==========================================
 
-// Render was the original host. Send stale bookmarks and installed PWAs to
-// the canonical deployment before they begin a long-running research request.
-if (window.location.hostname === "jw-search.onrender.com") {
-    window.location.replace(
-        `https://jw-search.vercel.app${window.location.pathname}${window.location.search}${window.location.hash}`
-    );
-}
-
 const API_BASE = "";
-// The page is served by Vercel. Render remains a separate, CORS-enabled API
-// contingency for a temporary platform failure or execution limit.
-const BACKUP_API_BASE = "https://jw-search.onrender.com";
-
-function canFailOver(response) {
-    return !response || response.status >= 500;
-}
 
 const appVersion = document.getElementById("app-version");
 const dockAppVersion = document.getElementById("dock-app-version");
@@ -45,7 +30,9 @@ if (localStorage.getItem("jw_search_provider_policy") !== PROVIDER_POLICY_VERSIO
 }
 let currentProvider = localStorage.getItem("jw_search_active_provider") || "hy3";
 let currentFontSize = 18; // Reader font size in pixels
-let researchTransport = "recoverable_job";
+// Vercel handles each search in the same request that started it. This keeps
+// the response, diagnostics and source navigation on the canonical host.
+let researchTransport = "synchronous";
 
 let activeConversation = {
     id: "conv_" + Date.now(),
@@ -328,13 +315,11 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
         historyPayload.push({ role: "assistant", content: turn.answer.slice(0, 10000) });
     }
 
-    // Long work runs as a recoverable server task. The browser connection can
-    // reconnect and fetch the result without restarting the research.
-    let controller = new AbortController();
+    const controller = new AbortController();
     const longResearch = mode === "deep" || Boolean(tool);
-    let useResearchJob = longResearch && researchTransport === "recoverable_job";
-    // Reserve time for the independent backup before the browser gives up.
-    let timeoutId = setTimeout(() => controller.abort(), longResearch ? 180000 : 65000);
+    // Keep enough room for Vercel to finish a deep consultation while still
+    // returning a useful error to the page if the connection is interrupted.
+    const timeoutId = setTimeout(() => controller.abort(), longResearch ? 270000 : 65000);
     pendingSearch = controller;
 
     try {
@@ -354,101 +339,12 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
             lang: lang
         };
 
-        let requestBase = API_BASE;
-        let usedBackup = false;
-        let requestPath = useResearchJob ? '/api/research-jobs' : '/api/chat';
-        const makeResearchRequest = (base, signal) => fetch(`${base}${requestPath}`, {
+        const res = await fetch(`${API_BASE}/api/chat`, {
             method: "POST",
             headers: headers,
             body: JSON.stringify(bodyData),
-            signal
+            signal: controller.signal
         });
-        const useBackup = async () => {
-            usedBackup = true;
-            requestBase = BACKUP_API_BASE;
-            // A broad request moves to Render's durable job endpoint. Its work
-            // can continue while the phone reconnects instead of repeating the
-            // same short synchronous limit that just failed on Vercel.
-            useResearchJob = longResearch;
-            requestPath = useResearchJob ? '/api/research-jobs' : '/api/chat';
-            serverStageMessage = "O servidor principal demorou; continuando pelo servidor de contingência.";
-            updateStatusMessage();
-            controller = new AbortController();
-            pendingSearch = controller;
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => controller.abort(), longResearch ? 300000 : 85000);
-            return makeResearchRequest(requestBase, controller.signal);
-        };
-
-        let res;
-        try {
-            res = await makeResearchRequest(requestBase, controller.signal);
-        } catch (requestError) {
-            // A timeout or transport failure at the primary host is precisely
-            // when the independent Render deployment should take over.
-            res = await useBackup();
-        }
-        if (!usedBackup && canFailOver(res)) {
-            res = await useBackup();
-        }
-
-        if (useResearchJob && res.ok) {
-            const created = await res.json();
-            const pendingJob = {
-                id: created.id,
-                token: created.access_token,
-                query,
-                conversationId: conversation.id,
-                conversation,
-                mode,
-                tool,
-                apiBase: requestBase,
-                startedAt: new Date().toISOString()
-            };
-            sessionStorage.setItem("jw_search_pending_job", JSON.stringify(pendingJob));
-            serverStageMessage = created.message || "Pesquisa adicionada à fila.";
-            updateStatusMessage();
-            while (true) {
-                await new Promise((resolve, reject) => {
-                    const timer = setTimeout(resolve, 2000);
-                    controller.signal.addEventListener("abort", () => {
-                        clearTimeout(timer);
-                        reject(new DOMException("Pesquisa interrompida", "AbortError"));
-                    }, {once: true});
-                });
-                try {
-                    res = await fetch(`${requestBase}/api/research-jobs/${created.id}`, {
-                        headers: {"X-Job-Token": created.access_token},
-                        signal: controller.signal
-                    });
-                } catch (pollError) {
-                    if (pollError.name === "AbortError") throw pollError;
-                    serverStageMessage = "Reconectando ao andamento da pesquisa.";
-                    updateStatusMessage();
-                    continue;
-                }
-                if (!res.ok) break;
-                const state = await res.json();
-                serverStageMessage = state.message || "Pesquisa em andamento.";
-                updateStatusMessage();
-                if (state.status === "completed") {
-                    sessionStorage.removeItem("jw_search_pending_job");
-                    res = new Response(JSON.stringify(state.result), {
-                        status: 200,
-                        headers: {"Content-Type": "application/json"}
-                    });
-                    break;
-                }
-                if (state.status === "failed" || state.status === "cancelled") {
-                    sessionStorage.removeItem("jw_search_pending_job");
-                    res = new Response(JSON.stringify({detail: state.error || state.message}), {
-                        status: state.status_code || 503,
-                        headers: {"Content-Type": "application/json"}
-                    });
-                    break;
-                }
-            }
-        }
 
         clearTimeout(timeoutId);
 
@@ -466,12 +362,6 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
         }
 
         const data = await res.json();
-        if (usedBackup) {
-            data.warnings = [
-                ...(data.warnings || []),
-                "A infraestrutura principal não respondeu a tempo; esta pesquisa foi concluída pelo servidor de contingência."
-            ];
-        }
         const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
 
         const newTurn = {
@@ -524,74 +414,9 @@ async function executeTurnSearch(query, replaceTurnIndex = null, tool = null) {
     }
 }
 
-async function resumePendingResearchJob() {
-    if (pendingSearch) return;
-    let pending;
-    try {
-        pending = JSON.parse(sessionStorage.getItem("jw_search_pending_job") || "null");
-    } catch {
-        sessionStorage.removeItem("jw_search_pending_job");
-        return;
-    }
-    if (!pending?.id || !pending?.token || !pending?.query) return;
-    pendingSearch = true;
-    if (pending.conversation?.id === pending.conversationId) {
-        activeConversation = pending.conversation;
-    }
-    statusContainer.classList.remove("hidden");
-    if (statusText) statusText.innerText = "Reconectando à pesquisa em andamento…";
-    try {
-        while (true) {
-            let response;
-            try {
-                response = await fetch(`${pending.apiBase || API_BASE}/api/research-jobs/${pending.id}`, {
-                    headers: {"X-Job-Token": pending.token}
-                });
-            } catch {
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                continue;
-            }
-            const state = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(state.detail || "A pesquisa anterior expirou.");
-            if (statusText) statusText.innerText = state.message || "Pesquisa em andamento.";
-            if (state.status === "completed") {
-                const data = state.result || {};
-                activeConversation.turns.push({
-                    query: pending.query,
-                    answer: data.ai_response || "Nenhuma resposta gerada.",
-                    results: data.results || [],
-                    mode: pending.mode || "deep",
-                    tool: pending.tool || null,
-                    evidence: data.evidence,
-                    warnings: data.warnings || [],
-                    provider: data.provider || currentProvider,
-                    model: data.model || "",
-                    latency: "recuperada",
-                    timestamp: new Date().toISOString()
-                });
-                activeConversation.updatedAt = new Date().toISOString();
-                sessionStorage.removeItem("jw_search_pending_job");
-                saveCurrentThreadToStorage();
-                renderConversationThread();
-                break;
-            }
-            if (state.status === "failed" || state.status === "cancelled") {
-                throw new Error(state.error || state.message || "A pesquisa não foi concluída.");
-            }
-            await new Promise(resolve => setTimeout(resolve, 2500));
-        }
-    } catch (error) {
-        sessionStorage.removeItem("jw_search_pending_job");
-        showSystemError(`Não foi possível recuperar a pesquisa: ${error.message}`, {
-            query: pending.query, mode: pending.mode, error: error.message
-        });
-    } finally {
-        pendingSearch = null;
-        statusContainer.classList.add("hidden");
-    }
-}
-
-setTimeout(resumePendingResearchJob, 0);
+// Discard tasks created by the retired background-worker transport. New
+// consultations always remain on this Vercel request and report failures here.
+sessionStorage.removeItem("jw_search_pending_job");
 
 if (searchForm) {
     searchForm.addEventListener("submit", (e) => {
@@ -1650,7 +1475,7 @@ async function checkKeyStatus() {
         const res = await fetch(`${API_BASE}/api/config`);
         if (res.ok) {
             const data = await res.json();
-            researchTransport = data.research_transport || "recoverable_job";
+            researchTransport = data.research_transport || "synchronous";
             let serverHasForActive = (currentProvider === "gemini" && data.has_gemini) || (currentProvider === "deepseek" && data.has_deepseek) || (currentProvider === "hy3" && data.has_hy3);
             if (keyBadgeText) keyBadgeText.innerHTML = serverHasForActive ? `<span class="text-blue-300">●</span> Servidor Ativo` : `<span class="text-amber-300">●</span> Inserir Chave`;
         }
@@ -1684,10 +1509,10 @@ async function runDiagnostics() {
 
         diagnosticsContent.innerHTML = `
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <!-- Ping Render -->
+                <!-- Ping Vercel -->
                 <div class="p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
                     <div>
-                        <span class="font-bold text-gray-800 block">⚡ Servidor (Render)</span>
+                        <span class="font-bold text-gray-800 block">⚡ Servidor (Vercel)</span>
                         <span class="text-[10px] text-gray-500">Tempo de resposta HTTP</span>
                     </div>
                     <span class="font-bold ${pingTime < 500 ? 'text-green-600' : 'text-amber-600'}">${pingTime} ms</span>

@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import time
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextvars import copy_context
 from urllib.parse import urlsplit, urljoin
@@ -17,6 +18,50 @@ from rag_engine import search_wol_direct, extract_theocratic_keywords
 from scraper import get_clean_document, infer_publication_info
 from safety import SearchDeadline, remaining, official_url
 from study_tools import tool_instruction, outline_schedule
+
+
+def _search_normalized(value):
+    """Normalize accents for ranking only; preserve the official spelling in queries."""
+    return "".join(
+        char
+        for char in unicodedata.normalize("NFD", value.casefold())
+        if unicodedata.category(char) != "Mn"
+    )
+
+
+def _topic_profile(query):
+    """Return a vetted retrieval agenda for terms WOL indexes differently.
+
+    These profiles are retrieval vocabulary, not conclusions.  They let a
+    plain-language question reach the official index instead of forcing WOL to
+    match every conversational word in the same paragraph.
+    """
+    normalized = _search_normalized(query)
+    if "suicid" not in normalized:
+        return None
+    return {
+        "topic": "suicídio",
+        "intent": (
+            "identificar relatos bíblicos relacionados ao assunto e como as "
+            "publicações oficiais os explicam, sem ir além das fontes"
+        ),
+        "subtopics": [
+            "relatos bíblicos e referências citados nas fontes",
+            "explicações das publicações oficiais",
+            "princípios e limites de interpretação",
+            "apoio e orientação apresentados nas publicações",
+        ],
+        "queries": [
+            "suicídio",
+            "suicídio relatos bíblicos",
+            "suicídio Bíblia",
+            "Saul suicídio",
+            "Aitofel suicídio",
+            "Judas suicídio",
+            "suicídio Estudo Perspicaz",
+            "suicídio A Sentinela",
+        ],
+    }
 
 
 def topic_query(query, history, tool=None):
@@ -45,6 +90,9 @@ def research_queries(query, mode, entity=False, practical=False):
     base = extract_theocratic_keywords(query).strip()
     if not base:
         return [base]
+    profile = _topic_profile(query)
+    if profile:
+        return profile["queries"][: (8 if mode == "deep" else 3)]
     if mode != "deep":
         variants = (
             [base, f"{base} homem humilde", f"{base} exemplo"]
@@ -87,6 +135,24 @@ def research_queries(query, mode, entity=False, practical=False):
 def build_research_plan(query, mode, entity=False, topic=None):
     """Turn a free-form question into an observable, provider-neutral agenda."""
     base = (topic or extract_theocratic_keywords(query)).strip()
+    profile = _topic_profile(query)
+    if profile:
+        subtopics = profile["subtopics"]
+        if mode != "deep":
+            subtopics = subtopics[:3]
+        return {
+            "question": query,
+            "topic": profile["topic"],
+            "retrieval_topic": profile["topic"],
+            "intent": profile["intent"],
+            "subtopics": subtopics,
+            "queries": profile["queries"][: (8 if mode == "deep" else 3)],
+            "recursive": mode == "deep",
+            "planner": "deterministic_topic_profile",
+            "ambiguities": [],
+            "concepts": [profile["topic"]],
+            "coverage_terms": {},
+        }
     lower = query.casefold()
     practical = any(word in lower for word in ("como ", "o que fa", "lidar", "sair "))
     if entity:
@@ -361,15 +427,16 @@ def _candidate_key(hit):
 
 def _select_diverse_hits(hits, limit, query):
     selected, seen_keys, publication_counts = [], set(), {}
-    terms = extract_theocratic_keywords(query).lower().split()
+    terms = _search_normalized(extract_theocratic_keywords(query)).split()
 
     def relevance(hit):
-        title = hit.get("title", "").lower()
-        snippet = hit.get("snippet", "").lower()
-        reference = hit.get("reference_label", "").lower()
+        title = _search_normalized(hit.get("title", ""))
+        snippet = _search_normalized(hit.get("snippet", ""))
+        reference = _search_normalized(hit.get("reference_label", ""))
         matched_terms = extract_theocratic_keywords(
             hit.get("matched_query", "")
-        ).lower().split()
+        )
+        matched_terms = _search_normalized(matched_terms).split()
         score = sum(4 for term in terms if term in title) + sum(
             1 for term in terms if term in snippet
         )
@@ -421,7 +488,7 @@ def collect_evidence(query, lang, mode, intent_query=None, plan=None):
     started = time.monotonic()
     # Keep a predictable synthesis window even when WOL is slow.
     stop_at = started + (40 if mode == "deep" else 22)
-    base = extract_theocratic_keywords(query).strip()
+    base = (plan or {}).get("retrieval_topic") or extract_theocratic_keywords(query).strip()
     hits, seen_urls = [], set()
     first_batch = (
         search_wol_direct(
@@ -478,7 +545,7 @@ def collect_evidence(query, lang, mode, intent_query=None, plan=None):
     sources = []
     seen_document_titles = set()
     source_query_counts = {}
-    terms = set(extract_theocratic_keywords(query).lower().split())
+    terms = set(_search_normalized(extract_theocratic_keywords(base)).split())
     total_budget = 48000 if mode == "deep" else 22000
     for hit in hits:
         if len(sources) >= source_limit:
@@ -526,7 +593,7 @@ def collect_evidence(query, lang, mode, intent_query=None, plan=None):
             continue
         ranking = sorted(
             range(len(paragraphs)),
-            key=lambda i: -sum(t in paragraphs[i].lower() for t in terms),
+            key=lambda i: -sum(t in _search_normalized(paragraphs[i]) for t in terms),
         )
         indices = set()
         for i in ranking[: 6 if mode == "deep" else 3]:
@@ -638,7 +705,7 @@ def expand_related_documents(
     for source in sources:
         for related in source.get("related_documents", []):
             title = related["title"].casefold()
-            relevance = sum(term in title for term in terms)
+            relevance = sum(term in _search_normalized(title) for term in terms)
             if relevance > 0 and len(title) >= 4:
                 queue.append((-relevance, 1, source["id"], related))
     queue.sort(key=lambda item: (item[0], item[1]))
@@ -664,7 +731,7 @@ def expand_related_documents(
             continue
         ranking = sorted(
             range(len(paragraphs)),
-            key=lambda i: -sum(term in paragraphs[i].casefold() for term in terms),
+            key=lambda i: -sum(term in _search_normalized(paragraphs[i]) for term in terms),
         )
         indices = set()
         for index in ranking[:6]:
@@ -731,7 +798,7 @@ def expand_related_documents(
         followed += 1
         if depth < max_depth:
             for child in child_links:
-                score = sum(term in child["title"].casefold() for term in terms)
+                score = sum(term in _search_normalized(child["title"]) for term in terms)
                 if score > 0 and len(child["title"].strip()) >= 4:
                     queue.append((-score, depth + 1, source_id, child))
             queue.sort(key=lambda item: (item[0], item[1]))
@@ -1275,6 +1342,28 @@ Desenvolva os pontos cobertos pelas evidências. Não preencha lacunas com memó
     if mode == "deep":
         answer = append_missing_bible_texts(answer, sources)
     answer, cited, warnings = render_citations(answer, sources)
+    if not cited:
+        # A fluent answer without a document identity is not a verified
+        # research result.  Do not show it as completed: the request handler
+        # can retry the free-provider result with its last-resort provider,
+        # and callers without a fallback receive an explicit recoverable state.
+        warnings.append(
+            "A síntese foi descartada porque não citou nenhuma fonte recuperada."
+        )
+        return {
+            **common,
+            "ai_response": (
+                "A pesquisa recuperou fontes oficiais, mas o provedor não vinculou "
+                "a síntese a elas. Tente regenerar para obter uma resposta verificável."
+            ),
+            "model": used_model,
+            "status": "uncited_response",
+            "citations": [],
+            "warnings": list(dict.fromkeys(warnings)),
+            "outline_schedule": None,
+            "research_queries": plan["queries"],
+            "elapsed_seconds": round(time.monotonic() - started, 2),
+        }
     if str(finish_reason).lower() in {"length", "max_tokens", "finishreason.max_tokens"}:
         warnings.append("O provedor interrompeu a resposta no limite de geração.")
         answer += "\n\n### Resposta incompleta\nO provedor atingiu o limite de geração. O texto acima não deve ser tratado como uma pesquisa ampla concluída."

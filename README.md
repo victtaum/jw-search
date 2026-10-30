@@ -74,6 +74,6 @@ Consultas reais são verificações separadas e não comprovam qualidade para to
 
 Web/PWA é o foco desta entrega. Android recebeu uma correção para não anexar a chave Gemini à leitura de artigos; não foi compilado nesta rodada. iOS permanece incompleto.
 
-Docker e Render usam `backend/requirements.lock`. Atualize dependências deliberadamente, regenere o lock e execute os testes. `criar_pacote_zip.bat` exporta apenas o commit HEAD via `git archive`, sem copiar ambientes virtuais, `.env` ignorados ou arquivos não versionados.
+O deploy de produção usa o Vercel e `backend/requirements.lock`. Atualize dependências deliberadamente, regenere o lock e execute os testes. `criar_pacote_zip.bat` exporta apenas o commit HEAD via `git archive`, sem copiar ambientes virtuais, `.env` ignorados ou arquivos não versionados.
 
 Biblioteca vendorizada: [DOMPurify 3.3.1 e licença](web/vendor/DOMPurify-LICENSE.txt). A apresentação ainda usa Tailwind e fontes por CDN; empacotamento completo, CSP estrita e validação visual em vários dispositivos continuam pendentes.

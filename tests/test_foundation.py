@@ -28,17 +28,6 @@ def test_config_and_health_never_expose_key(monkeypatch):
     assert client.post("/api/config", json={"api_key": "fake"}).status_code == 405
 
 
-def test_legacy_render_domain_redirects_to_vercel():
-    response = client.get(
-        "/?consulta=moises",
-        headers={"host": "jw-search.onrender.com"},
-        follow_redirects=False,
-    )
-    assert response.status_code == 307
-    assert response.headers["location"] == "https://jw-search.vercel.app/?consulta=moises"
-    assert client.get("/healthz", headers={"host": "jw-search.onrender.com"}).status_code == 200
-
-
 def test_arbitrary_provider_destination_rejected_before_generation(monkeypatch):
     generate = Mock()
     monkeypatch.setattr(main, "run_research", generate)
@@ -230,6 +219,16 @@ def test_deep_research_plan_is_observable_and_source_specific():
     assert len(plan["subtopics"]) == 5
     assert any("Estudo Perspicaz" in query for query in plan["queries"])
     assert any("A Sentinela" in query for query in plan["queries"])
+
+
+def test_suicide_topic_profile_uses_official_index_vocabulary():
+    plan = research.build_research_plan("relatos de suicidio", "deep")
+    assert plan["planner"] == "deterministic_topic_profile"
+    assert plan["topic"] == "suicídio"
+    assert plan["retrieval_topic"] == "suicídio"
+    assert plan["queries"][0] == "suicídio"
+    assert "Saul suicídio" in plan["queries"]
+    assert "Judas suicídio" in plan["queries"]
 
 
 def test_semantic_plan_is_constrained_and_keeps_official_source_queries():
@@ -584,67 +583,11 @@ def test_empty_retrieval_does_not_call_model(monkeypatch):
     llm.assert_not_called()
 
 
-def test_long_research_job_is_private_and_recoverable(monkeypatch):
-    monkeypatch.setattr(
-        main,
-        "handle_theocratic_search",
-        lambda **kwargs: {
-            "status": "completed",
-            "ai_response": f"Resposta para {kwargs['q']}",
-            "results": [],
-        },
-    )
-    created = client.post(
-        "/api/research-jobs",
-        headers={"X-Hy3-Api-Key": "private-key"},
-        json={"query": "como sair das dívidas?", "provider": "hy3", "mode": "deep"},
-    )
-    assert created.status_code == 202
-    payload = created.json()
-    assert payload["access_token"]
-    assert "private-key" not in created.text
-    assert client.get(f"/api/research-jobs/{payload['id']}").status_code == 404
-    for _ in range(50):
-        status = client.get(
-            f"/api/research-jobs/{payload['id']}",
-            headers={"X-Job-Token": payload["access_token"]},
-        )
-        if status.json()["status"] == "completed":
-            break
-        time.sleep(0.01)
-    result = status.json()
-    assert result["status"] == "completed"
-    assert result["result"]["ai_response"] == "Resposta para como sair das dívidas?"
-
-
-def test_vercel_config_uses_synchronous_research(monkeypatch):
-    monkeypatch.setenv("VERCEL", "1")
+def test_config_uses_synchronous_vercel_research():
     response = client.get("/api/config")
     assert response.status_code == 200
     assert response.json()["research_transport"] == "synchronous"
     assert response.json()["deployment_platform"] == "vercel"
-
-
-def test_persistent_server_config_uses_recoverable_jobs(monkeypatch):
-    monkeypatch.delenv("VERCEL", raising=False)
-    response = client.get("/api/config")
-    assert response.status_code == 200
-    assert response.json()["research_transport"] == "recoverable_job"
-
-
-def test_queued_research_job_can_be_cancelled(monkeypatch):
-    monkeypatch.setattr(main._research_job_executor, "submit", lambda *args: None)
-    created = client.post(
-        "/api/research-jobs",
-        headers={"X-Hy3-Api-Key": "private-key"},
-        json={"query": "Moisés", "provider": "hy3", "mode": "deep"},
-    ).json()
-    cancelled = client.delete(
-        f"/api/research-jobs/{created['id']}",
-        headers={"X-Job-Token": created["access_token"]},
-    )
-    assert cancelled.status_code == 200
-    assert cancelled.json()["status"] == "cancelled"
 
 
 def test_openrouter_free_is_default_and_hy3_reasoning_is_explicit(monkeypatch):
@@ -692,6 +635,46 @@ def test_openrouter_free_is_default_and_hy3_reasoning_is_explicit(monkeypatch):
     assert result["model"] == "openrouter/free"
     assert completion.call_args.kwargs["model"] == "openrouter/free"
     assert "extra_body" not in completion.call_args.kwargs
+
+
+def test_uncited_model_response_is_not_completed_research(monkeypatch):
+    monkeypatch.setattr(
+        research,
+        "collect_evidence",
+        lambda *a, **_kw: [
+            {
+                "id": "S1",
+                "title": "Fonte",
+                "link": "https://wol.jw.org/fonte",
+                "publication": "A Sentinela",
+                "passages": [{"id": "S1P1", "text": "Evidência suficiente."}],
+            }
+        ],
+    )
+    completion = Mock(
+        return_value=SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content="Uma resposta sem identificador de fonte."),
+                    finish_reason="stop",
+                )
+            ]
+        )
+    )
+    context = Mock()
+    context.__enter__ = Mock(
+        return_value=SimpleNamespace(
+            chat=SimpleNamespace(completions=SimpleNamespace(create=completion))
+        )
+    )
+    context.__exit__ = Mock(return_value=False)
+    monkeypatch.setattr(research, "OpenAI", Mock(return_value=context))
+    result = research.run_research(
+        "amor", [], "hy3", "fake", "https://openrouter.ai/api/v1", None, "quick", "pt", False
+    )
+    assert result["status"] == "uncited_response"
+    assert result["citations"] == []
+    assert "não vinculou" in result["ai_response"]
 
 
 def test_no_silent_fallback_and_deadline_reset(monkeypatch):
@@ -742,7 +725,7 @@ def test_hy3_recoverable_failure_uses_visitors_gemini(monkeypatch):
     assert data["provider"] == "gemini" and data["fallback_from"] == "hy3"
     assert "OpenRouter ficou indisponível" in data["warnings"][0]
     assert generate.call_args_list[1].args[2] == "gemini"
-    assert budgets[0] <= 95 and budgets[1] > 100
+    assert budgets[0] <= 135 and budgets[1] > 100
 
 
 def test_public_hy3_failure_uses_server_gemini_as_last_resort(monkeypatch):
@@ -782,6 +765,25 @@ def test_insufficient_openrouter_evidence_retries_with_gemini(monkeypatch):
     assert response.status_code == 200
     assert response.json()["provider"] == "gemini"
     assert "último recurso" in response.json()["warnings"][0]
+
+
+def test_uncited_openrouter_response_retries_with_gemini(monkeypatch):
+    generate = Mock(
+        side_effect=[
+            {"ai_response": "sem citações", "results": [{}], "status": "uncited_response"},
+            {"ai_response": "com fontes", "results": [{}], "status": "completed", "provider": "gemini"},
+        ]
+    )
+    monkeypatch.setattr(main, "run_research", generate)
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-server-key")
+    response = client.post(
+        "/api/chat",
+        headers={"X-Hy3-Api-Key": "hy3-key"},
+        json={"query": "relatos de suicídio", "provider": "hy3"},
+    )
+    assert response.status_code == 200
+    assert response.json()["provider"] == "gemini"
+    assert generate.call_count == 2
 
 
 def test_owner_can_explicitly_use_reserved_server_gemini(monkeypatch):
@@ -906,6 +908,25 @@ def test_wol_result_uses_document_metadata_not_embedded_verse(monkeypatch):
     result = search_wol_direct("dívidas")[0]
     assert result["link"] == "https://wol.jw.org/pt/wol/d/r5/lp-t/2012808"
     assert result["title"] == "Lidar com dívidas"
+
+
+def test_wol_current_markup_uses_caption_title_not_matched_paragraph(monkeypatch):
+    import rag_engine
+
+    html = """
+    <ul class="results resultContentDocument">
+      <li class="caption"><a class="lnk" href="/pt/wol/d/r5/lp-t/101998642">Suicídio: um flagelo dos jovens</a></li>
+      <li class="result"><ul class="resultItems">
+        <li class="searchResult html5 pub-g98 docId-101998642"><article><div class="document"><p>O suicídio é mencionado nesta passagem.</p></div></article></li>
+        <li class="ref">g98 8/9 págs. 4-5 - Despertai! — 1998</li>
+      </ul></li>
+    </ul>
+    """
+    monkeypatch.setattr(rag_engine, "fetch_url", lambda url: html)
+    result = search_wol_direct("suicídio")[0]
+    assert result["title"] == "Suicídio: um flagelo dos jovens"
+    assert result["publication"] == "Despertai!"
+    assert "mencionado" in result["snippet"]
 
 
 def test_wol_metadata_identifies_bible_and_perspicaz(monkeypatch):

@@ -18,7 +18,7 @@ class RequestBoundary:
             "/api/chat",
             "/api/search",
             "/api/diagnostics",
-        ) or scope["path"].startswith("/api/research-jobs")
+        )
         if (
             access
             and protected_path
