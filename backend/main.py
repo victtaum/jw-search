@@ -58,7 +58,7 @@ class ContactRequest(BaseModel):
 app = FastAPI(
     title="JW Search API",
     description="Backend de consulta de informações do jw.org e wol.jw.org com suporte a Inteligência Artificial",
-    version="2.28.7",
+    version="2.28.8",
 )
 
 
@@ -628,7 +628,7 @@ def api_contact(payload: ContactRequest, request: Request):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "version": "2.28.7"}
+    return {"status": "ok", "version": "2.28.8"}
 
 
 @app.get("/api/config")

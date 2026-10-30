@@ -229,6 +229,9 @@ def test_suicide_topic_profile_uses_official_index_vocabulary():
     assert plan["queries"][0] == "suicídio"
     assert "Saul suicídio" in plan["queries"]
     assert "Judas suicídio" in plan["queries"]
+    assert plan["bible_references"] == [
+        "1 Samuel 31:3-4", "2 Samuel 17:23", "Mateus 27:3-5"
+    ]
 
 
 def test_semantic_plan_is_constrained_and_keeps_official_source_queries():

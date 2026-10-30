@@ -61,6 +61,13 @@ def _topic_profile(query):
             "suicídio Estudo Perspicaz",
             "suicídio A Sentinela",
         ],
+        # These are the biblical accounts the official-source profile needs to
+        # distinguish. Their complete text is fetched before synthesis.
+        "bible_references": [
+            "1 Samuel 31:3-4",
+            "2 Samuel 17:23",
+            "Mateus 27:3-5",
+        ],
     }
 
 
@@ -152,6 +159,7 @@ def build_research_plan(query, mode, entity=False, topic=None):
             "ambiguities": [],
             "concepts": [profile["topic"]],
             "coverage_terms": {},
+            "bible_references": profile["bible_references"],
         }
     lower = query.casefold()
     practical = any(word in lower for word in ("como ", "o que fa", "lidar", "sair "))
@@ -923,7 +931,7 @@ def fill_research_gaps(
     return sources, total_budget
 
 
-def collect_referenced_verses(sources, lang, query="", limit=8):
+def collect_referenced_verses(sources, lang, query="", limit=8, extra_references=()):
     """Follow Bible references found in evidence and retrieve their exact text."""
     from bible import fetch_verse_content
     from scraper import BIBLE_BOOKS_MAP
@@ -935,7 +943,9 @@ def collect_referenced_verses(sources, lang, query="", limit=8):
         rf"\b(?:{books})\.?\s+\d+\s*[:.]\s*\d+(?:\s*-\s*(?:\d+\s*:\s*)?\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)?",
         re.I,
     )
-    references = []
+    # A vetted topic profile can require exact biblical accounts even if a
+    # publication expresses the reference with a format the parser cannot see.
+    references = [(1000, reference) for reference in extra_references]
     terms = extract_theocratic_keywords(query).lower().split()
     source_order = sorted(
         sources,
@@ -1142,7 +1152,14 @@ def run_research(
     if mode == "deep" and not tool:
         if progress:
             progress("reading", "Lendo as fontes e seguindo referências relacionadas.")
-        sources.extend(collect_referenced_verses(sources, lang, search_query))
+        sources.extend(
+            collect_referenced_verses(
+                sources,
+                lang,
+                search_query,
+                extra_references=plan.get("bible_references", ()),
+            )
+        )
     if tool:
         from bible import fetch_verse_content
         from scraper import BIBLE_BOOKS_MAP
