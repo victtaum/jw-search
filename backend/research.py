@@ -1269,8 +1269,9 @@ Desenvolva os pontos cobertos pelas evidências. Não preencha lacunas com memó
         + [{"role": "user", "content": query}]
     )
     max_tokens = 5000 if tool else (7000 if mode == "deep" else 2500)
-    if provider == "hy3" and mode == "deep" and not tool:
-        max_tokens = 4000
+    # Broad research must have room to connect the collected sources, quote the
+    # relevant passages, and explain their relationship.  Do not artificially
+    # shorten OpenRouter's response below the deep-research contract.
     if progress:
         progress("synthesizing", "Organizando as evidências em uma resposta fundamentada.")
     if provider == "gemini":
